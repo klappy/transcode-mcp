@@ -9,8 +9,8 @@
     "smoke-test": "bun run smoke-test.ts"
   },
   "dependencies": {
-    "agents-sdk": "latest",
-    "@modelcontextprotocol/sdk": "latest",
+    "agents-sdk": "^0.0.36",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
