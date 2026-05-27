@@ -33,7 +33,7 @@ This document is a working hypothesis. The rule needs verification against a rea
 def encode_dimension(source_w, target_w, source_h, target_h, q_preset):
     if source_w > target_w:
         # BRANCH A — Downsample (the dominant traffic case)
-        encode_w = ceil_to_mod16(min(target_w * 1.5, source_w * 1.5))
+        encode_w = ceil_to_mod16(min(target_w * 1.5, source_w))
         encode_h = preserve_aspect_ratio(source, encode_w)
         encode_h = ceil_to_mod16(encode_h)
     elif source_w < target_w:
@@ -55,9 +55,9 @@ Each branch is described below with its mechanism, its multi-objective scoring, 
 
 The dominant traffic case: a 4000-pixel phone photo headed to a 1200-pixel display. The encoder ingests the high-resolution source and produces an intermediate-resolution encode; the browser does the final downscale to display.
 
-**Mechanism.** `encode_w = ceil_to_mod16(min(target_w × 1.5, source_w × 1.5))`.
+**Mechanism.** `encode_w = ceil_to_mod16(min(target_w × 1.5, source_w))`.
 
-- `min(target × 1.5, source × 1.5)` — the half-class overshoot, capped so we never invent pixels above the source resolution. For source > target (this branch), the binding term is `target × 1.5`.
+- `min(target × 1.5, source)` — the half-class overshoot, capped so we never invent pixels above the source resolution. For source > target (this branch), the binding term is `target × 1.5` whenever `target × 1.5 ≤ source`; otherwise the `source` cap binds and the encoder stays at source dimensions.
 - `ceil_to_mod16(...)` — round up to the next multiple of 16 so the codec's macroblock grid divides cleanly. JPEG, WebP, AVC, HEVC, AV1 all benefit; the cost is at most 15 extra pixels per dimension.
 
 **Why the overshoot.** The final browser downscale is the artifact filter. Encoding at exactly the target dimension means the encoder's quantization noise is what the user sees; encoding at 1.5× target means the noise passes through a downscale that smooths blocking, ringing, and chroma artifacts.
@@ -76,7 +76,7 @@ The dominant traffic case: a 4000-pixel phone photo headed to a 1200-pixel displ
 **Trade explicitly named.** This branch pays bytes for perceived-quality margin. The half-class overshoot only earns its byte cost when the source is lossy (JPEG with visible artifacts) — for clean sources, the overshoot may be bytes for invisible quality gain. This is the case the corpus measurement (open item in `project-goal.md`) must resolve.
 
 **Worked example.** Source 4000×3000 phone photo, target 800×600 display.
-- `min(800×1.5, 4000×1.5)` = 1200
+- `min(800×1.5, 4000)` = 1200
 - `ceil_to_mod16(1200)` = 1200 (already mod-16)
 - Encode dimensions: 1200×900, then ceil_to_mod16(900) = 912
 - Final encode: 1200×912
@@ -157,7 +157,7 @@ function encodeDimension(
 
   // Branch A — downsample (dominant traffic case)
   if (sourceW > targetW) {
-    const halfClass = Math.min(targetW * 1.5, sourceW * 1.5);
+    const halfClass = Math.min(targetW * 1.5, sourceW);
     const encodeW = ceilToMod16(halfClass);
     // Preserve aspect ratio, then align
     const aspectRatio = sourceH / sourceW;
