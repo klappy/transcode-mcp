@@ -4,6 +4,8 @@
 
 import { createMcpHandler } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { z } from "zod";
 
 // Half-class perceptual overshoot (from canon)
@@ -20,6 +22,9 @@ const PRESET_MAP: Record<string, { rate: number; channels: number; bitrate: stri
   'music+medium': { rate: 48000, channels: 2, bitrate: '96k' },
   'music+high':   { rate: 48000, channels: 2, bitrate: '128k' },
 };
+
+const ODDKIT_MCP_URL = "https://oddkit.klappy.dev/mcp";
+const CANON_KB_URL = "https://github.com/klappy/transcode-mcp";
 
 function createServer() {
   const server = new McpServer({
@@ -60,64 +65,103 @@ function createServer() {
     }
   );
 
-  // === Canon docs proxy tool (per canon/patterns/docs-proxy-canon-as-tool.md) ===
+  // === docs tool - thin proxy to oddkit (following PTXprint-MCP pattern) ===
   server.tool(
     "docs",
     {
-      query: z.string().describe("Natural language or structured query against the canon"),
-      audience: z.string().optional().describe("Optional audience filter (e.g. developer, agent, summary)"),
-      depth: z.enum(["1", "2", "3"]).optional().describe("1=snippet, 2=full top doc, 3=top + next two"),
+      query: z.string(),
+      audience: z.string().optional(),
+      depth: z.enum(["1", "2", "3"]).optional(),
     },
-    async (args, extra: any) => {
-      const { query, audience, depth } = args;
-      const env = extra?.env || {};
+    async (args) => {
+      const { query, audience = "headless", depth = "1" } = args;
 
-      const canonEndpoint = env.CANON_ENDPOINT;
-
-      if (!canonEndpoint) {
-        return {
-          content: [{
-            type: "text",
-            text: JSON.stringify({
-              answer: null,
-              sources: [],
-              deeper: [],
-              governance_source: "minimal",
-              error: "CANON_ENDPOINT not configured in wrangler.toml [vars]"
-            })
-          }]
-        };
-      }
-
+      let client: Client | null = null;
       try {
-        const res = await fetch(canonEndpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            query,
-            audience,
-            depth,
-            knowledge_base_url: "https://github.com/klappy/transcode-mcp"
-          }),
+        const transport = new StreamableHTTPClientTransport(new URL(ODDKIT_MCP_URL));
+        client = new Client({ name: "transcode-mcp-docs", version: "0.1.0" });
+        await client.connect(transport);
+
+        // Call oddkit search
+        const searchResult = await client.callTool({
+          name: "oddkit",
+          arguments: {
+            action: "search",
+            input: query,
+            knowledge_base_url: CANON_KB_URL,
+            result_grouping: "overlay_first",
+          },
         });
 
-        if (!res.ok) {
-          throw new Error(`Canon server responded with ${res.status}`);
+        const parsed = JSON.parse(searchResult.content[0].text);
+        const hits = parsed?.result?.hits || [];
+
+        if (hits.length === 0) {
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify({
+                answer: null,
+                sources: [],
+                deeper: [],
+                governance_source: "knowledge_base"
+              })
+            }]
+          };
         }
 
-        const data = await res.json();
+        const top = hits[0];
+
+        // depth 1 = just return snippet
+        if (depth === "1") {
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify({
+                answer: top.snippet,
+                sources: hits.slice(0, 5).map((h: any) => ({
+                  uri: h.uri,
+                  title: h.title,
+                  snippet: h.snippet,
+                  score: h.score
+                })),
+                deeper: [],
+                governance_source: "knowledge_base"
+              })
+            }]
+          };
+        }
+
+        // depth >= 2: get full top document
+        const getResult = await client.callTool({
+          name: "oddkit",
+          arguments: {
+            action: "get",
+            input: top.uri,
+            knowledge_base_url: CANON_KB_URL,
+          },
+        });
+
+        const getParsed = JSON.parse(getResult.content[0].text);
+        const fullContent = getParsed?.result?.content || top.snippet;
 
         return {
           content: [{
             type: "text",
             text: JSON.stringify({
-              answer: data.answer ?? null,
-              sources: data.sources ?? [],
-              deeper: data.deeper ?? [],
-              governance_source: data.governance_source ?? "knowledge_base"
+              answer: fullContent,
+              sources: [{
+                uri: top.uri,
+                title: top.title,
+                snippet: fullContent,
+                score: top.score
+              }],
+              deeper: [],
+              governance_source: "knowledge_base"
             })
           }]
         };
+
       } catch (err: any) {
         return {
           content: [{
@@ -127,10 +171,14 @@ function createServer() {
               sources: [],
               deeper: [],
               governance_source: "minimal",
-              error: err?.message || "Canon unreachable"
+              error: err?.message || "oddkit unreachable"
             })
           }]
         };
+      } finally {
+        if (client) {
+          try { await client.close(); } catch {}
+        }
       }
     }
   );
