@@ -1,6 +1,6 @@
 // src/worker.ts
 // Proxy-first + lazy transcoding MCP server using current Cloudflare Agents SDK
-// Deploy marker: 2026-05-27 v6 - Hardened audio passthrough (simplified parsing)
+// Deploy marker: 2026-05-27 v7 - Ultra-simple audio passthrough for testing
 
 import { createMcpHandler } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -97,11 +97,11 @@ export default {
     if (url.pathname.startsWith('/mcp')) { const server = createServer(); const handler = createMcpHandler(server); return handler(request, env, ctx); }
     if (url.pathname.startsWith('/image/')) { return handleImageProxy(request, env, ctx); }
     if (url.pathname.startsWith('/audio/')) { return handleAudioProxy(request, env, ctx); }
-    return new Response('transcode-mcp LIVE v6 - Hardened passthrough active', { status: 200 });
+    return new Response('transcode-mcp LIVE v7 - Ultra simple passthrough', { status: 200 });
   },
 };
 
-// Real Image Proxy (Cache API + ready for Images binding)
+// Real Image Proxy
 async function handleImageProxy(request: Request, env: any, ctx: ExecutionContext) {
   const sourceUrl = decodeURIComponent(new URL(request.url).pathname.replace('/image/', ''));
   const cacheKey = new Request(request.url, request);
@@ -116,41 +116,30 @@ async function handleImageProxy(request: Request, env: any, ctx: ExecutionContex
   } catch (e) { return new Response('Image error', { status: 500 }); }
 }
 
-// Real Audio Proxy (Hardened passthrough for v1)
+// Ultra simple Audio Proxy (everything after /audio/ is the source URL)
 async function handleAudioProxy(request: Request, env: any, ctx: ExecutionContext) {
   try {
     const url = new URL(request.url);
-    // The path after /audio/ is everything. We take everything after the first two segments as the source.
-    const path = url.pathname.replace('/audio/', '');
-    const segments = path.split('/');
-    if (segments.length < 2) {
-      return new Response('Invalid audio path format', { status: 400 });
-    }
-    // Reconstruct the source URL from the remaining segments
-    const sourceUrl = decodeURIComponent(segments.slice(1).join('/'));
+    const sourceUrl = decodeURIComponent(url.pathname.replace('/audio/', ''));
 
     const cacheKey = new Request(request.url, request);
     const cached = await caches.default.match(cacheKey);
     if (cached) return cached;
 
     const response = await fetch(sourceUrl);
-    if (!response.ok) {
-      return new Response('Audio source not found', { status: 404 });
-    }
+    if (!response.ok) return new Response('Source not found', { status: 404 });
 
     const newResponse = new Response(response.body, {
       status: 200,
       headers: {
         'Content-Type': response.headers.get('Content-Type') || 'audio/mpeg',
         'Cache-Control': 'public, max-age=31536000, immutable',
-        'X-Proxy-Mode': 'passthrough-v6'
+        'X-Proxy-Mode': 'simple-passthrough-v7'
       }
     });
-
     ctx.waitUntil(caches.default.put(cacheKey, newResponse.clone()));
     return newResponse;
-
   } catch (e: any) {
-    return new Response('Audio proxy error: ' + (e.message || e.toString()), { status: 500 });
+    return new Response('Audio error: ' + (e.message || String(e)), { status: 500 });
   }
 }
