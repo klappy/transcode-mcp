@@ -940,7 +940,12 @@ function comboId(c) {
   return c.target + ':' + c.quality + ':' + c.format;
 }
 
+let progressHideTimer = null;
 function setProgress(loaded, total) {
+  if (progressHideTimer !== null) {
+    clearTimeout(progressHideTimer);
+    progressHideTimer = null;
+  }
   if (total === 0) {
     progressBar.hidden = true;
     return;
@@ -951,7 +956,10 @@ function setProgress(loaded, total) {
   progressLabel.textContent = loaded + ' / ' + total + ' loaded';
   if (loaded >= total) {
     // Briefly show 100% then hide
-    setTimeout(() => { progressBar.hidden = true; }, 600);
+    progressHideTimer = setTimeout(() => {
+      progressBar.hidden = true;
+      progressHideTimer = null;
+    }, 600);
   }
 }
 
@@ -1218,10 +1226,9 @@ function renderExplorerTable(items) {
   // Update sort indicator on headers
   document.querySelectorAll('.results-table th[data-sort-key]').forEach(th => {
     th.classList.remove('sort-active', 'sort-asc');
-    if (th.dataset.sortKey === currentSortKey ||
-       (currentSortKey === 'size-desc' && th.dataset.sortKey === 'size')) {
+    if (th.dataset.sortKey === currentSortKey) {
       th.classList.add('sort-active');
-      if (currentSortDir === 'asc' && currentSortKey !== 'size-desc') {
+      if (currentSortDir === 'asc') {
         th.classList.add('sort-asc');
       }
     }
