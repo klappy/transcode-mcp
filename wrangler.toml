@@ -5,6 +5,7 @@ compatibility_date = "2025-05-01"
 compatibility_flags = [ "nodejs_compat" ]
 
 [vars]
+# CANON_ENDPOINT = "https://your-canon-endpoint.example.com/query"   # Used by the docs tool
 
 # Cloudflare Images binding (for image path)
 # [images]
