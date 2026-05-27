@@ -20,7 +20,7 @@ async function checkEndpoint(fullUrl: string, label: string) {
     return { status: 'skipped' };
   }
 
-  const targetUrl = `${WORKER_BASE_URL.replace(/\\/$/, '')}${fullUrl}`;
+  const targetUrl = `${WORKER_BASE_URL.replace(/\/$/, '')}${fullUrl}`;
 
   try {
     const res = await fetch(targetUrl, { method: 'GET' });

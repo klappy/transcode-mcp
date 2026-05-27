@@ -70,7 +70,7 @@ function createServer() {
         client = new Client({ name: "transcode-mcp-docs", version: "0.1.0" });
         await client.connect(transport);
         const searchResult = await client.callTool({ name: "oddkit", arguments: { action: "search", input: query, knowledge_base_url: CANON_KB_URL, result_grouping: "overlay_first" } });
-        const parsed = JSON.parse(searchResult.content[0].text);
+        const parsed = JSON.parse((searchResult.content as any)[0].text);
         const hits = parsed?.result?.hits || [];
         if (hits.length === 0) {
           return { content: [{ type: "text", text: JSON.stringify({ answer: null, sources: [], deeper: [], governance_source: "knowledge_base" }) }] };
@@ -80,7 +80,7 @@ function createServer() {
           return { content: [{ type: "text", text: JSON.stringify({ answer: top.snippet, sources: hits.slice(0,5).map((h:any)=>({uri:h.uri,title:h.title,snippet:h.snippet,score:h.score})), deeper: [], governance_source: "knowledge_base" }) }] };
         }
         const getResult = await client.callTool({ name: "oddkit", arguments: { action: "get", input: top.uri, knowledge_base_url: CANON_KB_URL } });
-        const getParsed = JSON.parse(getResult.content[0].text);
+        const getParsed = JSON.parse((getResult.content as any)[0].text);
         const fullContent = getParsed?.result?.content || top.snippet;
         return { content: [{ type: "text", text: JSON.stringify({ answer: fullContent, sources: [{uri:top.uri,title:top.title,snippet:fullContent,score:top.score}], deeper: [], governance_source: "knowledge_base" }) }] };
       } catch (err: any) {

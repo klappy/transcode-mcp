@@ -1,14 +1,22 @@
 ---
 title: "Session Journal — Media Transcoding Proxy, Exploration Session 1"
-audience: journal
 date: 2026-05-26
+status: stable
 mode: exploration
-status: complete
-project: media-proxy-mcp
-operator: Christopher Klapp
 ---
 
 # Session Journal — Media Transcoding Proxy, Exploration Session 1
+
+> Exploration session that established the spine of transcode-mcp: the perceptual axes a transcoding proxy spends and starves, the half-class resolution overshoot, the per-axis perceptual leash, content-class triage, bounded two-pass VBR, the two-pass content-understanding architecture, the v1 scope (images + audio, video deferred), and the reference architecture (one thin Cloudflare Worker, one ffmpeg Container, R2 content-addressed storage, modeled on klappy/ptxprint-mcp). Also resolved the IP status (expired patent US9565430B1, public domain), the audio method (protect sample rate, spend bit budget), and the storage strategy (content hash as ground truth, ETag as fast-path). Every recipe is verify-then-adopt at planning time, not remember-and-implement.
+
+---
+
+## Summary — Spine of the Product, Reference Architecture, and the Verify-Don't-Remember Discipline
+
+This is the durable record of the first session, captured at session-close so the path that produced the decisions is walkable. The session converged the product concept (a media transcoding proxy with an automagic URL plus an MCP layer), the core method (control the character of the loss; spend nothing on what the human can't perceive; the system of constraints is the trick), the v1 scope (images + audio synchronously, video deferred at launch but architecture-ready), the reference architecture (Cloudflare Worker + Container + R2 modeled on ptxprint-mcp), and the storage strategy (content-addressed R2 with ETag fast-path). It also captured several assistant self-corrections — reaching for defaults instead of tracing mechanisms — explicitly enough that the same failure mode is named and watched for in subsequent sessions. The decisions, observations, learnings, and constraints from this session are encoded in `canon/encodings/2026-05-26-exploration-session.tsv`.
+
+---
+
 
 ## What this product is
 
