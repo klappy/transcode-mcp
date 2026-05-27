@@ -4,6 +4,11 @@
 
 This file documents learnings from bootstrapping oddkit into the repo and how AI agents (LLMs) should interact with the canon, governance, and MCP surface.
 
+### Project Identity — Proactive Integrity
+See canon/values/project-identity.md
+
+Before I speak, I observe. Before I claim, I verify. Before I confirm, I prove.
+
 ### Key Learnings from oddkit Bootstrapping
 - **Document-first philosophy**: Always encode decisions via DOLCHEO before code changes.
 - **Challenge & Gate**: Use oddkit challenge on proposals and gate on mode transitions.
@@ -20,6 +25,6 @@ Agents should call oddkit tools via the connected service for:
 - `oddkit_preflight`: Surface relevant docs.
 
 ### MCP Tool Surface for oddkit
-The MCP config (see mcp-oddkit-config.json) exposes oddkit actions as LLM-callable tools for intelligent URL generation and canon maintenance.
+The MCP config (see canon/governance/oddkit-mcp-config.json) exposes oddkit actions as LLM-callable tools for intelligent URL generation and canon maintenance.
 
 Refer to canon/governance/writing-conventions.md for authoring rules.
