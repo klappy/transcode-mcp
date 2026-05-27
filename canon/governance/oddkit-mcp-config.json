@@ -1,0 +1,30 @@
+{
+  "mcp": {
+    "tools": [
+      {
+        "name": "oddkit_challenge",
+        "description": "Pressure-test claims against canon",
+        "parameters": {
+          "input": "string"
+        }
+      },
+      {
+        "name": "oddkit_gate",
+        "description": "Check epistemic mode transitions",
+        "parameters": {
+          "input": "string"
+        }
+      },
+      {
+        "name": "oddkit_encode",
+        "description": "Structure decisions as DOLCHEO artifacts"
+      },
+      {
+        "name": "oddkit_audit",
+        "description": "Validate canon links and governance"
+      }
+    ],
+    "knowledge_base_url": "https://github.com/Klappy/transcode-mcp",
+    "strict_mode": true
+  }
+}
