@@ -73,6 +73,152 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
     font-family: var(--mono); font-size: 12px; color: var(--text-dim);
   }
   .source-info strong { color: var(--text); }
+
+  /* HTML hidden attribute must override explicit display values in our CSS.
+     Without this, [hidden]="true" doesn't hide .grid (display: grid) or
+     .table-wrap because our rules win over the user-agent stylesheet. */
+  [hidden] { display: none !important; }
+
+  /* Checkbox pill groups for multi-select controls */
+  .checkbox-group {
+    display: flex; flex-wrap: wrap; gap: 4px;
+  }
+
+  /* Multi-select dropdown — compact trigger that opens a checkbox popover */
+  .dropdown-multiselect { position: relative; }
+  .dropdown-trigger {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 7px 10px; font-size: 13px; font-family: inherit;
+    cursor: pointer; min-width: 160px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; font-weight: 500;
+  }
+  .dropdown-trigger:hover { border-color: var(--accent); }
+  .dropdown-trigger[aria-expanded="true"] { border-color: var(--accent); }
+  .dropdown-summary { color: var(--text); }
+  .dropdown-caret { color: var(--text-dim); font-size: 10px; }
+  .dropdown-popover {
+    position: absolute; top: calc(100% + 4px); left: 0;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px;
+    min-width: 280px; max-width: 360px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+    z-index: 50;
+  }
+  .dropdown-popover-header {
+    display: flex; gap: 12px;
+    padding-bottom: 8px; margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .dropdown-link {
+    background: transparent; color: var(--accent);
+    border: 0; padding: 2px 4px;
+    font-size: 12px; cursor: pointer;
+    font-weight: 500;
+  }
+  .dropdown-link:hover { color: var(--text); background: transparent; }
+  .dropdown-checkboxes { gap: 4px; }
+  .checkbox-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 4px; padding: 4px 8px;
+    font-size: 12px; color: var(--text-dim);
+    cursor: pointer; user-select: none;
+    transition: background 0.1s, border-color 0.1s, color 0.1s;
+  }
+  .checkbox-pill:hover { border-color: var(--accent); color: var(--text); }
+  .checkbox-pill input[type="checkbox"] {
+    width: 12px; height: 12px; accent-color: var(--accent);
+    margin: 0;
+  }
+  .checkbox-pill:has(input:checked) {
+    background: rgba(122, 184, 255, 0.12);
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  /* View mode toggle */
+  .view-toggle {
+    display: flex; gap: 0; background: var(--panel-2);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 2px; width: fit-content;
+  }
+  .view-btn {
+    background: transparent; color: var(--text-dim);
+    border: 0; padding: 6px 12px; font-size: 13px;
+    cursor: pointer; border-radius: 4px;
+    font-weight: 500;
+  }
+  .view-btn:hover { color: var(--text); background: transparent; }
+  .view-btn.active {
+    background: var(--accent); color: #0a1320;
+  }
+  .view-btn.active:hover { background: var(--accent); color: #0a1320; }
+
+  /* Progress bar shown while batch is loading */
+  .progress-bar {
+    position: relative;
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 6px; height: 28px; margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    background: var(--accent); height: 100%; width: 0%;
+    transition: width 0.2s;
+  }
+  .progress-label {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-family: var(--mono); color: var(--text);
+    mix-blend-mode: difference;
+  }
+
+  /* Results table view */
+  .table-wrap {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; overflow: auto;
+  }
+  .results-table {
+    width: 100%; border-collapse: collapse;
+    font-family: var(--mono); font-size: 12px;
+  }
+  .results-table th,
+  .results-table td {
+    padding: 8px 12px; text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .results-table th {
+    background: var(--panel-2); color: var(--text-dim);
+    font-weight: 600; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    cursor: pointer; user-select: none;
+    position: sticky; top: 0; z-index: 1;
+  }
+  .results-table th:hover { color: var(--text); }
+  .results-table th.sort-active { color: var(--accent); }
+  .results-table th.sort-active::after { content: " ▾"; font-size: 9px; }
+  .results-table th.sort-active.sort-asc::after { content: " ▴"; }
+  .results-table td { color: var(--text); }
+  .results-table tr.row-binding-target td:first-child { border-left: 3px solid var(--accent); }
+  .results-table tr.row-binding-source td:first-child { border-left: 3px solid var(--accent-2); }
+  .results-table tr.row-binding-equal td:first-child { border-left: 3px solid var(--warn); }
+  .results-table tbody tr {
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .results-table tbody tr:hover { background: var(--panel-2); }
+  .results-table .preview-cell {
+    width: 80px; padding: 4px 8px;
+  }
+  .results-table .preview-cell img {
+    width: 64px; height: 48px; object-fit: cover;
+    border-radius: 3px; display: block;
+  }
+  .results-table .ratio-better { color: var(--accent-2); }
+  .results-table .ratio-worse { color: var(--warn); }
+
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -351,24 +497,74 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
     <input type="text" id="custom-url" placeholder="https://example.com/photo.jpg — or pass ?source=URL in this page's URL" autocomplete="off">
   </div>
   <div class="control-group">
-    <label for="quality-select">Quality preset</label>
-    <select id="quality-select">
-      <option value="low">low (q=20)</option>
-      <option value="medium" selected>medium (q=50)</option>
-      <option value="high">high (q=80)</option>
+    <label>Quality presets</label>
+    <div class="checkbox-group" id="quality-group">
+      <label class="checkbox-pill"><input type="checkbox" value="low" checked> low (q=20)</label>
+      <label class="checkbox-pill"><input type="checkbox" value="medium" checked> medium (q=50)</label>
+      <label class="checkbox-pill"><input type="checkbox" value="high" checked> high (q=80)</label>
+    </div>
+  </div>
+  <div class="control-group">
+    <label>Output formats</label>
+    <div class="checkbox-group" id="format-group">
+      <label class="checkbox-pill"><input type="checkbox" value="webp" checked> webp</label>
+      <label class="checkbox-pill"><input type="checkbox" value="jpeg" checked> jpeg</label>
+    </div>
+  </div>
+  <div class="control-group" style="min-width: 200px;">
+    <label>Target size (shortest side)</label>
+    <div class="dropdown-multiselect" id="target-dropdown">
+      <button type="button" class="dropdown-trigger" id="target-trigger" aria-expanded="false" aria-haspopup="true">
+        <span class="dropdown-summary" id="target-summary">6 sizes</span>
+        <span class="dropdown-caret">▾</span>
+      </button>
+      <div class="dropdown-popover" id="target-popover" hidden>
+        <div class="dropdown-popover-header">
+          <button type="button" class="dropdown-link" id="target-all">all</button>
+          <button type="button" class="dropdown-link" id="target-none">none</button>
+          <button type="button" class="dropdown-link" id="target-default">default</button>
+        </div>
+        <div class="checkbox-group dropdown-checkboxes" id="target-group">
+          <label class="checkbox-pill"><input type="checkbox" value="320" checked> 320</label>
+          <label class="checkbox-pill"><input type="checkbox" value="480" checked> 480</label>
+          <label class="checkbox-pill"><input type="checkbox" value="640"> 640</label>
+          <label class="checkbox-pill"><input type="checkbox" value="720" checked> 720</label>
+          <label class="checkbox-pill"><input type="checkbox" value="854"> 854</label>
+          <label class="checkbox-pill"><input type="checkbox" value="960"> 960</label>
+          <label class="checkbox-pill"><input type="checkbox" value="1080" checked> 1080</label>
+          <label class="checkbox-pill"><input type="checkbox" value="1280"> 1280</label>
+          <label class="checkbox-pill"><input type="checkbox" value="1600"> 1600</label>
+          <label class="checkbox-pill"><input type="checkbox" value="1920"> 1920</label>
+          <label class="checkbox-pill"><input type="checkbox" value="2160" checked> 2160</label>
+          <label class="checkbox-pill"><input type="checkbox" value="2560"> 2560</label>
+          <label class="checkbox-pill"><input type="checkbox" value="3840" checked> 3840 (4K)</label>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="control-group">
+    <label for="sort-select">Sort by</label>
+    <select id="sort-select">
+      <option value="bpp" selected>bytes / pixel (efficiency)</option>
+      <option value="size">file size (smallest first)</option>
+      <option value="size-desc">file size (largest first)</option>
+      <option value="target">target resolution</option>
+      <option value="quality">quality preset</option>
+      <option value="format">format</option>
+      <option value="encode">encode dimension</option>
+      <option value="binding">binding term</option>
+      <option value="ratio">vs baseline</option>
     </select>
   </div>
   <div class="control-group">
-    <label for="format-select">Output format</label>
-    <select id="format-select">
-      <option value="auto" selected>auto (negotiate)</option>
-      <option value="avif">avif</option>
-      <option value="webp">webp</option>
-      <option value="jpeg">jpeg</option>
-    </select>
+    <label>View</label>
+    <div class="view-toggle">
+      <button class="view-btn active" data-view="grid" id="view-grid-btn">Grid</button>
+      <button class="view-btn" data-view="table" id="view-table-btn">Table</button>
+    </div>
   </div>
-  <div style="display: flex; gap: 8px;">
-    <button id="reload">Reload grid</button>
+  <div style="display: flex; gap: 8px; flex-shrink: 0;">
+    <button id="reload">Reload</button>
     <button id="share-link" class="btn-secondary" title="Copy a shareable link to this view">Share link</button>
   </div>
 </div>
@@ -377,7 +573,31 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
 
 <div id="baseline-wrap" class="baseline-wrap"></div>
 
+<div id="progress-bar" class="progress-bar" hidden>
+  <div class="progress-fill" id="progress-fill"></div>
+  <div class="progress-label" id="progress-label">0 / 0</div>
+</div>
+
 <div id="grid" class="grid"></div>
+
+<div id="table-wrap" class="table-wrap" hidden>
+  <table class="results-table">
+    <thead>
+      <tr>
+        <th data-sort-key="target">shortest side</th>
+        <th data-sort-key="encode">encode</th>
+        <th data-sort-key="quality">q</th>
+        <th data-sort-key="format">format</th>
+        <th data-sort-key="binding">binds</th>
+        <th data-sort-key="size">size</th>
+        <th data-sort-key="bpp">bytes/px</th>
+        <th data-sort-key="ratio">vs baseline</th>
+        <th>preview</th>
+      </tr>
+    </thead>
+    <tbody id="table-body"></tbody>
+  </table>
+</div>
 
 <div id="modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="modal compare-modal" id="modal">
@@ -450,15 +670,62 @@ cache   — X-Transcode-Cache: HIT, MISS, or PASS (passthrough)</pre>
 </details>
 
 <script>
-const TARGETS = [320, 480, 640, 720, 800, 854, 960, 1080, 1280, 1600, 1920, 2560];
+const ALL_TARGETS = [320, 480, 640, 720, 854, 960, 1080, 1280, 1600, 1920, 2160, 2560, 3840];
+const DEFAULT_TARGETS = [320, 480, 720, 1080, 2160, 3840];
+const ALL_QUALITIES = ['low', 'medium', 'high'];
+const ALL_FORMATS = ['webp', 'jpeg'];
+const FETCH_CONCURRENCY = 6;
 
 const sourceSelect = document.getElementById('source-select');
 const customUrl = document.getElementById('custom-url');
-const qualitySelect = document.getElementById('quality-select');
-const formatSelect = document.getElementById('format-select');
+const qualityGroup = document.getElementById('quality-group');
+const formatGroup = document.getElementById('format-group');
+const targetGroup = document.getElementById('target-group');
+const targetDropdown = document.getElementById('target-dropdown');
+const targetTrigger = document.getElementById('target-trigger');
+const targetPopover = document.getElementById('target-popover');
+const targetSummary = document.getElementById('target-summary');
+const targetAllBtn = document.getElementById('target-all');
+const targetNoneBtn = document.getElementById('target-none');
+const targetDefaultBtn = document.getElementById('target-default');
+const sortSelect = document.getElementById('sort-select');
+const viewGridBtn = document.getElementById('view-grid-btn');
+const viewTableBtn = document.getElementById('view-table-btn');
 const reloadBtn = document.getElementById('reload');
 const sourceInfo = document.getElementById('source-info');
 const grid = document.getElementById('grid');
+const tableWrap = document.getElementById('table-wrap');
+const tableBody = document.getElementById('table-body');
+const progressBar = document.getElementById('progress-bar');
+const progressFill = document.getElementById('progress-fill');
+const progressLabel = document.getElementById('progress-label');
+
+// All loaded results, accumulated as fetches complete. Each entry holds the
+// metadata we need to render either a tile or a table row, plus everything
+// the compare modal needs.
+let explorerResults = [];
+let currentViewMode = 'grid';
+let currentSortKey = 'bpp';
+let currentSortDir = 'asc';
+let baselineBytes = 0; // For "vs baseline" ratios in table view
+// Incremented on each loadExplorer() call. Workers from a prior invocation
+// check their captured generation against this and abort their writes if
+// stale, preventing mixed results when the user changes source/filters
+// while fetches are still in flight.
+let explorerGeneration = 0;
+// rAF-coalesced render flag — many concurrent fetches all completing in
+// the same frame collapse to a single DOM rebuild instead of N rebuilds.
+let renderScheduled = false;
+
+function getCheckedValues(group) {
+  return Array.from(group.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+}
+function setCheckedValues(group, values) {
+  const set = new Set(values);
+  group.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.checked = set.has(cb.value);
+  });
+}
 
 function currentSource() {
   const custom = customUrl.value.trim();
@@ -500,6 +767,32 @@ function bindingClass(binding) {
   if (binding === 'source') return 'source';
   if (binding === 'equal') return 'equal';
   return '';
+}
+
+// Resolves with the natural pixel dimensions of an image URL. Returns
+// { w: 0, h: 0 } if the image fails to load — caller can treat that as
+// "unknown" and fall back to interpreting target as width directly.
+function getNaturalDimensions(url) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => resolve({ w: 0, h: 0 });
+    img.src = url;
+  });
+}
+
+// Converts a "shortest side = S" target into the proxy w= value, given the
+// source's aspect ratio. The proxy's w parameter resizes the image to that
+// width while preserving aspect — so for landscape sources we send the longer
+// side, for portrait we send w=S directly (since w IS the shorter side then).
+function shortestSideToWidth(shortestSide, sourceW, sourceH) {
+  if (!sourceW || !sourceH) return shortestSide; // Unknown source — fall back
+  if (sourceW >= sourceH) {
+    // Landscape (or square): height is the shorter side, so w = S × aspect
+    return Math.round(shortestSide * (sourceW / sourceH));
+  }
+  // Portrait: width is the shorter side, so w = S directly
+  return shortestSide;
 }
 
 function fileSizeClass(bytes, target) {
@@ -608,93 +901,359 @@ async function loadBaseline(source) {
   }
 }
 
-async function loadGrid() {
-  const source = currentSource();
-  const q = qualitySelect.value;
-  const f = formatSelect.value;
+// ---------------------------------------------------------------------------
+// Explorer — multi-select matrix loader, sortable grid + table render
 
-  sourceInfo.innerHTML = 'Source: <strong>' + escapeHtml(source) + '</strong>';
-  grid.innerHTML = '';
+function getSelectedCombinations() {
+  const targets = getCheckedValues(targetGroup).map(s => parseInt(s, 10)).filter(n => !isNaN(n));
+  const qualities = getCheckedValues(qualityGroup);
+  const formats = getCheckedValues(formatGroup);
+  const combos = [];
+  for (const t of targets) {
+    for (const q of qualities) {
+      for (const f of formats) {
+        combos.push({ target: t, quality: q, format: f });
+      }
+    }
+  }
+  return combos;
+}
 
-  // Build and load the baseline tile (source through proxy passthrough — no
-  // options applied means the worker streams the source unmodified).
-  loadBaseline(source);
+function comboId(c) {
+  return c.target + ':' + c.quality + ':' + c.format;
+}
 
-  // Build tiles up front so they appear immediately
-  const tiles = TARGETS.map(target => {
-    const tile = document.createElement('div');
-    tile.className = 'tile loading';
-    const path = buildProxyPath(source, target, q, f);
-    tile.innerHTML = \`
-      <div class="tile-header">
-        <span class="target">target \${target}px</span>
-        <span class="formula">w=\${target},q=\${q},f=\${f}</span>
-      </div>
-      <div class="tile-image"></div>
-      <div class="tile-meta" data-target="\${target}"><div class="row"><span>loading…</span></div></div>
-    \`;
-    grid.appendChild(tile);
-    return { tile, target, path };
+let progressHideTimer = null;
+function setProgress(loaded, total) {
+  if (progressHideTimer !== null) {
+    clearTimeout(progressHideTimer);
+    progressHideTimer = null;
+  }
+  if (total === 0) {
+    progressBar.hidden = true;
+    return;
+  }
+  progressBar.hidden = false;
+  const pct = Math.round((loaded / total) * 100);
+  progressFill.style.width = pct + '%';
+  progressLabel.textContent = loaded + ' / ' + total + ' loaded';
+  if (loaded >= total) {
+    // Briefly show 100% then hide
+    progressHideTimer = setTimeout(() => {
+      progressBar.hidden = true;
+      progressHideTimer = null;
+    }, 600);
+  }
+}
+
+// Run an array of async work with a concurrency cap. onProgress(done, total)
+// fires after each completion.
+async function runWithConcurrency(items, worker, maxConcurrent, onProgress) {
+  let index = 0;
+  let done = 0;
+  const total = items.length;
+  if (onProgress) onProgress(0, total);
+
+  async function runOne() {
+    while (true) {
+      const i = index++;
+      if (i >= items.length) return;
+      try {
+        await worker(items[i], i);
+      } catch (_err) {
+        // Worker handles its own errors; we just continue the queue
+      }
+      done++;
+      if (onProgress) onProgress(done, total);
+    }
+  }
+
+  const runners = Array.from({ length: Math.min(maxConcurrent, items.length) }, runOne);
+  await Promise.all(runners);
+}
+
+function scheduleRender() {
+  if (renderScheduled) return;
+  renderScheduled = true;
+  requestAnimationFrame(() => {
+    renderScheduled = false;
+    renderExplorer();
   });
+}
 
-  // Load all in parallel
-  await Promise.all(tiles.map(async ({ tile, target, path }) => {
+async function loadExplorer() {
+  const myGeneration = ++explorerGeneration;
+  const source = currentSource();
+  const combos = getSelectedCombinations();
+
+  sourceInfo.innerHTML = 'Source: <strong>' + escapeHtml(source) + '</strong> · ' +
+    '<span style="color: var(--text-dim);">' + combos.length + ' combinations to evaluate</span>';
+
+  // Reset state
+  explorerResults = [];
+  baselineBytes = 0;
+  grid.innerHTML = '';
+  tableBody.innerHTML = '';
+
+  // Load baseline first — gives us bytes & source dimensions for ratio columns
+  await loadBaseline(source);
+  if (myGeneration !== explorerGeneration) return;
+  // Pick up baseline state from its tile dataset for ratio metrics
+  const baselineTile = document.querySelector('.baseline-tile');
+  if (baselineTile && baselineTile.dataset.size) {
+    baselineBytes = parseInt(baselineTile.dataset.size, 10) || 0;
+  }
+
+  if (combos.length === 0) {
+    setProgress(0, 0);
+    return;
+  }
+
+  // Resolve source aspect ratio so we can interpret target as "shortest side".
+  // We need the natural dimensions of the unmodified source. Try the baseline
+  // tile's dataset first (it may already have them from img.onload); if not
+  // there yet, load them via the passthrough URL directly.
+  let srcW = parseInt((baselineTile && baselineTile.dataset.sourceW) || '0', 10);
+  let srcH = parseInt((baselineTile && baselineTile.dataset.sourceH) || '0', 10);
+  if (!srcW || !srcH) {
+    const dims = await getNaturalDimensions('/image/' + source);
+    if (myGeneration !== explorerGeneration) return;
+    srcW = dims.w;
+    srcH = dims.h;
+  }
+
+  setProgress(0, combos.length);
+
+  await runWithConcurrency(combos, async (combo) => {
+    // combo.target is the shortest-side target. Convert to proxy w= for this
+    // source's aspect ratio.
+    const proxyW = shortestSideToWidth(combo.target, srcW, srcH);
+    const path = buildProxyPath(source, proxyW, combo.quality, combo.format);
     const fullUrl = window.location.origin + path;
     try {
       const result = await fetchHead(fullUrl);
+      if (myGeneration !== explorerGeneration) return;
       const h = result.headers;
-      const sourceW = h['x-transcode-source-w'];
-      const sourceH = h['x-transcode-source-h'];
-      const encodeW = h['x-transcode-encode-w'];
-      const encodeH = h['x-transcode-encode-h'];
+      const encodeW = parseInt(h['x-transcode-encode-w'] || '0', 10);
+      const encodeH = parseInt(h['x-transcode-encode-h'] || '0', 10);
+      const sourceW = parseInt(h['x-transcode-source-w'] || '0', 10);
+      const sourceH = parseInt(h['x-transcode-source-h'] || '0', 10);
       const binding = h['x-transcode-binding'] || '';
-      const quality = h['x-transcode-quality'];
-      const format = (h['x-transcode-format'] || h['content-type'] || '').replace('image/', '');
+      const quality = h['x-transcode-quality'] || '';
+      // WebP and JPEG are both reliably encoded by Cloudflare Images with no
+      // silent fallback (unlike AVIF, which has a 1600px hard limit and
+      // downgrades to WebP). With AVIF removed from the format selector, the
+      // requested format always matches the delivered format, so a single
+      // format field read from Content-Type is sufficient.
+      const format = (h['content-type'] || h['x-transcode-format'] || '').split(';')[0].replace('image/', '');
       const cache = h['x-transcode-cache'] || '';
-
-      tile.classList.remove('loading');
-      tile.classList.add(bindingClass(binding));
-      // Store metadata for the modal
-      tile.dataset.target = String(target);
-      tile.dataset.path = path;
-      tile.dataset.sourceW = sourceW || '';
-      tile.dataset.sourceH = sourceH || '';
-      tile.dataset.encodeW = encodeW || '';
-      tile.dataset.encodeH = encodeH || '';
-      tile.dataset.binding = binding;
-      tile.dataset.quality = quality || '';
-      tile.dataset.format = format;
-      tile.dataset.cache = cache;
-      tile.dataset.size = String(result.size);
-      tile.setAttribute('role', 'button');
-      tile.setAttribute('tabindex', '0');
-      tile.setAttribute('aria-label', 'Open ' + target + 'px preview');
-
-      const img = document.createElement('img');
-      img.src = path;
-      img.alt = 'target ' + target;
-      img.loading = 'lazy';
-      const imgWrap = tile.querySelector('.tile-image');
-      imgWrap.innerHTML = '';
-      imgWrap.appendChild(img);
-
-      const meta = tile.querySelector('.tile-meta');
-      const sizeCls = fileSizeClass(result.size, target);
-      meta.innerHTML = \`
-        <div class="row"><span>source</span><strong>\${sourceW || '?'} × \${sourceH || '?'}</strong></div>
-        <div class="row"><span>encode</span><strong>\${encodeW || '?'} × \${encodeH || '?'}</strong></div>
-        <div class="row"><span>binds</span><strong>\${binding || '—'}</strong></div>
-        <div class="row"><span>quality</span><strong>\${quality || '?'}</strong></div>
-        <div class="row"><span>format</span><strong>\${format || '?'}</strong></div>
-        <div class="row"><span>size</span><strong class="file-size \${sizeCls}">\${formatBytes(result.size)}</strong></div>
-        <div class="row"><span>cache</span><strong>\${cache || '—'}</strong></div>
-      \`;
+      const pixels = encodeW * encodeH;
+      const bpp = pixels > 0 ? (result.size / pixels) : 0;
+      const entry = {
+        id: comboId(combo),
+        target: combo.target,             // The shortest-side target (UI semantics)
+        requestedW: proxyW,               // The actual proxy w= we sent
+        requestedQuality: combo.quality,
+        requestedFormat: combo.format,
+        path,
+        size: result.size,
+        bpp,
+        sourceW, sourceH,
+        encodeW, encodeH,
+        binding,
+        quality,
+        format,
+        cache,
+      };
+      explorerResults.push(entry);
+      scheduleRender();
     } catch (err) {
-      tile.classList.remove('loading');
-      tile.classList.add('error');
-      tile.querySelector('.tile-image').textContent = 'failed: ' + err.message;
+      if (myGeneration !== explorerGeneration) return;
+      explorerResults.push({
+        id: comboId(combo),
+        target: combo.target,
+        requestedW: proxyW,
+        requestedQuality: combo.quality,
+        requestedFormat: combo.format,
+        path: '',
+        size: 0, bpp: 0,
+        sourceW: 0, sourceH: 0,
+        encodeW: 0, encodeH: 0,
+        binding: 'error',
+        quality: '',
+        format: '',
+        cache: '',
+        error: err && err.message ? err.message : 'fetch failed',
+      });
+      scheduleRender();
     }
-  }));
+  }, FETCH_CONCURRENCY, setProgress);
+}
+
+// Sort comparator factory
+function compareResults(a, b, key, dir) {
+  const sign = dir === 'desc' ? -1 : 1;
+  let va, vb;
+  switch (key) {
+    case 'bpp':       va = a.bpp;       vb = b.bpp;       break;
+    case 'size':      va = a.size;      vb = b.size;      break;
+    case 'target':    va = a.target;    vb = b.target;    break;
+    case 'quality':
+      // Map to numeric for sort: low < medium < high
+      const qrank = { low: 0, medium: 1, high: 2 };
+      va = qrank[a.requestedQuality] ?? -1;
+      vb = qrank[b.requestedQuality] ?? -1;
+      break;
+    case 'format':    va = a.format;    vb = b.format;    break;
+    case 'encode':    va = a.encodeW;   vb = b.encodeW;   break;
+    case 'binding':   va = a.binding;   vb = b.binding;   break;
+    case 'ratio':
+      va = baselineBytes > 0 ? a.size / baselineBytes : 0;
+      vb = baselineBytes > 0 ? b.size / baselineBytes : 0;
+      break;
+    default:          va = a.target;    vb = b.target;
+  }
+  if (va < vb) return -1 * sign;
+  if (va > vb) return  1 * sign;
+  return 0;
+}
+
+function sortedResults() {
+  const out = explorerResults.slice();
+  out.sort((a, b) => compareResults(a, b, currentSortKey, currentSortDir));
+  return out;
+}
+
+function renderExplorer() {
+  const items = sortedResults();
+  if (currentViewMode === 'grid') {
+    renderExplorerGrid(items);
+  } else {
+    renderExplorerTable(items);
+  }
+}
+
+function renderExplorerGrid(items) {
+  // Rebuild the grid in sorted order. Reusing existing tiles avoids image
+  // re-fetching since the proxy URL is the same and browser caches it.
+  // We just replace the contents in the right order.
+  grid.innerHTML = '';
+  for (const e of items) {
+    const tile = document.createElement('div');
+    if (e.error) {
+      tile.className = 'tile error';
+      tile.innerHTML = '<div class="tile-header"><span class="target">' + e.target +
+        'px (shortest)</span><span class="formula">q=' + e.requestedQuality + ',f=' + e.requestedFormat +
+        '</span></div><div class="tile-image">failed: ' + escapeHtml(e.error) +
+        '</div><div class="tile-meta"></div>';
+      grid.appendChild(tile);
+      continue;
+    }
+    tile.className = 'tile ' + bindingClass(e.binding);
+    // Same dataset shape the modal expects
+    tile.dataset.target = String(e.target);
+    tile.dataset.path = e.path;
+    tile.dataset.sourceW = String(e.sourceW);
+    tile.dataset.sourceH = String(e.sourceH);
+    tile.dataset.encodeW = String(e.encodeW);
+    tile.dataset.encodeH = String(e.encodeH);
+    tile.dataset.binding = e.binding;
+    tile.dataset.quality = e.quality;
+    tile.dataset.format = e.format;
+    tile.dataset.cache = e.cache;
+    tile.dataset.size = String(e.size);
+    tile.setAttribute('role', 'button');
+    tile.setAttribute('tabindex', '0');
+    tile.setAttribute('aria-label', 'Open ' + e.target + 'px shortest-side preview');
+
+    const bppStr = e.bpp > 0 ? e.bpp.toFixed(3) : '?';
+    // For display, show what the user asked for (shortest side) + the
+    // actual proxy w= we sent (only meaningfully different on landscape).
+    const wHint = e.requestedW && e.requestedW !== e.target ? '  (w=' + e.requestedW + ')' : '';
+    tile.innerHTML =
+      '<div class="tile-header">' +
+        '<span class="target">' + e.target + 'px shortest</span>' +
+        '<span class="formula">q=' + e.requestedQuality + ',f=' + e.requestedFormat + wHint + '</span>' +
+      '</div>' +
+      '<div class="tile-image"><img loading="lazy" src="' + escapeHtml(e.path) + '" alt="' + e.target + 'px shortest side"></div>' +
+      '<div class="tile-meta">' +
+        '<div class="row"><span>encode</span><strong>' + e.encodeW + ' × ' + e.encodeH + '</strong></div>' +
+        '<div class="row"><span>binds</span><strong>' + (e.binding || '—') + '</strong></div>' +
+        '<div class="row"><span>quality</span><strong>' + (e.quality || '?') + '</strong></div>' +
+        '<div class="row"><span>format</span><strong>' + (e.format || '?') + '</strong></div>' +
+        '<div class="row"><span>size</span><strong>' + formatBytes(e.size) + '</strong></div>' +
+        '<div class="row"><span>bytes/px</span><strong>' + bppStr + '</strong></div>' +
+      '</div>';
+    grid.appendChild(tile);
+  }
+}
+
+function renderExplorerTable(items) {
+  tableBody.innerHTML = '';
+  // Update sort indicator on headers
+  document.querySelectorAll('.results-table th[data-sort-key]').forEach(th => {
+    th.classList.remove('sort-active', 'sort-asc');
+    if (th.dataset.sortKey === currentSortKey) {
+      th.classList.add('sort-active');
+      if (currentSortDir === 'asc') {
+        th.classList.add('sort-asc');
+      }
+    }
+  });
+  for (const e of items) {
+    const tr = document.createElement('tr');
+    if (e.error) {
+      tr.innerHTML = '<td>' + e.target + '</td><td colspan="8">failed: ' + escapeHtml(e.error) + '</td>';
+      tableBody.appendChild(tr);
+      continue;
+    }
+    tr.classList.add('row-binding-' + (e.binding || 'unknown'));
+    tr.dataset.target = String(e.target);
+    tr.dataset.path = e.path;
+    tr.dataset.sourceW = String(e.sourceW);
+    tr.dataset.sourceH = String(e.sourceH);
+    tr.dataset.encodeW = String(e.encodeW);
+    tr.dataset.encodeH = String(e.encodeH);
+    tr.dataset.binding = e.binding;
+    tr.dataset.quality = e.quality;
+    tr.dataset.format = e.format;
+    tr.dataset.cache = e.cache;
+    tr.dataset.size = String(e.size);
+    tr.setAttribute('role', 'button');
+    tr.setAttribute('tabindex', '0');
+
+    const ratio = baselineBytes > 0 ? (e.size / baselineBytes) : 0;
+    const ratioStr = ratio > 0 ? (ratio * 100).toFixed(1) + '%' : '—';
+    const ratioCls = ratio > 0 && ratio < 0.5 ? 'ratio-better' : ratio > 1 ? 'ratio-worse' : '';
+    const bppStr = e.bpp > 0 ? e.bpp.toFixed(3) : '?';
+    tr.innerHTML =
+      '<td>' + e.target + 'px</td>' +
+      '<td>' + e.encodeW + ' × ' + e.encodeH + '</td>' +
+      '<td>' + (e.quality || '?') + '</td>' +
+      '<td>' + (e.format || '?') + '</td>' +
+      '<td>' + (e.binding || '—') + '</td>' +
+      '<td>' + formatBytes(e.size) + '</td>' +
+      '<td>' + bppStr + '</td>' +
+      '<td class="' + ratioCls + '">' + ratioStr + '</td>' +
+      '<td class="preview-cell"><img loading="lazy" src="' + escapeHtml(e.path) + '" alt=""></td>';
+    tableBody.appendChild(tr);
+  }
+}
+
+function setViewMode(mode) {
+  currentViewMode = mode;
+  if (mode === 'grid') {
+    grid.hidden = false;
+    tableWrap.hidden = true;
+    viewGridBtn.classList.add('active');
+    viewTableBtn.classList.remove('active');
+  } else {
+    grid.hidden = true;
+    tableWrap.hidden = false;
+    viewGridBtn.classList.remove('active');
+    viewTableBtn.classList.add('active');
+  }
+  renderExplorer();
 }
 
 function escapeHtml(s) {
@@ -759,15 +1318,18 @@ function gatherCompareEntries() {
     });
   }
 
-  // Every loaded transcoded tile
-  document.querySelectorAll('.tile').forEach(tile => {
-    if (tile.classList.contains('loading') || tile.classList.contains('error')) return;
-    const d = tile.dataset;
+  // Every loaded transcoded tile (from grid view) or table row
+  const selector = currentViewMode === 'grid' ? '.tile' : '.results-table tbody tr';
+  document.querySelectorAll(selector).forEach(el => {
+    if (el.classList.contains('loading') || el.classList.contains('error')) return;
+    if (!el.dataset.path) return; // header row or non-result row
+    const d = el.dataset;
     const target = parseInt(d.target, 10);
     const encodeW = parseInt(d.encodeW || '0', 10);
     const encodeH = parseInt(d.encodeH || '0', 10);
+    const id = 'tile-' + target + '-' + (d.quality || '?') + '-' + (d.format || '?');
     entries.push({
-      id: 'tile-' + target,
+      id,
       kind: 'tile',
       label: 'target ' + target + 'px — encode ' + encodeW + '×' + encodeH + ' q=' + d.quality + ' ' + d.format,
       path: d.path,
@@ -946,19 +1508,38 @@ zoomOutBtn.addEventListener('click', () => setZoom(compareState.zoom / 1.5));
 zoomFitBtn.addEventListener('click', setZoomFit);
 
 // Tile click → open compare modal with that tile pre-selected on the right
+function tileEntryId(el) {
+  const target = el.dataset.target;
+  const q = el.dataset.quality || '?';
+  const f = el.dataset.format || '?';
+  return target ? 'tile-' + target + '-' + q + '-' + f : null;
+}
+
 grid.addEventListener('click', (e) => {
   const tile = e.target.closest('.tile');
   if (!tile || tile.classList.contains('loading') || tile.classList.contains('error')) return;
-  const target = tile.dataset.target;
-  openCompareModal(target ? 'tile-' + target : null);
+  openCompareModal(tileEntryId(tile));
 });
 grid.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' && e.key !== ' ') return;
   const tile = e.target.closest('.tile');
   if (!tile || tile.classList.contains('loading') || tile.classList.contains('error')) return;
   e.preventDefault();
-  const target = tile.dataset.target;
-  openCompareModal(target ? 'tile-' + target : null);
+  openCompareModal(tileEntryId(tile));
+});
+
+// Table row click → open compare modal with that row as right panel
+tableBody.addEventListener('click', (e) => {
+  const row = e.target.closest('tr');
+  if (!row || !row.dataset.path) return;
+  openCompareModal(tileEntryId(row));
+});
+tableBody.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const row = e.target.closest('tr');
+  if (!row || !row.dataset.path) return;
+  e.preventDefault();
+  openCompareModal(tileEntryId(row));
 });
 
 // Baseline tile click → open compare modal with baseline on both sides initially
@@ -997,35 +1578,45 @@ function readUrlState() {
   const params = new URLSearchParams(window.location.search);
   return {
     source: params.get('source'),
-    q: params.get('q'),
-    f: params.get('f'),
+    q: params.get('q'),       // comma-separated list of qualities
+    f: params.get('f'),       // comma-separated list of formats
+    w: params.get('w'),       // comma-separated list of target widths
+    sort: params.get('sort'), // sort key
+    view: params.get('view'), // 'grid' or 'table'
   };
 }
 
 function writeUrlState() {
-  // Build a clean query string reflecting current control state.
   const params = new URLSearchParams();
   const sourceVal = currentSource();
   if (sourceVal) params.set('source', sourceVal);
-  if (qualitySelect.value && qualitySelect.value !== 'medium') {
-    params.set('q', qualitySelect.value);
+
+  // Only encode arrays when they differ from "all checked" (the default).
+  // Keeps shareable URLs short for the common case.
+  const q = getCheckedValues(qualityGroup);
+  const f = getCheckedValues(formatGroup);
+  const w = getCheckedValues(targetGroup).map(Number);
+  if (q.length !== ALL_QUALITIES.length) params.set('q', q.join(','));
+  if (f.length !== ALL_FORMATS.length) params.set('f', f.join(','));
+  // Targets: only encode if different from the default selection (not "all")
+  const defaultTargetsSorted = DEFAULT_TARGETS.slice().sort((a, b) => a - b).join(',');
+  const wSorted = w.slice().sort((a, b) => a - b).join(',');
+  if (wSorted !== defaultTargetsSorted) params.set('w', w.join(','));
+  if (currentSortKey !== 'bpp' || currentSortDir !== 'asc') {
+    const sortValue = currentSortDir === 'desc' ? currentSortKey + '-desc' : currentSortKey;
+    params.set('sort', sortValue);
   }
-  if (formatSelect.value && formatSelect.value !== 'auto') {
-    params.set('f', formatSelect.value);
-  }
+  if (currentViewMode !== 'grid') params.set('view', currentViewMode);
+
   const qs = params.toString();
   const newUrl = window.location.pathname + (qs ? '?' + qs : '');
-  // replaceState so the user can hit back and not get stuck in their own state
   history.replaceState(null, '', newUrl);
 }
 
 function applyUrlState() {
-  const { source, q, f } = readUrlState();
+  const { source, q, f, w, sort, view } = readUrlState();
   if (source) {
-    // If the source matches a dropdown option, select it. Otherwise put it in
-    // the custom URL field. Either way the page loads with their image.
-    const matchingOption = Array.from(sourceSelect.options)
-      .find(opt => opt.value === source);
+    const matchingOption = Array.from(sourceSelect.options).find(opt => opt.value === source);
     if (matchingOption) {
       sourceSelect.value = source;
       customUrl.value = '';
@@ -1033,11 +1624,27 @@ function applyUrlState() {
       customUrl.value = source;
     }
   }
-  if (q && ['low', 'medium', 'high'].includes(q)) {
-    qualitySelect.value = q;
+  if (q !== null) {
+    setCheckedValues(qualityGroup, q.split(',').filter(s => ALL_QUALITIES.includes(s)));
   }
-  if (f && ['auto', 'avif', 'webp', 'jpeg'].includes(f)) {
-    formatSelect.value = f;
+  if (f !== null) {
+    setCheckedValues(formatGroup, f.split(',').filter(s => ALL_FORMATS.includes(s)));
+  }
+  if (w !== null) {
+    setCheckedValues(targetGroup, w.split(',').filter(s => ALL_TARGETS.includes(parseInt(s, 10))));
+  }
+  if (sort) {
+    const validKeys = ['bpp', 'size', 'target', 'quality', 'format', 'encode', 'binding', 'ratio'];
+    const isDesc = sort.endsWith('-desc');
+    const baseKey = isDesc ? sort.slice(0, -'-desc'.length) : sort;
+    if (validKeys.includes(baseKey)) {
+      currentSortKey = baseKey;
+      currentSortDir = isDesc ? 'desc' : 'asc';
+      sortSelect.value = baseKey === 'size' && isDesc ? 'size-desc' : baseKey;
+    }
+  }
+  if (view === 'table') {
+    setViewMode('table');
   }
 }
 
@@ -1081,29 +1688,116 @@ shareLinkBtn.addEventListener('click', async () => {
   }
 });
 
-reloadBtn.addEventListener('click', loadGrid);
+// Debounce checkbox changes so toggling several pills doesn't fire N reloads
+let reloadTimer = null;
+function scheduleReload() {
+  writeUrlState();
+  if (reloadTimer) clearTimeout(reloadTimer);
+  reloadTimer = setTimeout(() => { loadExplorer(); }, 280);
+}
+
+// Update the dropdown summary ("6 widths") based on what's selected
+function updateTargetSummary() {
+  const checked = getCheckedValues(targetGroup);
+  const n = checked.length;
+  if (n === 0) {
+    targetSummary.textContent = 'none selected';
+  } else if (n === ALL_TARGETS.length) {
+    targetSummary.textContent = 'all ' + n + ' sizes';
+  } else {
+    targetSummary.textContent = n + ' size' + (n === 1 ? '' : 's');
+  }
+}
+
+// Dropdown open/close + outside-click + Esc to close
+function setTargetDropdownOpen(open) {
+  targetTrigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  targetPopover.hidden = !open;
+}
+targetTrigger.addEventListener('click', (e) => {
+  e.stopPropagation();
+  setTargetDropdownOpen(targetPopover.hidden);
+});
+document.addEventListener('click', (e) => {
+  if (targetPopover.hidden) return;
+  if (!targetDropdown.contains(e.target)) setTargetDropdownOpen(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !targetPopover.hidden) setTargetDropdownOpen(false);
+});
+
+// Quick-set buttons
+targetAllBtn.addEventListener('click', () => {
+  setCheckedValues(targetGroup, ALL_TARGETS.map(String));
+  updateTargetSummary();
+  scheduleReload();
+});
+targetNoneBtn.addEventListener('click', () => {
+  setCheckedValues(targetGroup, []);
+  updateTargetSummary();
+  scheduleReload();
+});
+targetDefaultBtn.addEventListener('click', () => {
+  setCheckedValues(targetGroup, DEFAULT_TARGETS.map(String));
+  updateTargetSummary();
+  scheduleReload();
+});
+
+reloadBtn.addEventListener('click', () => { loadExplorer(); });
 sourceSelect.addEventListener('change', () => {
   customUrl.value = '';
   writeUrlState();
-  loadGrid();
+  loadExplorer();
 });
 customUrl.addEventListener('change', () => {
   writeUrlState();
-  loadGrid();
+  loadExplorer();
 });
-qualitySelect.addEventListener('change', () => {
-  writeUrlState();
-  loadGrid();
-});
-formatSelect.addEventListener('change', () => {
-  writeUrlState();
-  loadGrid();
+qualityGroup.addEventListener('change', scheduleReload);
+formatGroup.addEventListener('change', scheduleReload);
+targetGroup.addEventListener('change', () => {
+  updateTargetSummary();
+  scheduleReload();
 });
 
-// Initial load: apply URL state to controls, then load grid, then sync URL
-// back (so any defaults missing from the URL get reflected if needed).
+// Sort dropdown — re-renders without re-fetching
+sortSelect.addEventListener('change', () => {
+  const v = sortSelect.value;
+  if (v === 'size-desc') {
+    currentSortKey = 'size';
+    currentSortDir = 'desc';
+  } else {
+    currentSortKey = v;
+    currentSortDir = 'asc';
+  }
+  writeUrlState();
+  renderExplorer();
+});
+
+// View mode toggle
+viewGridBtn.addEventListener('click', () => { setViewMode('grid'); writeUrlState(); });
+viewTableBtn.addEventListener('click', () => { setViewMode('table'); writeUrlState(); });
+
+// Table header click → sort by that column
+document.querySelectorAll('.results-table th[data-sort-key]').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.sortKey;
+    if (key === currentSortKey) {
+      currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      currentSortKey = key;
+      currentSortDir = 'asc';
+    }
+    sortSelect.value = currentSortKey === 'size' && currentSortDir === 'desc' ? 'size-desc' : currentSortKey;
+    writeUrlState();
+    renderExplorer();
+  });
+});
+
+// Initial load
 applyUrlState();
-loadGrid();
+updateTargetSummary();
+loadExplorer();
 writeUrlState();
 </script>
 
