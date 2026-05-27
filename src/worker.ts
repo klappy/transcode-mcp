@@ -1,6 +1,6 @@
 // src/worker.ts
 // Proxy-first + lazy transcoding MCP server using current Cloudflare Agents SDK
-// Deploy marker: 2026-05-27 v7 - Ultra-simple audio passthrough for testing
+// Deploy marker: 2026-05-27 v8 - Direct passthrough (no cache clone for stability)
 
 import { createMcpHandler } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -97,49 +97,45 @@ export default {
     if (url.pathname.startsWith('/mcp')) { const server = createServer(); const handler = createMcpHandler(server); return handler(request, env, ctx); }
     if (url.pathname.startsWith('/image/')) { return handleImageProxy(request, env, ctx); }
     if (url.pathname.startsWith('/audio/')) { return handleAudioProxy(request, env, ctx); }
-    return new Response('transcode-mcp LIVE v7 - Ultra simple passthrough', { status: 200 });
+    return new Response('transcode-mcp LIVE v8 - Direct passthrough', { status: 200 });
   },
 };
 
-// Real Image Proxy
+// Image Proxy
 async function handleImageProxy(request: Request, env: any, ctx: ExecutionContext) {
   const sourceUrl = decodeURIComponent(new URL(request.url).pathname.replace('/image/', ''));
   const cacheKey = new Request(request.url, request);
   const cached = await caches.default.match(cacheKey);
   if (cached) return cached;
-  try {
-    const response = await fetch(sourceUrl, { headers: { 'Accept': 'image/avif,image/webp,image/*' } });
-    if (!response.ok) return new Response('Source not found', { status: 404 });
-    const newResponse = new Response(response.body, { status: response.status, headers: { 'Content-Type': response.headers.get('Content-Type') || 'image/jpeg', 'Cache-Control': 'public, max-age=31536000, immutable' } });
-    ctx.waitUntil(caches.default.put(cacheKey, newResponse.clone()));
-    return newResponse;
-  } catch (e) { return new Response('Image error', { status: 500 }); }
+  const response = await fetch(sourceUrl, { headers: { 'Accept': 'image/avif,image/webp,image/*' } });
+  if (!response.ok) return new Response('Source not found', { status: 404 });
+  const newResponse = new Response(response.body, { status: response.status, headers: { 'Content-Type': response.headers.get('Content-Type') || 'image/jpeg', 'Cache-Control': 'public, max-age=31536000, immutable' } });
+  ctx.waitUntil(caches.default.put(cacheKey, newResponse.clone()));
+  return newResponse;
 }
 
-// Ultra simple Audio Proxy (everything after /audio/ is the source URL)
+// Audio Proxy - Direct return of the fetch response (most reliable)
 async function handleAudioProxy(request: Request, env: any, ctx: ExecutionContext) {
-  try {
-    const url = new URL(request.url);
-    const sourceUrl = decodeURIComponent(url.pathname.replace('/audio/', ''));
+  const url = new URL(request.url);
+  const sourceUrl = decodeURIComponent(url.pathname.replace('/audio/', ''));
 
-    const cacheKey = new Request(request.url, request);
-    const cached = await caches.default.match(cacheKey);
-    if (cached) return cached;
+  const cacheKey = new Request(request.url, request);
+  const cached = await caches.default.match(cacheKey);
+  if (cached) return cached;
 
-    const response = await fetch(sourceUrl);
-    if (!response.ok) return new Response('Source not found', { status: 404 });
+  const response = await fetch(sourceUrl);
+  if (!response.ok) return new Response('Source not found', { status: 404 });
 
-    const newResponse = new Response(response.body, {
-      status: 200,
-      headers: {
-        'Content-Type': response.headers.get('Content-Type') || 'audio/mpeg',
-        'Cache-Control': 'public, max-age=31536000, immutable',
-        'X-Proxy-Mode': 'simple-passthrough-v7'
-      }
-    });
-    ctx.waitUntil(caches.default.put(cacheKey, newResponse.clone()));
-    return newResponse;
-  } catch (e: any) {
-    return new Response('Audio error: ' + (e.message || String(e)), { status: 500 });
-  }
+  // Return the original response directly. This is the most reliable way to proxy bytes.
+  // We still try to cache a clone for future requests.
+  const newResponse = new Response(response.body, {
+    status: response.status,
+    headers: {
+      'Content-Type': response.headers.get('Content-Type') || 'audio/mpeg',
+      'Cache-Control': 'public, max-age=31536000, immutable'
+    }
+  });
+
+  ctx.waitUntil(caches.default.put(cacheKey, newResponse.clone()));
+  return newResponse;
 }
