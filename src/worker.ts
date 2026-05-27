@@ -27,6 +27,7 @@ function createServer() {
     version: "0.1.0",
   });
 
+  // === Existing tool ===
   server.tool(
     "generate_transcode_url",
     {
@@ -59,6 +60,47 @@ function createServer() {
     }
   );
 
+  // === Canon docs proxy tool (per canon/patterns/docs-proxy-canon-as-tool.md) ===
+  server.tool(
+    "docs",
+    {
+      query: z.string().describe("Natural language or structured query against the canon"),
+      audience: z.string().optional().describe("Optional audience filter (e.g. developer, agent, summary)"),
+      depth: z.enum(["1", "2", "3"]).optional().describe("1=snippet, 2=full top doc, 3=top + next two"),
+    },
+    async (args) => {
+      const { query, audience, depth } = args;
+
+      // TODO: Wire this to the actual canon server.
+      // Per canon, we should pin this server's own repo as knowledge_base_url.
+      // Example call pattern (to be implemented):
+      // const canonResponse = await fetch("https://your-canon-endpoint/query", {
+      //   method: "POST",
+      //   body: JSON.stringify({
+      //     query,
+      //     audience,
+      //     depth,
+      //     knowledge_base_url: "https://github.com/klappy/transcode-mcp"
+      //   })
+      // });
+
+      // For now: graceful degradation + clear signal
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            answer: null,
+            sources: [],
+            deeper: [],
+            governance_source: "minimal",
+            note: "docs tool not yet wired to canon server. See canon/patterns/docs-proxy-canon-as-tool.md",
+            query_received: query
+          })
+        }]
+      };
+    }
+  );
+
   return server;
 }
 
@@ -80,21 +122,15 @@ export default {
       return handleAudioProxy(request, env);
     }
 
-    // Visible marker so we can confirm when new code is live
     return new Response('transcode-mcp LIVE v3 - MCP at /mcp (forced deploy)', { status: 200 });
   },
 };
 
 // Placeholder proxy routes (to be implemented)
 async function handleImageProxy(request: Request, env: any) {
-  // TODO: Integrate Cloudflare Images binding + Cache API
-  // Path after /image/ contains the source identifier
   return new Response("[Image Proxy Placeholder] - Will use Cloudflare Images + edge cache here", { status: 200 });
 }
 
 async function handleAudioProxy(request: Request, env: any) {
-  // TODO: Lazy on-demand transcoding using ffmpeg recipes from canon
-  // Then write result to R2 and return optimized stream
-  // Path format: /audio/{preset}/{encodeRate}/{source_url}
   return new Response("[Audio Proxy Placeholder] - Will do lazy ffmpeg transcoding + R2 write here", { status: 200 });
 }
