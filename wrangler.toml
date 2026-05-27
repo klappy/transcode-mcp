@@ -4,8 +4,8 @@ main = "src/worker.ts"
 compatibility_date = "2025-05-01"
 compatibility_flags = [ "nodejs_compat" ]
 
-[build]
-command = "npm install"
+# [build] section removed — Cloudflare build env now uses bun install by default.
+# The previous 'npm install' command was causing ERESOLVE conflicts with agents + ai peer deps.
 
 [vars]
 # Add any non-secret vars here
