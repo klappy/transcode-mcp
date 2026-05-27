@@ -427,8 +427,6 @@ async function loadBaseline(source) {
     // passthrough path doesn't set X-Transcode-Source-* headers (because no
     // transform was attempted), so we measure from the loaded image instead.
     // We'll fill these in once the image loads.
-    tile.classList.remove('loading');
-
     tile.dataset.path = path;
     tile.dataset.size = String(result.size);
     tile.dataset.cache = cache;
@@ -443,6 +441,7 @@ async function loadBaseline(source) {
     img.onload = () => {
       tile.dataset.sourceW = String(img.naturalWidth);
       tile.dataset.sourceH = String(img.naturalHeight);
+      tile.classList.remove('loading');
       const heading = tile.querySelector('h2');
       heading.innerHTML = \`Original source <span style="color: var(--text-dim); font-weight: 400; font-size: 13px;">\${img.naturalWidth} × \${img.naturalHeight}</span>\`;
       const meta = tile.querySelector('.baseline-meta');
