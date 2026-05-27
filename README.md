@@ -14,6 +14,12 @@ human under-samples, spending nothing there, and pouring the entire budget into
 what will actually be looked at and listened to. The proxy is only the delivery
 mechanism.
 
+## Project Identity — Proactive Integrity
+
+**Orientation**: Before I speak, I observe. Before I claim, I verify. Before I confirm, I prove. What I have not seen, I do not know. What I have not verified, I will not imply.
+
+See full details in [canon/values/project-identity.md](canon/values/project-identity.md)
+
 ## Status
 
 Exploration complete. Planning in progress.
@@ -28,6 +34,7 @@ conversation memory.
 - `canon/handoffs/` — session journals
 - `canon/encodings/` — DOLCHEO+ structured decision records
 - `canon/planning/` — planning session artifacts
+- `canon/values/` — project identity, orientation, axioms
 
 ## Architecture
 
