@@ -274,12 +274,12 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
   }
   .compare-image-cell::before {
     content: attr(data-side);
-    position: sticky; top: 6px; left: 6px;
+    position: absolute; top: 6px; left: 6px;
     background: rgba(0,0,0,0.65); color: var(--text);
     font-size: 10px; font-family: var(--mono);
     padding: 2px 6px; border-radius: 3px;
     text-transform: uppercase; letter-spacing: 0.08em;
-    z-index: 2; align-self: flex-start;
+    z-index: 2;
   }
   .compare-image-cell img {
     display: block; width: 100%; height: auto;
@@ -851,8 +851,10 @@ function renderCompare() {
 
   // Explanation pulled from the right-hand entry's binding (the "strategy")
   let explain = '';
-  if (right.kind === 'baseline') {
+  if (left.kind === 'baseline' && right.kind === 'baseline') {
     explain = 'Both panels show the unmodified source. Pan and zoom to inspect the original.';
+  } else if (right.kind === 'baseline') {
+    explain = 'Right panel shows the unmodified source. Compare against the left panel'+'\u2019'+'s encode.';
   } else if (right.binding === 'target') {
     explain =
       'Right panel: proxy encoded at <code>' + right.encodeW + '×' + right.encodeH + '</code> ' +
