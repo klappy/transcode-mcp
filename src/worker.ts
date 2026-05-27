@@ -68,11 +68,26 @@ function createServer() {
       audience: z.string().optional().describe("Optional audience filter (e.g. developer, agent, summary)"),
       depth: z.enum(["1", "2", "3"]).optional().describe("1=snippet, 2=full top doc, 3=top + next two"),
     },
-    async (args, extra) => {  // extra may contain env in some runtimes
+    async (args, extra: any) => {
       const { query, audience, depth } = args;
+      const env = extra?.env || {};
 
-      // Wire to canon server, pinning this repo as knowledge_base_url (per canon)
-      const canonEndpoint = "https://canon.klappy.dev/query"; // adjust if your canon endpoint differs
+      const canonEndpoint = env.CANON_ENDPOINT;
+
+      if (!canonEndpoint) {
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              answer: null,
+              sources: [],
+              deeper: [],
+              governance_source: "minimal",
+              error: "CANON_ENDPOINT not configured in wrangler.toml [vars]"
+            })
+          }]
+        };
+      }
 
       try {
         const res = await fetch(canonEndpoint, {
@@ -104,7 +119,6 @@ function createServer() {
           }]
         };
       } catch (err: any) {
-        // Graceful degradation per canon
         return {
           content: [{
             type: "text",
