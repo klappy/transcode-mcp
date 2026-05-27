@@ -68,36 +68,56 @@ function createServer() {
       audience: z.string().optional().describe("Optional audience filter (e.g. developer, agent, summary)"),
       depth: z.enum(["1", "2", "3"]).optional().describe("1=snippet, 2=full top doc, 3=top + next two"),
     },
-    async (args) => {
+    async (args, extra) => {  // extra may contain env in some runtimes
       const { query, audience, depth } = args;
 
-      // TODO: Wire this to the actual canon server.
-      // Per canon, we should pin this server's own repo as knowledge_base_url.
-      // Example call pattern (to be implemented):
-      // const canonResponse = await fetch("https://your-canon-endpoint/query", {
-      //   method: "POST",
-      //   body: JSON.stringify({
-      //     query,
-      //     audience,
-      //     depth,
-      //     knowledge_base_url: "https://github.com/klappy/transcode-mcp"
-      //   })
-      // });
+      // Wire to canon server, pinning this repo as knowledge_base_url (per canon)
+      const canonEndpoint = "https://canon.klappy.dev/query"; // adjust if your canon endpoint differs
 
-      // For now: graceful degradation + clear signal
-      return {
-        content: [{
-          type: "text",
-          text: JSON.stringify({
-            answer: null,
-            sources: [],
-            deeper: [],
-            governance_source: "minimal",
-            note: "docs tool not yet wired to canon server. See canon/patterns/docs-proxy-canon-as-tool.md",
-            query_received: query
-          })
-        }]
-      };
+      try {
+        const res = await fetch(canonEndpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query,
+            audience,
+            depth,
+            knowledge_base_url: "https://github.com/klappy/transcode-mcp"
+          }),
+        });
+
+        if (!res.ok) {
+          throw new Error(`Canon server responded with ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              answer: data.answer ?? null,
+              sources: data.sources ?? [],
+              deeper: data.deeper ?? [],
+              governance_source: data.governance_source ?? "knowledge_base"
+            })
+          }]
+        };
+      } catch (err: any) {
+        // Graceful degradation per canon
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              answer: null,
+              sources: [],
+              deeper: [],
+              governance_source: "minimal",
+              error: err?.message || "Canon unreachable"
+            })
+          }]
+        };
+      }
     }
   );
 
