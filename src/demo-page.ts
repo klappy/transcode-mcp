@@ -217,7 +217,7 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
     color: var(--text-dim); font-family: var(--mono); font-size: 12px;
     min-width: 52px; text-align: center; user-select: none;
   }
-  .zoom-fit, .zoom-onetoone { font-size: 12px; padding: 6px 8px; }
+  .zoom-fit { font-size: 12px; padding: 6px 8px; }
 
   /* Compare panel headers */
   .compare-panels {
@@ -283,7 +283,6 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
   }
   .compare-image-cell img {
     display: block; width: 100%; height: auto;
-    image-rendering: pixelated; /* Show real pixels at zoom, no smoothing */
   }
   .modal-explanation {
     padding: 14px 18px;
@@ -389,8 +388,7 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
         <button class="zoom-btn" id="zoom-out" aria-label="Zoom out" title="Zoom out (−)">−</button>
         <span class="zoom-readout" id="zoom-readout">100%</span>
         <button class="zoom-btn" id="zoom-in" aria-label="Zoom in" title="Zoom in (+)">+</button>
-        <button class="zoom-btn zoom-fit" id="zoom-fit" title="Fit to modal (0)">Fit</button>
-        <button class="zoom-btn zoom-onetoone" id="zoom-onetoone" title="1:1 native pixels (1)">1:1</button>
+        <button class="zoom-btn zoom-fit" id="zoom-fit" title="Reset zoom (0)">Reset</button>
       </div>
       <button class="modal-close" id="modal-close" aria-label="Close">×</button>
     </div>
@@ -707,7 +705,6 @@ const zoomReadout = document.getElementById('zoom-readout');
 const zoomInBtn = document.getElementById('zoom-in');
 const zoomOutBtn = document.getElementById('zoom-out');
 const zoomFitBtn = document.getElementById('zoom-fit');
-const zoom11Btn = document.getElementById('zoom-onetoone');
 
 // Comparison entries built from baseline + all loaded tiles. The id is a
 // short stable string used in the picker dropdowns.
@@ -829,21 +826,6 @@ function setZoomFit() {
   setZoom(1.0);
 }
 
-function setZoomOneToOne() {
-  // 1:1 = each cell shows its image at native pixel size.
-  // canvasW × 0.5 = naturalW (of the larger image)  =>  zoom = (2 × naturalW) / vpW
-  const left = findEntry(compareState.leftId);
-  const right = findEntry(compareState.rightId);
-  const maxNatural = Math.max(
-    left ? left.naturalW : 0,
-    right ? right.naturalW : 0,
-    1,
-  );
-  const vpW = getViewportInnerWidth();
-  if (vpW <= 0) return;
-  setZoom((2 * maxNatural) / vpW);
-}
-
 function renderCompare() {
   const left = findEntry(compareState.leftId);
   const right = findEntry(compareState.rightId);
@@ -914,13 +896,10 @@ function openCompareModal(initialRightId = null) {
   populateCompareDropdowns();
   modalBackdrop.classList.add('open');
 
-  // Render first, then size 1:1 once the layout exists
+  // Reset zoom and render
+  compareState.zoom = 1.0;
   renderCompare();
-  // Defer the 1:1 calc until layout settles
-  requestAnimationFrame(() => {
-    setZoomOneToOne();
-    modalCloseBtn.focus();
-  });
+  modalCloseBtn.focus();
 }
 
 function findEntryInArray(arr, id) {
@@ -948,7 +927,6 @@ comparePickerRight.addEventListener('change', () => {
 zoomInBtn.addEventListener('click', () => setZoom(compareState.zoom * 1.5));
 zoomOutBtn.addEventListener('click', () => setZoom(compareState.zoom / 1.5));
 zoomFitBtn.addEventListener('click', setZoomFit);
-zoom11Btn.addEventListener('click', setZoomOneToOne);
 
 // Recalculate canvas width if the window resizes (keeps the zoom ratio)
 window.addEventListener('resize', () => {
@@ -997,7 +975,6 @@ document.addEventListener('keydown', (e) => {
   if (e.key === '+' || e.key === '=') { e.preventDefault(); setZoom(compareState.zoom * 1.5); }
   else if (e.key === '-' || e.key === '_') { e.preventDefault(); setZoom(compareState.zoom / 1.5); }
   else if (e.key === '0') { e.preventDefault(); setZoomFit(); }
-  else if (e.key === '1') { e.preventDefault(); setZoomOneToOne(); }
 });
 
 // URL state — read on load, write on change. The page URL itself becomes the
