@@ -9,7 +9,8 @@
     "tail": "wrangler tail"
   },
   "dependencies": {
-    "agents": "^0.2.7"
+    "agents": "^0.2.7",
+    "ai": "^4.3.16"
   },
   "devDependencies": {
     "wrangler": "^3.0.0"
