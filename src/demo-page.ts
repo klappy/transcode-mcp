@@ -547,6 +547,9 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
       <option value="target">target resolution</option>
       <option value="quality">quality preset</option>
       <option value="format">format</option>
+      <option value="encode">encode dimension</option>
+      <option value="binding">binding term</option>
+      <option value="ratio">vs baseline</option>
     </select>
   </div>
   <div class="control-group">
@@ -701,7 +704,14 @@ let currentViewMode = 'grid';
 let currentSortKey = 'bpp';
 let currentSortDir = 'asc';
 let baselineBytes = 0; // For "vs baseline" ratios in table view
-let baselineSourceW = 0; // For bytes-per-pixel calculation reference
+// Incremented on each loadExplorer() call. Workers from a prior invocation
+// check their captured generation against this and abort their writes if
+// stale, preventing mixed results when the user changes source/filters
+// while fetches are still in flight.
+let explorerGeneration = 0;
+// rAF-coalesced render flag — many concurrent fetches all completing in
+// the same frame collapse to a single DOM rebuild instead of N rebuilds.
+let renderScheduled = false;
 
 function getCheckedValues(group) {
   return Array.from(group.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
@@ -950,7 +960,17 @@ async function runWithConcurrency(items, worker, maxConcurrent, onProgress) {
   await Promise.all(runners);
 }
 
+function scheduleRender() {
+  if (renderScheduled) return;
+  renderScheduled = true;
+  requestAnimationFrame(() => {
+    renderScheduled = false;
+    renderExplorer();
+  });
+}
+
 async function loadExplorer() {
+  const myGeneration = ++explorerGeneration;
   const source = currentSource();
   const combos = getSelectedCombinations();
 
@@ -960,12 +980,12 @@ async function loadExplorer() {
   // Reset state
   explorerResults = [];
   baselineBytes = 0;
-  baselineSourceW = 0;
   grid.innerHTML = '';
   tableBody.innerHTML = '';
 
   // Load baseline first — gives us bytes & source dimensions for ratio columns
   await loadBaseline(source);
+  if (myGeneration !== explorerGeneration) return;
   // Pick up baseline state from its tile dataset for ratio metrics
   const baselineTile = document.querySelector('.baseline-tile');
   if (baselineTile && baselineTile.dataset.size) {
@@ -985,11 +1005,10 @@ async function loadExplorer() {
   let srcH = parseInt((baselineTile && baselineTile.dataset.sourceH) || '0', 10);
   if (!srcW || !srcH) {
     const dims = await getNaturalDimensions('/image/' + source);
+    if (myGeneration !== explorerGeneration) return;
     srcW = dims.w;
     srcH = dims.h;
   }
-  // Save for later — the modal and other code may want this
-  baselineSourceW = srcW;
 
   setProgress(0, combos.length);
 
@@ -1001,6 +1020,7 @@ async function loadExplorer() {
     const fullUrl = window.location.origin + path;
     try {
       const result = await fetchHead(fullUrl);
+      if (myGeneration !== explorerGeneration) return;
       const h = result.headers;
       const encodeW = parseInt(h['x-transcode-encode-w'] || '0', 10);
       const encodeH = parseInt(h['x-transcode-encode-h'] || '0', 10);
@@ -1029,8 +1049,9 @@ async function loadExplorer() {
         cache,
       };
       explorerResults.push(entry);
-      renderExplorer();
+      scheduleRender();
     } catch (err) {
+      if (myGeneration !== explorerGeneration) return;
       explorerResults.push({
         id: comboId(combo),
         target: combo.target,
@@ -1047,7 +1068,7 @@ async function loadExplorer() {
         cache: '',
         error: err && err.message ? err.message : 'fetch failed',
       });
-      renderExplorer();
+      scheduleRender();
     }
   }, FETCH_CONCURRENCY, setProgress);
 }
@@ -1063,8 +1084,8 @@ function compareResults(a, b, key, dir) {
     case 'quality':
       // Map to numeric for sort: low < medium < high
       const qrank = { low: 0, medium: 1, high: 2 };
-      va = qrank[a.quality] ?? -1;
-      vb = qrank[b.quality] ?? -1;
+      va = qrank[a.requestedQuality] ?? -1;
+      vb = qrank[b.requestedQuality] ?? -1;
       break;
     case 'format':    va = a.format;    vb = b.format;    break;
     case 'encode':    va = a.encodeW;   vb = b.encodeW;   break;
@@ -1566,7 +1587,10 @@ function writeUrlState() {
   const defaultTargetsSorted = DEFAULT_TARGETS.slice().sort((a, b) => a - b).join(',');
   const wSorted = w.slice().sort((a, b) => a - b).join(',');
   if (wSorted !== defaultTargetsSorted) params.set('w', w.join(','));
-  if (currentSortKey !== 'bpp') params.set('sort', currentSortKey);
+  if (currentSortKey !== 'bpp') {
+    const sortValue = currentSortKey === 'size' && currentSortDir === 'desc' ? 'size-desc' : currentSortKey;
+    params.set('sort', sortValue);
+  }
   if (currentViewMode !== 'grid') params.set('view', currentViewMode);
 
   const qs = params.toString();
@@ -1595,10 +1619,16 @@ function applyUrlState() {
     setCheckedValues(targetGroup, w.split(',').filter(s => ALL_TARGETS.includes(parseInt(s, 10))));
   }
   if (sort) {
-    const validSorts = ['bpp', 'size', 'target', 'quality', 'format', 'encode', 'binding', 'ratio'];
+    const validSorts = ['bpp', 'size', 'size-desc', 'target', 'quality', 'format', 'encode', 'binding', 'ratio'];
     if (validSorts.includes(sort)) {
-      currentSortKey = sort;
-      sortSelect.value = sort;
+      if (sort === 'size-desc') {
+        currentSortKey = 'size';
+        currentSortDir = 'desc';
+        sortSelect.value = 'size-desc';
+      } else {
+        currentSortKey = sort;
+        sortSelect.value = sort;
+      }
     }
   }
   if (view === 'table') {
