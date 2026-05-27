@@ -1,6 +1,6 @@
 // src/worker.ts
 // Proxy-first + lazy transcoding MCP server using current Cloudflare Agents SDK
-// Deploy marker: 2026-05-27 v5 - Audio proxy functional as passthrough (ffmpeg step ready for Container)
+// Deploy marker: 2026-05-27 v5 - Audio proxy functional passthrough (ffmpeg step ready for Container)
 
 import { createMcpHandler } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
