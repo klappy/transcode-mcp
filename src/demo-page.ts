@@ -65,7 +65,11 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
   .tile {
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 8px; overflow: hidden; display: flex; flex-direction: column;
+    cursor: pointer; transition: border-color 0.15s, transform 0.15s;
   }
+  .tile:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .tile.loading, .tile.error { cursor: default; }
+  .tile.loading:hover, .tile.error:hover { border-color: var(--border); transform: none; }
   .tile-header {
     padding: 10px 12px; border-bottom: 1px solid var(--border);
     background: var(--panel-2); font-size: 13px; font-weight: 600;
@@ -89,6 +93,74 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
   }
   .file-size.ok { color: var(--accent-2); }
   .file-size.high { color: var(--warn); }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    z-index: 100;
+    overflow-y: auto;
+    padding: 24px;
+  }
+  .modal-backdrop.open { display: flex; align-items: flex-start; justify-content: center; }
+  .modal {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px;
+    max-width: calc(100vw - 48px);
+    width: auto;
+    margin: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    display: flex; flex-direction: column;
+  }
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    gap: 16px;
+  }
+  .modal-title { font-size: 15px; font-weight: 600; }
+  .modal-title .target { color: var(--accent); }
+  .modal-title .display-info { color: var(--text-dim); font-weight: 400; font-size: 12px; margin-left: 8px; }
+  .modal-close {
+    background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--text); width: 32px; height: 32px;
+    border-radius: 6px; cursor: pointer; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .modal-close:hover { background: var(--border); }
+  .modal-image-wrap {
+    background: #000; display: flex; align-items: center; justify-content: center;
+    padding: 0; max-height: calc(100vh - 240px);
+    overflow: auto;
+  }
+  .modal-image-wrap img {
+    display: block; height: auto;
+    /* width is set inline by JS to match target (or viewport cap) */
+  }
+  .modal-meta {
+    padding: 14px 18px;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-dim);
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 8px 24px;
+    border-top: 1px solid var(--border);
+  }
+  .modal-meta .row { display: flex; justify-content: space-between; gap: 8px; }
+  .modal-meta .row strong { color: var(--text); font-weight: 500; }
+  .modal-explanation {
+    padding: 14px 18px;
+    font-size: 12px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border);
+    line-height: 1.6;
+  }
+  .modal-explanation code {
+    background: var(--panel-2); padding: 1px 5px;
+    border-radius: 3px; font-size: 11px;
+    color: var(--text);
+  }
   details { margin-top: 24px; }
   summary { cursor: pointer; color: var(--text-dim); font-size: 13px; padding: 8px 0; }
   details[open] summary { color: var(--text); }
@@ -165,10 +237,26 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
 
 <div id="grid" class="grid"></div>
 
+<div id="modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">
+        <span class="target">target ?px</span>
+        <span class="display-info"></span>
+      </div>
+      <button class="modal-close" id="modal-close" aria-label="Close">×</button>
+    </div>
+    <div class="modal-image-wrap" id="modal-image-wrap"></div>
+    <div class="modal-meta" id="modal-meta"></div>
+    <div class="modal-explanation" id="modal-explanation"></div>
+  </div>
+</div>
+
 <div class="legend">
   <span class="target">target × 1.5 binds (normal case)</span>
   <span class="source">source × 1.5 binds (tiny-source cap)</span>
   <span class="equal">source equals target</span>
+  <span style="color: var(--accent); margin-left: auto;">→ click any tile to view at target size</span>
 </div>
 
 <details>
@@ -289,6 +377,22 @@ async function loadGrid() {
 
       tile.classList.remove('loading');
       tile.classList.add(bindingClass(binding));
+      // Store metadata for the modal
+      tile.dataset.target = String(target);
+      tile.dataset.path = path;
+      tile.dataset.sourceW = sourceW || '';
+      tile.dataset.sourceH = sourceH || '';
+      tile.dataset.encodeW = encodeW || '';
+      tile.dataset.encodeH = encodeH || '';
+      tile.dataset.binding = binding;
+      tile.dataset.quality = quality || '';
+      tile.dataset.format = format;
+      tile.dataset.cache = cache;
+      tile.dataset.size = String(result.size);
+      tile.setAttribute('role', 'button');
+      tile.setAttribute('tabindex', '0');
+      tile.setAttribute('aria-label', 'Open ' + target + 'px preview');
+
       const img = document.createElement('img');
       img.src = path;
       img.alt = 'target ' + target;
@@ -321,6 +425,118 @@ function escapeHtml(s) {
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
 }
+
+// Modal
+const modalBackdrop = document.getElementById('modal-backdrop');
+const modalTitle = document.getElementById('modal-title');
+const modalImageWrap = document.getElementById('modal-image-wrap');
+const modalMeta = document.getElementById('modal-meta');
+const modalExplanation = document.getElementById('modal-explanation');
+const modalCloseBtn = document.getElementById('modal-close');
+
+function openModalForTile(tile) {
+  if (tile.classList.contains('loading') || tile.classList.contains('error')) return;
+  const d = tile.dataset;
+  const target = parseInt(d.target, 10);
+  const encodeW = parseInt(d.encodeW || '0', 10);
+  const encodeH = parseInt(d.encodeH || '0', 10);
+  const sourceW = d.sourceW;
+  const sourceH = d.sourceH;
+  const binding = d.binding;
+  const quality = d.quality;
+  const format = d.format;
+  const cache = d.cache;
+  const size = parseInt(d.size || '0', 10);
+  const path = d.path;
+
+  // Cap display width to viewport (with a margin for modal padding/scrollbars)
+  const viewportCap = window.innerWidth - 80;
+  const displayWidth = Math.min(target, viewportCap);
+  const isClamped = displayWidth < target;
+
+  modalTitle.innerHTML =
+    '<span class="target">target ' + target + 'px</span>' +
+    '<span class="display-info">' +
+    (isClamped
+      ? 'displayed at ' + displayWidth + 'px (your viewport is narrower than target)'
+      : 'displayed at ' + target + 'px (1:1 with target)') +
+    '</span>';
+
+  // Render the image at target width — the browser does the final downscale
+  // from the encode dimensions (encodeW × encodeH) to this display size.
+  // That downscale IS the artifact-filter canon describes.
+  const img = document.createElement('img');
+  img.src = path;
+  img.alt = 'target ' + target + ' preview';
+  img.style.width = displayWidth + 'px';
+  modalImageWrap.innerHTML = '';
+  modalImageWrap.appendChild(img);
+
+  modalMeta.innerHTML =
+    '<div class="row"><span>source</span><strong>' + (sourceW || '?') + ' × ' + (sourceH || '?') + '</strong></div>' +
+    '<div class="row"><span>encode</span><strong>' + (encodeW || '?') + ' × ' + (encodeH || '?') + '</strong></div>' +
+    '<div class="row"><span>display</span><strong>' + displayWidth + 'px wide</strong></div>' +
+    '<div class="row"><span>binds</span><strong>' + (binding || '—') + '</strong></div>' +
+    '<div class="row"><span>quality</span><strong>q=' + (quality || '?') + '</strong></div>' +
+    '<div class="row"><span>format</span><strong>' + (format || '?') + '</strong></div>' +
+    '<div class="row"><span>size</span><strong>' + formatBytes(size) + '</strong></div>' +
+    '<div class="row"><span>cache</span><strong>' + (cache || '—') + '</strong></div>';
+
+  // Explanation tailored to which term bound
+  let explain = '';
+  if (binding === 'target') {
+    explain =
+      'The proxy encoded this image at <code>' + encodeW + '×' + encodeH + '</code> ' +
+      '(target × 1.5, mod-16 aligned). Your browser is downscaling that to ' + displayWidth + 'px ' +
+      'for display — that downscale is the artifact filter, the same mechanism canon describes for ' +
+      '"control the character of the loss."';
+  } else if (binding === 'source') {
+    explain =
+      'Source is small enough that <code>source × 1.5 = ' + encodeW + 'px</code> binds instead of ' +
+      'target × 1.5. The proxy encoded at the modest overshoot, and your browser is upscaling ' +
+      'from ' + encodeW + 'px to ' + displayWidth + 'px for display. Without the <code>source × 1.5</code> ' +
+      'cap, this would have manufactured pixels from no signal.';
+  } else if (binding === 'equal') {
+    explain =
+      'Source dimensions already match the target. No scaling at the encoder; the only work is ' +
+      'format conversion and quality adjustment.';
+  }
+  modalExplanation.innerHTML = explain;
+
+  modalBackdrop.classList.add('open');
+  // Focus close button for keyboard accessibility
+  modalCloseBtn.focus();
+}
+
+function closeModal() {
+  modalBackdrop.classList.remove('open');
+  // Free the image so it doesn't stay in memory
+  modalImageWrap.innerHTML = '';
+}
+
+// Tile click → open modal
+grid.addEventListener('click', (e) => {
+  const tile = e.target.closest('.tile');
+  if (tile) openModalForTile(tile);
+});
+grid.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    const tile = e.target.closest('.tile');
+    if (tile) {
+      e.preventDefault();
+      openModalForTile(tile);
+    }
+  }
+});
+
+// Close handlers
+modalCloseBtn.addEventListener('click', closeModal);
+modalBackdrop.addEventListener('click', (e) => {
+  if (e.target === modalBackdrop) closeModal();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && modalBackdrop.classList.contains('open')) closeModal();
+});
 
 reloadBtn.addEventListener('click', loadGrid);
 sourceSelect.addEventListener('change', () => { customUrl.value = ''; loadGrid(); });
