@@ -74,6 +74,11 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
   }
   .source-info strong { color: var(--text); }
 
+  /* HTML hidden attribute must override explicit display values in our CSS.
+     Without this, [hidden]="true" doesn't hide .grid (display: grid) or
+     .table-wrap because our rules win over the user-agent stylesheet. */
+  [hidden] { display: none !important; }
+
   /* Checkbox pill groups for multi-select controls */
   .checkbox-group {
     display: flex; flex-wrap: wrap; gap: 4px;
@@ -213,6 +218,22 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
   }
   .results-table .ratio-better { color: var(--accent-2); }
   .results-table .ratio-worse { color: var(--warn); }
+
+  /* Fallback indicator — Cloudflare Images downgrade (e.g. avif → webp).
+     Subtle but visible: dimmer text and a tiny badge so duplicate-bytes rows
+     are explained, not mysterious. */
+  .fallback-badge {
+    display: inline-block; margin-left: 4px;
+    padding: 1px 5px; font-size: 9px;
+    background: var(--warn); color: #000;
+    border-radius: 3px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    vertical-align: middle;
+    cursor: help;
+  }
+  .tile.fallback .tile-meta strong { color: var(--text-dim); }
+  .results-table tr.row-fallback td { color: var(--text-dim); }
+  .results-table tr.row-fallback td:nth-child(4) { color: var(--warn); }
 
   .grid {
     display: grid;
@@ -1028,7 +1049,16 @@ async function loadExplorer() {
       const sourceH = parseInt(h['x-transcode-source-h'] || '0', 10);
       const binding = h['x-transcode-binding'] || '';
       const quality = h['x-transcode-quality'] || '';
-      const format = (h['x-transcode-format'] || h['content-type'] || '').replace('image/', '');
+      // Distinguish what we ASKED FOR (X-Transcode-Format, set by worker from
+      // the request param) vs what was DELIVERED (Content-Type, set by worker
+      // from the actual binding response). Cloudflare Images falls back from
+      // AVIF to WebP silently when the source exceeds 1600px or the encoder
+      // is overloaded. Without distinguishing, every AVIF row in the explorer
+      // shows identical stats to its WebP sibling — the bytes ARE identical.
+      const requestedFormat = (h['x-transcode-format'] || '').replace('image/', '');
+      const deliveredFormat = (h['content-type'] || '').split(';')[0].replace('image/', '');
+      const fallbackOccurred =
+        requestedFormat && deliveredFormat && requestedFormat !== deliveredFormat;
       const cache = h['x-transcode-cache'] || '';
       const pixels = encodeW * encodeH;
       const bpp = pixels > 0 ? (result.size / pixels) : 0;
@@ -1045,7 +1075,11 @@ async function loadExplorer() {
         encodeW, encodeH,
         binding,
         quality,
-        format,
+        // For display we prefer the DELIVERED format. The requested format is
+        // kept on requestedFormat already. fallbackOccurred is a flag the UI
+        // uses to badge rows where Cloudflare downgraded.
+        format: deliveredFormat || requestedFormat || '?',
+        fallbackOccurred,
         cache,
       };
       explorerResults.push(entry);
@@ -1065,6 +1099,7 @@ async function loadExplorer() {
         binding: 'error',
         quality: '',
         format: '',
+        fallbackOccurred: false,
         cache: '',
         error: err && err.message ? err.message : 'fetch failed',
       });
@@ -1153,6 +1188,12 @@ function renderExplorerGrid(items) {
     // For display, show what the user asked for (shortest side) + the
     // actual proxy w= we sent (only meaningfully different on landscape).
     const wHint = e.requestedW && e.requestedW !== e.target ? '  (w=' + e.requestedW + ')' : '';
+    // Format row shows the delivered format. When Cloudflare downgraded (e.g.
+    // AVIF → WebP fallback), append a small marker so users see why the row
+    // is a duplicate of another row's bytes.
+    const formatCell = e.fallbackOccurred
+      ? e.requestedFormat + ' → ' + e.format + ' <span class="fallback-badge" title="Cloudflare Images fell back from ' + e.requestedFormat + ' to ' + e.format + '. Common cause: source exceeds the 1600px AVIF hard limit or AVIF encoder timed out.">fallback</span>'
+      : (e.format || '?');
     tile.innerHTML =
       '<div class="tile-header">' +
         '<span class="target">' + e.target + 'px shortest</span>' +
@@ -1163,10 +1204,11 @@ function renderExplorerGrid(items) {
         '<div class="row"><span>encode</span><strong>' + e.encodeW + ' × ' + e.encodeH + '</strong></div>' +
         '<div class="row"><span>binds</span><strong>' + (e.binding || '—') + '</strong></div>' +
         '<div class="row"><span>quality</span><strong>' + (e.quality || '?') + '</strong></div>' +
-        '<div class="row"><span>format</span><strong>' + (e.format || '?') + '</strong></div>' +
+        '<div class="row"><span>format</span><strong>' + formatCell + '</strong></div>' +
         '<div class="row"><span>size</span><strong>' + formatBytes(e.size) + '</strong></div>' +
         '<div class="row"><span>bytes/px</span><strong>' + bppStr + '</strong></div>' +
       '</div>';
+    if (e.fallbackOccurred) tile.classList.add('fallback');
     grid.appendChild(tile);
   }
 }
@@ -1210,12 +1252,20 @@ function renderExplorerTable(items) {
     const ratioStr = ratio > 0 ? (ratio * 100).toFixed(1) + '%' : '—';
     const ratioCls = ratio > 0 && ratio < 0.5 ? 'ratio-better' : ratio > 1 ? 'ratio-worse' : '';
     const bppStr = e.bpp > 0 ? e.bpp.toFixed(3) : '?';
+    // Format cell shows what was DELIVERED. When Cloudflare fell back, show
+    // "avif→webp" with the fallback badge so the row's identical bytes vs
+    // its WebP sibling make sense.
+    const formatCell = e.fallbackOccurred
+      ? '<span title="Cloudflare Images fell back from ' + e.requestedFormat + ' to ' + e.format + '">' + e.requestedFormat + '→' + e.format + '</span>'
+      : (e.format || '?');
+
+    if (e.fallbackOccurred) tr.classList.add('row-fallback');
 
     tr.innerHTML =
       '<td>' + e.target + 'px</td>' +
       '<td>' + e.encodeW + ' × ' + e.encodeH + '</td>' +
       '<td>' + (e.quality || '?') + '</td>' +
-      '<td>' + (e.format || '?') + '</td>' +
+      '<td>' + formatCell + '</td>' +
       '<td>' + (e.binding || '—') + '</td>' +
       '<td>' + formatBytes(e.size) + '</td>' +
       '<td>' + bppStr + '</td>' +
