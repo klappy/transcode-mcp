@@ -785,8 +785,7 @@ function readUrlState() {
 function writeUrlState() {
   // Build a clean query string reflecting current control state.
   const params = new URLSearchParams();
-  const customVal = customUrl.value.trim();
-  const sourceVal = customVal || sourceSelect.value;
+  const sourceVal = currentSource();
   if (sourceVal) params.set('source', sourceVal);
   if (qualitySelect.value && qualitySelect.value !== 'medium') {
     params.set('q', qualitySelect.value);
