@@ -72,16 +72,24 @@ export default {
       return handler(request, env, ctx);
     }
 
+    if (url.pathname.startsWith('/image/')) {
+      return handleImageProxy(request, env);
+    }
+
+    if (url.pathname.startsWith('/audio/')) {
+      return handleAudioProxy(request, env);
+    }
+
     // Visible marker so we can confirm when new code is live
     return new Response('transcode-mcp LIVE v3 - MCP at /mcp (forced deploy)', { status: 200 });
   },
 };
 
-// Placeholder proxy routes
+// Placeholder proxy routes (implement these next)
 async function handleImageProxy(request: Request, env: any) {
-  return new Response("Image proxy placeholder", { status: 200 });
+  return new Response("Image proxy placeholder - integrate Cloudflare Images here", { status: 200 });
 }
 
 async function handleAudioProxy(request: Request, env: any) {
-  return new Response("Audio proxy placeholder", { status: 200 });
+  return new Response("Audio proxy placeholder - add lazy ffmpeg + R2 here", { status: 200 });
 }
