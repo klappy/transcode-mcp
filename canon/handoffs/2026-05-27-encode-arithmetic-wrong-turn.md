@@ -223,6 +223,26 @@ The lessons:
    in sequence, with the operator callouts that prompted each. The destination
    matters; the path that produced it matters more for what the next session
    needs to know.
+9. **External tools that pattern-match are not authoritative on design
+   constraints.** Cursor bugbot flagged the encode-arithmetic formula on
+   PR #3 as a bug. The formula was `min(target × 1.5, source × 1.5)`;
+   bugbot read the prose's "source-as-ceiling" framing, saw `source × 1.5`
+   where it expected `source`, and "fixed" the formula to
+   `min(target × 1.5, source)`. The agent that had written the doc verified
+   bugbot's reasoning against the doc's prose, found the prose contradicted
+   the formula, and concluded the formula was wrong. The agent did not
+   verify against canon. Canon
+   (`canon/handoffs/2026-05-26-exploration-journal.md`, the v1 image target
+   section) explicitly endorses encoding above source dimensions for the
+   overshoot mechanism: *"If the source is at or below that resolution,
+   resolution is effectively a no-op — only the overshoot applies."* The
+   formula was correct; the *prose* in the doc was wrong. The operator
+   caught it. The fix was in the prose and in the collapsed branch
+   structure, not in the formula bugbot flagged. The meta-lesson: when an
+   external tool flags something on a canon doc, verify the finding against
+   canon before accepting it. Tools pattern-match style and consistency;
+   they don't know the project's design intent. Apply the same
+   verify-before-implying discipline to tool output as to memory.
 
 These lessons are summarized as anti-patterns in
 `canon/values/project-goal.md` under the heading "Anti-patterns to watch
