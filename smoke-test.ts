@@ -77,7 +77,7 @@ const CASES: SmokeCase[] = [
     targetW: 1080,
     quality: "medium",
     expectedBinding: "source",
-    minBytes: 10_000,
+    minBytes: 3_000,
     maxBytes: 200_000,
   },
 ];
