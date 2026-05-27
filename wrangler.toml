@@ -1,0 +1,27 @@
+# wrangler.toml
+name = "transcode-mcp"
+main = "src/worker.ts"
+compatibility_date = "2025-05-01"
+
+[build]
+command = "npm install"
+
+[vars]
+# Add any non-secret vars here
+
+# Cloudflare Images binding (for image path)
+# [images]
+# binding = "IMAGES"
+
+# R2 bucket for audio output (lazy writes)
+# [[r2_buckets]]
+# binding = "AUDIO_BUCKET"
+# bucket_name = "transcode-mcp-audio"
+
+# Container / Durable Object for heavy audio work (future)
+# [durable_objects]
+# bindings = [{ name = "AUDIO_CONTAINER", class_name = "AudioContainer" }]
+
+# For local dev with `wrangler dev`
+[dev]
+port = 8787
