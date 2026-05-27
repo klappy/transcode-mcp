@@ -508,10 +508,10 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
     </div>
   </div>
   <div class="control-group" style="min-width: 200px;">
-    <label>Target widths</label>
+    <label>Target size (shortest side)</label>
     <div class="dropdown-multiselect" id="target-dropdown">
       <button type="button" class="dropdown-trigger" id="target-trigger" aria-expanded="false" aria-haspopup="true">
-        <span class="dropdown-summary" id="target-summary">6 widths</span>
+        <span class="dropdown-summary" id="target-summary">6 sizes</span>
         <span class="dropdown-caret">▾</span>
       </button>
       <div class="dropdown-popover" id="target-popover" hidden>
@@ -577,7 +577,7 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
   <table class="results-table">
     <thead>
       <tr>
-        <th data-sort-key="target">target</th>
+        <th data-sort-key="target">shortest side</th>
         <th data-sort-key="encode">encode</th>
         <th data-sort-key="quality">q</th>
         <th data-sort-key="format">format</th>
@@ -753,6 +753,32 @@ function bindingClass(binding) {
   if (binding === 'source') return 'source';
   if (binding === 'equal') return 'equal';
   return '';
+}
+
+// Resolves with the natural pixel dimensions of an image URL. Returns
+// { w: 0, h: 0 } if the image fails to load — caller can treat that as
+// "unknown" and fall back to interpreting target as width directly.
+function getNaturalDimensions(url) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => resolve({ w: 0, h: 0 });
+    img.src = url;
+  });
+}
+
+// Converts a "shortest side = S" target into the proxy w= value, given the
+// source's aspect ratio. The proxy's w parameter resizes the image to that
+// width while preserving aspect — so for landscape sources we send the longer
+// side, for portrait we send w=S directly (since w IS the shorter side then).
+function shortestSideToWidth(shortestSide, sourceW, sourceH) {
+  if (!sourceW || !sourceH) return shortestSide; // Unknown source — fall back
+  if (sourceW >= sourceH) {
+    // Landscape (or square): height is the shorter side, so w = S × aspect
+    return Math.round(shortestSide * (sourceW / sourceH));
+  }
+  // Portrait: width is the shorter side, so w = S directly
+  return shortestSide;
 }
 
 function fileSizeClass(bytes, target) {
@@ -951,10 +977,27 @@ async function loadExplorer() {
     return;
   }
 
+  // Resolve source aspect ratio so we can interpret target as "shortest side".
+  // We need the natural dimensions of the unmodified source. Try the baseline
+  // tile's dataset first (it may already have them from img.onload); if not
+  // there yet, load them via the passthrough URL directly.
+  let srcW = parseInt((baselineTile && baselineTile.dataset.sourceW) || '0', 10);
+  let srcH = parseInt((baselineTile && baselineTile.dataset.sourceH) || '0', 10);
+  if (!srcW || !srcH) {
+    const dims = await getNaturalDimensions('/image/' + source);
+    srcW = dims.w;
+    srcH = dims.h;
+  }
+  // Save for later — the modal and other code may want this
+  baselineSourceW = srcW;
+
   setProgress(0, combos.length);
 
   await runWithConcurrency(combos, async (combo) => {
-    const path = buildProxyPath(source, combo.target, combo.quality, combo.format);
+    // combo.target is the shortest-side target. Convert to proxy w= for this
+    // source's aspect ratio.
+    const proxyW = shortestSideToWidth(combo.target, srcW, srcH);
+    const path = buildProxyPath(source, proxyW, combo.quality, combo.format);
     const fullUrl = window.location.origin + path;
     try {
       const result = await fetchHead(fullUrl);
@@ -967,12 +1010,12 @@ async function loadExplorer() {
       const quality = h['x-transcode-quality'] || '';
       const format = (h['x-transcode-format'] || h['content-type'] || '').replace('image/', '');
       const cache = h['x-transcode-cache'] || '';
-      if (sourceW > 0 && !baselineSourceW) baselineSourceW = sourceW;
       const pixels = encodeW * encodeH;
       const bpp = pixels > 0 ? (result.size / pixels) : 0;
       const entry = {
         id: comboId(combo),
-        target: combo.target,
+        target: combo.target,             // The shortest-side target (UI semantics)
+        requestedW: proxyW,               // The actual proxy w= we sent
         requestedQuality: combo.quality,
         requestedFormat: combo.format,
         path,
@@ -986,13 +1029,12 @@ async function loadExplorer() {
         cache,
       };
       explorerResults.push(entry);
-      // Re-render in current view mode (sort + paint)
       renderExplorer();
     } catch (err) {
-      // Errored combos are recorded so the user sees what failed
       explorerResults.push({
         id: comboId(combo),
         target: combo.target,
+        requestedW: proxyW,
         requestedQuality: combo.quality,
         requestedFormat: combo.format,
         path: '',
@@ -1062,8 +1104,8 @@ function renderExplorerGrid(items) {
     const tile = document.createElement('div');
     if (e.error) {
       tile.className = 'tile error';
-      tile.innerHTML = '<div class="tile-header"><span class="target">target ' + e.target +
-        'px</span><span class="formula">q=' + e.requestedQuality + ',f=' + e.requestedFormat +
+      tile.innerHTML = '<div class="tile-header"><span class="target">' + e.target +
+        'px (shortest)</span><span class="formula">q=' + e.requestedQuality + ',f=' + e.requestedFormat +
         '</span></div><div class="tile-image">failed: ' + escapeHtml(e.error) +
         '</div><div class="tile-meta"></div>';
       grid.appendChild(tile);
@@ -1084,15 +1126,18 @@ function renderExplorerGrid(items) {
     tile.dataset.size = String(e.size);
     tile.setAttribute('role', 'button');
     tile.setAttribute('tabindex', '0');
-    tile.setAttribute('aria-label', 'Open ' + e.target + 'px preview');
+    tile.setAttribute('aria-label', 'Open ' + e.target + 'px shortest-side preview');
 
     const bppStr = e.bpp > 0 ? e.bpp.toFixed(3) : '?';
+    // For display, show what the user asked for (shortest side) + the
+    // actual proxy w= we sent (only meaningfully different on landscape).
+    const wHint = e.requestedW && e.requestedW !== e.target ? '  (w=' + e.requestedW + ')' : '';
     tile.innerHTML =
       '<div class="tile-header">' +
-        '<span class="target">target ' + e.target + 'px</span>' +
-        '<span class="formula">q=' + e.requestedQuality + ',f=' + e.requestedFormat + '</span>' +
+        '<span class="target">' + e.target + 'px shortest</span>' +
+        '<span class="formula">q=' + e.requestedQuality + ',f=' + e.requestedFormat + wHint + '</span>' +
       '</div>' +
-      '<div class="tile-image"><img loading="lazy" src="' + escapeHtml(e.path) + '" alt="target ' + e.target + '"></div>' +
+      '<div class="tile-image"><img loading="lazy" src="' + escapeHtml(e.path) + '" alt="' + e.target + 'px shortest side"></div>' +
       '<div class="tile-meta">' +
         '<div class="row"><span>encode</span><strong>' + e.encodeW + ' × ' + e.encodeH + '</strong></div>' +
         '<div class="row"><span>binds</span><strong>' + (e.binding || '—') + '</strong></div>' +
@@ -1616,9 +1661,9 @@ function updateTargetSummary() {
   if (n === 0) {
     targetSummary.textContent = 'none selected';
   } else if (n === ALL_TARGETS.length) {
-    targetSummary.textContent = 'all ' + n + ' widths';
+    targetSummary.textContent = 'all ' + n + ' sizes';
   } else {
-    targetSummary.textContent = n + ' width' + (n === 1 ? '' : 's');
+    targetSummary.textContent = n + ' size' + (n === 1 ? '' : 's');
   }
 }
 
