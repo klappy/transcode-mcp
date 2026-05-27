@@ -85,11 +85,16 @@ export default {
   },
 };
 
-// Placeholder proxy routes (implement these next)
+// Placeholder proxy routes (to be implemented)
 async function handleImageProxy(request: Request, env: any) {
-  return new Response("Image proxy placeholder - integrate Cloudflare Images here", { status: 200 });
+  // TODO: Integrate Cloudflare Images binding + Cache API
+  // Path after /image/ contains the source identifier
+  return new Response("[Image Proxy Placeholder] - Will use Cloudflare Images + edge cache here", { status: 200 });
 }
 
 async function handleAudioProxy(request: Request, env: any) {
-  return new Response("Audio proxy placeholder - add lazy ffmpeg + R2 here", { status: 200 });
+  // TODO: Lazy on-demand transcoding using ffmpeg recipes from canon
+  // Then write result to R2 and return optimized stream
+  // Path format: /audio/{preset}/{encodeRate}/{source_url}
+  return new Response("[Audio Proxy Placeholder] - Will do lazy ffmpeg transcoding + R2 write here", { status: 200 });
 }
