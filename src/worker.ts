@@ -135,7 +135,8 @@ async function handleImageProxy(
 ): Promise<Response> {
   let parsed;
   try {
-    parsed = parseProxyPath(new URL(request.url).pathname);
+    const requestUrl = new URL(request.url);
+    parsed = parseProxyPath(requestUrl.pathname, requestUrl.search);
   } catch (err) {
     if (err instanceof ProxyPathError) {
       return new Response(err.message, { status: err.status });
@@ -287,7 +288,8 @@ async function handleAudioProxy(
 ): Promise<Response> {
   let parsed;
   try {
-    parsed = parseProxyPath(new URL(request.url).pathname);
+    const requestUrl = new URL(request.url);
+    parsed = parseProxyPath(requestUrl.pathname, requestUrl.search);
   } catch (err) {
     if (err instanceof ProxyPathError) {
       return new Response(err.message, { status: err.status });

@@ -41,6 +41,18 @@ describe("parseProxyPath — image", () => {
     );
   });
 
+  test("reattaches search portion when source URL has query string", () => {
+    // When the browser receives /image/w=800/https://cdn.com/img.jpg?w=2000,
+    // the URL parser splits pathname (/image/w=800/https://cdn.com/img.jpg)
+    // from search (?w=2000). The proxy parser must reattach the search to the
+    // source URL, not lose it.
+    const result = parseProxyPath(
+      "/image/w=800/https://cdn.com/img.jpg",
+      "?w=2000",
+    );
+    expect(result.sourceUrl).toBe("https://cdn.com/img.jpg?w=2000");
+  });
+
   test("preserves source URL with path segments", () => {
     const result = parseProxyPath(
       "/image/w=800/https://example.com/path/to/image.jpg",

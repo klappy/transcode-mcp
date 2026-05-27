@@ -36,7 +36,10 @@ export class ProxyPathError extends Error {
   }
 }
 
-export function parseProxyPath(pathname: string): ParsedRequest {
+export function parseProxyPath(
+  pathname: string,
+  search: string = "",
+): ParsedRequest {
   // Strip leading slash
   const trimmed = pathname.startsWith("/") ? pathname.slice(1) : pathname;
 
@@ -65,7 +68,12 @@ export function parseProxyPath(pathname: string): ParsedRequest {
     throw new ProxyPathError("No source URL found in path");
   }
 
-  const sourceUrl = rest.slice(urlStart);
+  // Reattach search/query string to the source URL. The browser splits the
+  // request URL into pathname+search, but the source URL may legitimately
+  // contain a query string (e.g. ?w=2000 for Unsplash, signed URLs, etc.).
+  // The search portion of the request URL is appended to whatever URL we
+  // extract from the path.
+  const sourceUrl = rest.slice(urlStart) + search;
   const optionsSegment = rest.slice(0, urlStart).replace(/\/$/, "");
 
   const options = optionsSegment ? parseOptions(optionsSegment) : {};
