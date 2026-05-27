@@ -1587,8 +1587,8 @@ function writeUrlState() {
   const defaultTargetsSorted = DEFAULT_TARGETS.slice().sort((a, b) => a - b).join(',');
   const wSorted = w.slice().sort((a, b) => a - b).join(',');
   if (wSorted !== defaultTargetsSorted) params.set('w', w.join(','));
-  if (currentSortKey !== 'bpp') {
-    const sortValue = currentSortKey === 'size' && currentSortDir === 'desc' ? 'size-desc' : currentSortKey;
+  if (currentSortKey !== 'bpp' || currentSortDir !== 'asc') {
+    const sortValue = currentSortDir === 'desc' ? currentSortKey + '-desc' : currentSortKey;
     params.set('sort', sortValue);
   }
   if (currentViewMode !== 'grid') params.set('view', currentViewMode);
@@ -1619,16 +1619,13 @@ function applyUrlState() {
     setCheckedValues(targetGroup, w.split(',').filter(s => ALL_TARGETS.includes(parseInt(s, 10))));
   }
   if (sort) {
-    const validSorts = ['bpp', 'size', 'size-desc', 'target', 'quality', 'format', 'encode', 'binding', 'ratio'];
-    if (validSorts.includes(sort)) {
-      if (sort === 'size-desc') {
-        currentSortKey = 'size';
-        currentSortDir = 'desc';
-        sortSelect.value = 'size-desc';
-      } else {
-        currentSortKey = sort;
-        sortSelect.value = sort;
-      }
+    const validKeys = ['bpp', 'size', 'target', 'quality', 'format', 'encode', 'binding', 'ratio'];
+    const isDesc = sort.endsWith('-desc');
+    const baseKey = isDesc ? sort.slice(0, -'-desc'.length) : sort;
+    if (validKeys.includes(baseKey)) {
+      currentSortKey = baseKey;
+      currentSortDir = isDesc ? 'desc' : 'asc';
+      sortSelect.value = baseKey === 'size' && isDesc ? 'size-desc' : baseKey;
     }
   }
   if (view === 'table') {
