@@ -78,7 +78,42 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
   .checkbox-group {
     display: flex; flex-wrap: wrap; gap: 4px;
   }
-  .checkbox-group-targets { max-width: 360px; }
+
+  /* Multi-select dropdown — compact trigger that opens a checkbox popover */
+  .dropdown-multiselect { position: relative; }
+  .dropdown-trigger {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 7px 10px; font-size: 13px; font-family: inherit;
+    cursor: pointer; min-width: 160px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; font-weight: 500;
+  }
+  .dropdown-trigger:hover { border-color: var(--accent); }
+  .dropdown-trigger[aria-expanded="true"] { border-color: var(--accent); }
+  .dropdown-summary { color: var(--text); }
+  .dropdown-caret { color: var(--text-dim); font-size: 10px; }
+  .dropdown-popover {
+    position: absolute; top: calc(100% + 4px); left: 0;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px;
+    min-width: 280px; max-width: 360px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+    z-index: 50;
+  }
+  .dropdown-popover-header {
+    display: flex; gap: 12px;
+    padding-bottom: 8px; margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .dropdown-link {
+    background: transparent; color: var(--accent);
+    border: 0; padding: 2px 4px;
+    font-size: 12px; cursor: pointer;
+    font-weight: 500;
+  }
+  .dropdown-link:hover { color: var(--text); background: transparent; }
+  .dropdown-checkboxes { gap: 4px; }
   .checkbox-pill {
     display: inline-flex; align-items: center; gap: 4px;
     background: var(--panel-2); border: 1px solid var(--border);
@@ -472,21 +507,35 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
       <label class="checkbox-pill"><input type="checkbox" value="jpeg" checked> jpeg</label>
     </div>
   </div>
-  <div class="control-group" style="min-width: 360px;">
+  <div class="control-group" style="min-width: 200px;">
     <label>Target widths</label>
-    <div class="checkbox-group checkbox-group-targets" id="target-group">
-      <label class="checkbox-pill"><input type="checkbox" value="320" checked> 320</label>
-      <label class="checkbox-pill"><input type="checkbox" value="480" checked> 480</label>
-      <label class="checkbox-pill"><input type="checkbox" value="640" checked> 640</label>
-      <label class="checkbox-pill"><input type="checkbox" value="720" checked> 720</label>
-      <label class="checkbox-pill"><input type="checkbox" value="800" checked> 800</label>
-      <label class="checkbox-pill"><input type="checkbox" value="854" checked> 854</label>
-      <label class="checkbox-pill"><input type="checkbox" value="960" checked> 960</label>
-      <label class="checkbox-pill"><input type="checkbox" value="1080" checked> 1080</label>
-      <label class="checkbox-pill"><input type="checkbox" value="1280" checked> 1280</label>
-      <label class="checkbox-pill"><input type="checkbox" value="1600" checked> 1600</label>
-      <label class="checkbox-pill"><input type="checkbox" value="1920" checked> 1920</label>
-      <label class="checkbox-pill"><input type="checkbox" value="2560" checked> 2560</label>
+    <div class="dropdown-multiselect" id="target-dropdown">
+      <button type="button" class="dropdown-trigger" id="target-trigger" aria-expanded="false" aria-haspopup="true">
+        <span class="dropdown-summary" id="target-summary">6 widths</span>
+        <span class="dropdown-caret">▾</span>
+      </button>
+      <div class="dropdown-popover" id="target-popover" hidden>
+        <div class="dropdown-popover-header">
+          <button type="button" class="dropdown-link" id="target-all">all</button>
+          <button type="button" class="dropdown-link" id="target-none">none</button>
+          <button type="button" class="dropdown-link" id="target-default">default</button>
+        </div>
+        <div class="checkbox-group dropdown-checkboxes" id="target-group">
+          <label class="checkbox-pill"><input type="checkbox" value="320" checked> 320</label>
+          <label class="checkbox-pill"><input type="checkbox" value="480" checked> 480</label>
+          <label class="checkbox-pill"><input type="checkbox" value="640"> 640</label>
+          <label class="checkbox-pill"><input type="checkbox" value="720" checked> 720</label>
+          <label class="checkbox-pill"><input type="checkbox" value="854"> 854</label>
+          <label class="checkbox-pill"><input type="checkbox" value="960"> 960</label>
+          <label class="checkbox-pill"><input type="checkbox" value="1080" checked> 1080</label>
+          <label class="checkbox-pill"><input type="checkbox" value="1280"> 1280</label>
+          <label class="checkbox-pill"><input type="checkbox" value="1600"> 1600</label>
+          <label class="checkbox-pill"><input type="checkbox" value="1920"> 1920</label>
+          <label class="checkbox-pill"><input type="checkbox" value="2160" checked> 2160</label>
+          <label class="checkbox-pill"><input type="checkbox" value="2560"> 2560</label>
+          <label class="checkbox-pill"><input type="checkbox" value="3840" checked> 3840 (4K)</label>
+        </div>
+      </div>
     </div>
   </div>
   <div class="control-group">
@@ -614,7 +663,8 @@ cache   — X-Transcode-Cache: HIT, MISS, or PASS (passthrough)</pre>
 </details>
 
 <script>
-const ALL_TARGETS = [320, 480, 640, 720, 800, 854, 960, 1080, 1280, 1600, 1920, 2560];
+const ALL_TARGETS = [320, 480, 640, 720, 854, 960, 1080, 1280, 1600, 1920, 2160, 2560, 3840];
+const DEFAULT_TARGETS = [320, 480, 720, 1080, 2160, 3840];
 const ALL_QUALITIES = ['low', 'medium', 'high'];
 const ALL_FORMATS = ['avif', 'webp', 'jpeg'];
 const FETCH_CONCURRENCY = 6;
@@ -624,6 +674,13 @@ const customUrl = document.getElementById('custom-url');
 const qualityGroup = document.getElementById('quality-group');
 const formatGroup = document.getElementById('format-group');
 const targetGroup = document.getElementById('target-group');
+const targetDropdown = document.getElementById('target-dropdown');
+const targetTrigger = document.getElementById('target-trigger');
+const targetPopover = document.getElementById('target-popover');
+const targetSummary = document.getElementById('target-summary');
+const targetAllBtn = document.getElementById('target-all');
+const targetNoneBtn = document.getElementById('target-none');
+const targetDefaultBtn = document.getElementById('target-default');
 const sortSelect = document.getElementById('sort-select');
 const viewGridBtn = document.getElementById('view-grid-btn');
 const viewTableBtn = document.getElementById('view-table-btn');
@@ -1461,7 +1518,10 @@ function writeUrlState() {
   const w = getCheckedValues(targetGroup).map(Number);
   if (q.length !== ALL_QUALITIES.length) params.set('q', q.join(','));
   if (f.length !== ALL_FORMATS.length) params.set('f', f.join(','));
-  if (w.length !== ALL_TARGETS.length) params.set('w', w.join(','));
+  // Targets: only encode if different from the default selection (not "all")
+  const defaultTargetsSorted = DEFAULT_TARGETS.slice().sort((a, b) => a - b).join(',');
+  const wSorted = w.slice().sort((a, b) => a - b).join(',');
+  if (wSorted !== defaultTargetsSorted) params.set('w', w.join(','));
   if (currentSortKey !== 'bpp') params.set('sort', currentSortKey);
   if (currentViewMode !== 'grid') params.set('view', currentViewMode);
 
@@ -1550,6 +1610,53 @@ function scheduleReload() {
   reloadTimer = setTimeout(() => { loadExplorer(); }, 280);
 }
 
+// Update the dropdown summary ("6 widths") based on what's selected
+function updateTargetSummary() {
+  const checked = getCheckedValues(targetGroup);
+  const n = checked.length;
+  if (n === 0) {
+    targetSummary.textContent = 'none selected';
+  } else if (n === ALL_TARGETS.length) {
+    targetSummary.textContent = 'all ' + n + ' widths';
+  } else {
+    targetSummary.textContent = n + ' width' + (n === 1 ? '' : 's');
+  }
+}
+
+// Dropdown open/close + outside-click + Esc to close
+function setTargetDropdownOpen(open) {
+  targetTrigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  targetPopover.hidden = !open;
+}
+targetTrigger.addEventListener('click', (e) => {
+  e.stopPropagation();
+  setTargetDropdownOpen(targetPopover.hidden);
+});
+document.addEventListener('click', (e) => {
+  if (targetPopover.hidden) return;
+  if (!targetDropdown.contains(e.target)) setTargetDropdownOpen(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !targetPopover.hidden) setTargetDropdownOpen(false);
+});
+
+// Quick-set buttons
+targetAllBtn.addEventListener('click', () => {
+  setCheckedValues(targetGroup, ALL_TARGETS.map(String));
+  updateTargetSummary();
+  scheduleReload();
+});
+targetNoneBtn.addEventListener('click', () => {
+  setCheckedValues(targetGroup, []);
+  updateTargetSummary();
+  scheduleReload();
+});
+targetDefaultBtn.addEventListener('click', () => {
+  setCheckedValues(targetGroup, DEFAULT_TARGETS.map(String));
+  updateTargetSummary();
+  scheduleReload();
+});
+
 reloadBtn.addEventListener('click', () => { loadExplorer(); });
 sourceSelect.addEventListener('change', () => {
   customUrl.value = '';
@@ -1562,7 +1669,10 @@ customUrl.addEventListener('change', () => {
 });
 qualityGroup.addEventListener('change', scheduleReload);
 formatGroup.addEventListener('change', scheduleReload);
-targetGroup.addEventListener('change', scheduleReload);
+targetGroup.addEventListener('change', () => {
+  updateTargetSummary();
+  scheduleReload();
+});
 
 // Sort dropdown — re-renders without re-fetching
 sortSelect.addEventListener('change', () => {
@@ -1600,6 +1710,7 @@ document.querySelectorAll('.results-table th[data-sort-key]').forEach(th => {
 
 // Initial load
 applyUrlState();
+updateTargetSummary();
 loadExplorer();
 writeUrlState();
 </script>
