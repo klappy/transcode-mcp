@@ -65,9 +65,9 @@ q=20 produces usable results where it normally would not.
 
 | Preset + q   | Bitrate | Sample rate | Channels | Use case |
 |--------------|---------|-------------|----------|----------|
-| voice+low    | 32k     | 16000 Hz    | mono     | Narrowband speech, maximum compression |
-| voice+medium | 64k     | 24000 Hz    | mono     | Clear speech, default for voice recordings |
-| voice+high   | 128k    | 48000 Hz    | mono     | High-quality voice, review/editing |
+| voice+low    | 8k      | 8000 Hz     | mono     | Telephone-quality speech, maximum compression, offline on constrained devices |
+| voice+medium | 16k     | 16000 Hz    | mono     | Clear speech, default for voice recordings on cheap phones |
+| voice+high   | 32k     | 24000 Hz    | mono     | High-quality voice, review/editing, good earbuds |
 | music+low    | 64k     | 24000 Hz    | stereo   | Background music, low-bandwidth |
 | music+medium | 128k    | 44100 Hz    | stereo   | General music delivery |
 | music+high   | 192k    | 48000 Hz    | stereo   | High-quality music, good playback chain |
