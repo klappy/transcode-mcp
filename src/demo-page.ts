@@ -49,6 +49,22 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
     cursor: pointer; font-size: 14px;
   }
   button:hover { background: #95c8ff; }
+  button.btn-secondary {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border);
+  }
+  button.btn-secondary:hover { background: var(--border); color: var(--text); }
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--accent-2);
+    border-radius: 6px; padding: 10px 16px;
+    font-size: 13px; box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 200;
+  }
+  .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
   .quality-row { display: flex; gap: 8px; align-items: center; }
   .quality-row label { font-size: 14px; color: var(--text); text-transform: none; letter-spacing: 0; }
   .source-info {
@@ -265,7 +281,7 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
   </div>
   <div class="control-group">
     <label for="custom-url">Or paste a URL</label>
-    <input type="text" id="custom-url" placeholder="https://example.com/photo.jpg" autocomplete="off">
+    <input type="text" id="custom-url" placeholder="https://example.com/photo.jpg — or pass ?source=URL in this page's URL" autocomplete="off">
   </div>
   <div class="control-group">
     <label for="quality-select">Quality preset</label>
@@ -284,8 +300,9 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
       <option value="jpeg">jpeg</option>
     </select>
   </div>
-  <div>
+  <div style="display: flex; gap: 8px;">
     <button id="reload">Reload grid</button>
+    <button id="share-link" class="btn-secondary" title="Copy a shareable link to this view">Share link</button>
   </div>
 </div>
 
@@ -309,6 +326,8 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
     <div class="modal-explanation" id="modal-explanation"></div>
   </div>
 </div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <div class="legend">
   <span class="target">target × 1.5 binds (normal case)</span>
@@ -750,13 +769,123 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && modalBackdrop.classList.contains('open')) closeModal();
 });
 
-reloadBtn.addEventListener('click', loadGrid);
-sourceSelect.addEventListener('change', () => { customUrl.value = ''; loadGrid(); });
-customUrl.addEventListener('change', loadGrid);
-qualitySelect.addEventListener('change', loadGrid);
-formatSelect.addEventListener('change', loadGrid);
+// URL state — read on load, write on change. The page URL itself becomes the
+// shareable state: ?source=...&q=...&f=... lets anyone link to a specific view.
+// Aquifer (or any other system) can deep-link by appending ?source=<image-url>.
 
+function readUrlState() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    source: params.get('source'),
+    q: params.get('q'),
+    f: params.get('f'),
+  };
+}
+
+function writeUrlState() {
+  // Build a clean query string reflecting current control state.
+  const params = new URLSearchParams();
+  const customVal = customUrl.value.trim();
+  const sourceVal = customVal || sourceSelect.value;
+  if (sourceVal) params.set('source', sourceVal);
+  if (qualitySelect.value && qualitySelect.value !== 'medium') {
+    params.set('q', qualitySelect.value);
+  }
+  if (formatSelect.value && formatSelect.value !== 'auto') {
+    params.set('f', formatSelect.value);
+  }
+  const qs = params.toString();
+  const newUrl = window.location.pathname + (qs ? '?' + qs : '');
+  // replaceState so the user can hit back and not get stuck in their own state
+  history.replaceState(null, '', newUrl);
+}
+
+function applyUrlState() {
+  const { source, q, f } = readUrlState();
+  if (source) {
+    // If the source matches a dropdown option, select it. Otherwise put it in
+    // the custom URL field. Either way the page loads with their image.
+    const matchingOption = Array.from(sourceSelect.options)
+      .find(opt => opt.value === source);
+    if (matchingOption) {
+      sourceSelect.value = source;
+      customUrl.value = '';
+    } else {
+      customUrl.value = source;
+    }
+  }
+  if (q && ['low', 'medium', 'high'].includes(q)) {
+    qualitySelect.value = q;
+  }
+  if (f && ['auto', 'avif', 'webp', 'jpeg'].includes(f)) {
+    formatSelect.value = f;
+  }
+}
+
+// Show toast for feedback (used after Share-link copy)
+const toast = document.getElementById('toast');
+let toastTimer = null;
+function showToast(message, duration = 2200) {
+  toast.textContent = message;
+  toast.classList.add('visible');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('visible'), duration);
+}
+
+// Share-link button: copies the current URL to clipboard
+const shareLinkBtn = document.getElementById('share-link');
+shareLinkBtn.addEventListener('click', async () => {
+  // Make sure the URL reflects current state first
+  writeUrlState();
+  const link = window.location.href;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(link);
+      showToast('Link copied to clipboard');
+    } else {
+      // Fallback: select the link in a temporary element
+      const ta = document.createElement('textarea');
+      ta.value = link;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'absolute';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('Link copied to clipboard');
+    }
+  } catch (err) {
+    // Last fallback: show the link in a prompt so they can copy manually
+    showToast('Copy this link manually (clipboard blocked)');
+    window.prompt('Copy this link:', link);
+  }
+});
+
+reloadBtn.addEventListener('click', loadGrid);
+sourceSelect.addEventListener('change', () => {
+  customUrl.value = '';
+  writeUrlState();
+  loadGrid();
+});
+customUrl.addEventListener('change', () => {
+  writeUrlState();
+  loadGrid();
+});
+qualitySelect.addEventListener('change', () => {
+  writeUrlState();
+  loadGrid();
+});
+formatSelect.addEventListener('change', () => {
+  writeUrlState();
+  loadGrid();
+});
+
+// Initial load: apply URL state to controls, then load grid, then sync URL
+// back (so any defaults missing from the URL get reflected if needed).
+applyUrlState();
 loadGrid();
+writeUrlState();
 </script>
 
 </body>
