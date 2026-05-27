@@ -7,9 +7,10 @@ compatibility_flags = [ "nodejs_compat" ]
 [vars]
 # CANON_ENDPOINT = "https://your-canon-endpoint.example.com/query"   # Used by the docs tool
 
-# Cloudflare Images binding (for image path)
-# [images]
-# binding = "IMAGES"
+# Cloudflare Images binding (for image path) — required for half-class transforms.
+# Without this, the worker falls back to passthrough (X-Transcode-Encode: no-binding).
+[images]
+binding = "IMAGES"
 
 # R2 bucket for audio output (lazy writes)
 # [[r2_buckets]]

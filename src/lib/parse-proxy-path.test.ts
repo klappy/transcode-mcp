@@ -1,0 +1,105 @@
+import { describe, expect, test } from "bun:test";
+import { parseProxyPath, ProxyPathError } from "./parse-proxy-path";
+
+describe("parseProxyPath — image", () => {
+  test("parses bare image URL with no options", () => {
+    const result = parseProxyPath("/image/https://example.com/photo.jpg");
+    expect(result.mediaType).toBe("image");
+    expect(result.options).toEqual({});
+    expect(result.sourceUrl).toBe("https://example.com/photo.jpg");
+  });
+
+  test("parses image with all options", () => {
+    const result = parseProxyPath(
+      "/image/w=800,h=600,q=low,f=avif/https://example.com/photo.jpg",
+    );
+    expect(result.mediaType).toBe("image");
+    expect(result.options).toEqual({ w: 800, h: 600, q: "low", f: "avif" });
+    expect(result.sourceUrl).toBe("https://example.com/photo.jpg");
+  });
+
+  test("parses image with width only", () => {
+    const result = parseProxyPath(
+      "/image/w=800/https://example.com/photo.jpg",
+    );
+    expect(result.options).toEqual({ w: 800 });
+  });
+
+  test("handles options in any order", () => {
+    const result = parseProxyPath(
+      "/image/q=high,f=webp,w=1080/https://example.com/photo.jpg",
+    );
+    expect(result.options).toEqual({ w: 1080, q: "high", f: "webp" });
+  });
+
+  test("preserves source URL with query string", () => {
+    const result = parseProxyPath(
+      "/image/w=800/https://example.com/photo.jpg?v=2&size=large",
+    );
+    expect(result.sourceUrl).toBe(
+      "https://example.com/photo.jpg?v=2&size=large",
+    );
+  });
+
+  test("preserves source URL with path segments", () => {
+    const result = parseProxyPath(
+      "/image/w=800/https://example.com/path/to/image.jpg",
+    );
+    expect(result.sourceUrl).toBe("https://example.com/path/to/image.jpg");
+  });
+
+  test("rejects invalid w value", () => {
+    expect(() =>
+      parseProxyPath("/image/w=99999/https://example.com/a.jpg"),
+    ).toThrow(ProxyPathError);
+    expect(() =>
+      parseProxyPath("/image/w=-1/https://example.com/a.jpg"),
+    ).toThrow(ProxyPathError);
+    expect(() =>
+      parseProxyPath("/image/w=abc/https://example.com/a.jpg"),
+    ).toThrow(ProxyPathError);
+  });
+
+  test("rejects invalid q value", () => {
+    expect(() =>
+      parseProxyPath("/image/q=ultra/https://example.com/a.jpg"),
+    ).toThrow(ProxyPathError);
+  });
+
+  test("rejects invalid f value", () => {
+    expect(() =>
+      parseProxyPath("/image/f=png/https://example.com/a.jpg"),
+    ).toThrow(ProxyPathError);
+  });
+});
+
+describe("parseProxyPath — audio", () => {
+  test("parses bare audio URL with no options", () => {
+    const result = parseProxyPath("/audio/https://example.com/sound.mp3");
+    expect(result.mediaType).toBe("audio");
+    expect(result.options).toEqual({});
+  });
+
+  test("parses audio with preset and q", () => {
+    const result = parseProxyPath(
+      "/audio/preset=voice,q=medium/https://example.com/sound.mp3",
+    );
+    expect(result.options).toEqual({ preset: "voice", q: "medium" });
+  });
+});
+
+describe("parseProxyPath — errors", () => {
+  test("rejects missing media_type", () => {
+    expect(() => parseProxyPath("/")).toThrow(ProxyPathError);
+  });
+
+  test("rejects unknown media_type", () => {
+    expect(() => parseProxyPath("/video/https://example.com/v.mp4")).toThrow(
+      ProxyPathError,
+    );
+  });
+
+  test("rejects path with no source URL", () => {
+    expect(() => parseProxyPath("/image/w=800")).toThrow(ProxyPathError);
+  });
+});
