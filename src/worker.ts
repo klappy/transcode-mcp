@@ -1,5 +1,6 @@
 // src/worker.ts
 // Proxy-first + lazy transcoding MCP server using current Cloudflare Agents SDK
+// Deploy marker: 2026-05-27 v3 - forcing fresh production deploy
 
 import { createMcpHandler } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -63,13 +64,20 @@ function createServer() {
 
 export default {
   async fetch(request: Request, env: any, ctx: ExecutionContext) {
-    const server = createServer();
-    const handler = createMcpHandler(server);
-    return handler(request, env, ctx);
+    const url = new URL(request.url);
+
+    if (url.pathname.startsWith('/mcp')) {
+      const server = createServer();
+      const handler = createMcpHandler(server);
+      return handler(request, env, ctx);
+    }
+
+    // Visible marker so we can confirm when new code is live
+    return new Response('transcode-mcp LIVE v3 - MCP at /mcp (forced deploy)', { status: 200 });
   },
 };
 
-// Placeholder proxy routes (to be implemented next)
+// Placeholder proxy routes
 async function handleImageProxy(request: Request, env: any) {
   return new Response("Image proxy placeholder", { status: 200 });
 }
