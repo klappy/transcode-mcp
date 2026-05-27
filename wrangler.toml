@@ -2,6 +2,7 @@
 name = "transcode-mcp"
 main = "src/worker.ts"
 compatibility_date = "2025-05-01"
+compatibility_flags = [ "nodejs_compat" ]
 
 [build]
 command = "npm install"
