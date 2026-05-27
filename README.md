@@ -4,13 +4,38 @@ A media transcoding proxy. An automagic URL that drops into an `<img>` or `<audi
 
 The primary use case is packaging media resources for offline delivery in Bible translation projects — ensuring images and audio attached to a pericope assignment are as small as possible for a cheap Android phone with limited storage and a slow connection.
 
-The product's value is transcoding craft — finding the perceptual axis the human under-samples, spending nothing there, and pouring the entire budget into what will actually be looked at and listened to. The proxy is only the delivery mechanism.
+---
+
+## The Goal — Read This First
+
+**Outcome:** smaller files at acceptable perceived quality, delivered fast and cheap, for offline packaging on constrained devices.
+
+**Cost function (what we minimize):** bytes per delivered media asset.
+
+**Constraints in tension (the quality attributes this project holds simultaneously, per `klappy://canon/methods/quality-attribute-tension-survey`):**
+
+| Constraint               | Floor / ceiling                                       | Why it tensions |
+|--------------------------|-------------------------------------------------------|----------------|
+| Perceived quality        | ≥ the floor set by the request's `q=low/med/high` preset | A smaller file that looks unacceptable is a failure, not a win |
+| Transcode wall time      | Worker + container budget; first-request latency      | A perfect file the user waited too long for is a failure |
+| Implementation simplicity| One Worker, one Container, presets as data, no per-request classification | Sophistication that won't survive a year of maintenance is a failure |
+| Maintainability          | One person can operate it indefinitely                 | Configuration sprawl is a failure |
+| Bandwidth cost (egress)  | Cloudflare egress on cache miss; R2 cost on hit       | Bytes paid twice is a failure |
+| Storage cost (R2)        | Content-addressed; lifecycle GC                        | Stored variants that won't be re-read are a failure |
+
+**Decision protocol:** any encoder choice (resolution, quality, format, codec, sample rate) is evaluated against ALL of these simultaneously. There is no single "right value" derived from geometry. There is a set of candidate configurations, each scored on bytes-and-quality-and-time-and-simplicity, and the one that holds all the constraints with the smallest byte cost wins. When constraints conflict, the operator (or the canon planning doc for the relevant class) names the trade explicitly — not implicitly by picking one and ignoring the others.
+
+**Core principle (`canon/handoffs/2026-05-26-exploration-journal.md`):** spend nothing on what the human can't perceive; control the character of the loss; the system of constraints is the trick.
+
+If a proposed rule reduces bytes but degrades quality below the floor — reject. If it improves quality but costs bytes the user can't perceive — reject. If it improves both but adds a per-request classifier that won't survive maintenance — reject. **The art is in holding all of them at once.**
+
+---
 
 ## Project Identity — Proactive Integrity
 
-**Orientation**: Before I speak, I observe. Before I claim, I verify. Before I confirm, I prove. What I have not seen, I do not know. What I have not verified, I will not imply.
+**Orientation:** Before I speak, I observe. Before I claim, I verify. Before I confirm, I prove. What I have not seen, I do not know. What I have not verified, I will not imply.
 
-See full details in [canon/values/project-identity.md](canon/values/project-identity.md)
+See full details in [canon/values/project-identity.md](canon/values/project-identity.md) and the full goal framing in [canon/values/project-goal.md](canon/values/project-goal.md).
 
 ## Status
 
@@ -26,7 +51,7 @@ See full details in [canon/values/project-identity.md](canon/values/project-iden
 - **MCP Control Surface**: LLM agents can call `generate_transcode_url` to get optimized proxy URLs.
 - **Canon-Aware `docs` Tool**: Proxies natural language queries to the project's canon (following the PTXprint-MCP / oddkit pattern).
 - **Proxy-First + Lazy Architecture**: URLs are generated instantly; actual transcoding/caching only happens on first request.
-- **Perceptual Optimization**: Uses half-class overshoot math and preset-specific ffmpeg recipes tuned for voice vs music.
+- **Perceptual Optimization**: Uses encoder-parameter selection (resolution × quality × format) tuned to the per-request budget, with preset-specific ffmpeg recipes for voice vs music.
 
 ## Architecture
 
@@ -39,8 +64,10 @@ The project's durable record lives in `canon/`. Exploration artifacts, planning 
 - `canon/handoffs/` — session journals
 - `canon/encodings/` — DOLCHEO+ structured decision records
 - `canon/planning/` — planning session artifacts
-- `canon/values/` — project identity, orientation, axioms
+- `canon/values/` — project identity, orientation, axioms, **and the goal**
 - `canon/constraints/` — definition of done, core governance baseline
+
+**Agent operating protocol:** at the start of every session in this repo, the first oddkit calls are `get` on `canon/values/project-goal.md` and `canon/values/project-identity.md`. The goal is the cost function; the identity is the creed. Skipping either is how rules get built against the wrong objective.
 
 ## License
 

@@ -26,17 +26,36 @@ rewrites each through the proxy with the right preset and bundles the results.
 
 ## Core Method
 
-One principle, many views: spend nothing on what the human can't perceive;
-control the character of the loss.
+**Multi-objective constrained optimization.** Minimize bytes subject to a set
+of constraints held simultaneously. The constraints — perceived quality floor,
+transcode wall time, implementation simplicity, maintainability, egress cost,
+storage cost — are named and quantified in
+[canon/values/project-goal.md](canon/values/project-goal.md). Every encoder
+choice is scored against all of them, not against one in isolation.
 
-- **Half-class resolution overshoot** — encode at 1.5x the target resolution,
-  let the display downscale smooth away compression artifacts
+The principle that orients the trades is from the exploration journal: spend
+nothing on what the human can't perceive; control the character of the loss;
+the system of constraints is the trick. The art is in holding all of them at
+once.
+
+The techniques the system uses to find bytes-cheap configurations that clear
+the quality floor:
+
 - **Per-axis perceptual leash** — push each axis (chroma, color depth,
   resolution, bit budget, sample rate) to just short of its breaking point
 - **Control the character of the loss** — degrade toward natural soft blur,
   away from blocking/ringing/banding
+- **Half-class resolution overshoot** — for downsamples from lossy sources,
+  encode at ~1.5x the target so the display downscale cleans up artifacts.
+  Applied conditionally, not universally — see encode-resolution planning doc.
 - **Three quality presets** — low (q=20), medium (q=50), high (q=80),
   same intent across media types, different codec settings per type
+- **Interchangeable knobs** — resolution, quality parameter, and format are
+  interchangeable levers against the byte budget. The encoder picks the
+  cheapest combination that clears the floor; no lever is privileged.
+
+None of these is the rule by itself. They are techniques in service of the
+multi-objective optimum.
 
 ## Platform
 
@@ -78,8 +97,3 @@ The LLM is a smart URL constructor — it picks the right preset and width based
 on the user's context and returns URL strings.
 
 ## What Comes Next
-
-- Exact half-class resolution arithmetic (with worked examples)
-- Audio Container recipe format
-- MCP tool definition
-- v1 build plan
