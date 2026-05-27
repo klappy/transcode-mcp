@@ -263,8 +263,7 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
   }
   .compare-canvas {
     display: grid; grid-template-columns: 1fr 1fr;
-    /* width is set inline by JS based on zoom factor; both cells inherit
-       the same column width so images stay aligned spatially. */
+    width: 100%; /* default — JS overrides to (zoom × 100)% to scale both panels */
   }
   .compare-image-cell {
     display: flex; align-items: flex-start; justify-content: center;
@@ -543,7 +542,10 @@ async function loadBaseline(source) {
     // For the baseline we need the natural dimensions of the source. The
     // passthrough path doesn't set X-Transcode-Source-* headers (because no
     // transform was attempted), so we measure from the loaded image instead.
-    // We'll fill these in once the image loads.
+    // The tile is usable for compare-mode as soon as the path is set; the
+    // dimensions just enhance its own display tile but aren't required for
+    // the picker to include it.
+    tile.classList.remove('loading');
     tile.dataset.path = path;
     tile.dataset.size = String(result.size);
     tile.dataset.cache = cache;
@@ -552,13 +554,26 @@ async function loadBaseline(source) {
     tile.setAttribute('tabindex', '0');
     tile.setAttribute('aria-label', 'Open original source preview');
 
+    // Fill in heading + meta immediately. Dimensions get added once the image
+    // decodes and we read naturalWidth/Height.
+    const heading0 = tile.querySelector('h2');
+    if (heading0) heading0.textContent = 'Original source';
+    const meta0 = tile.querySelector('.baseline-meta');
+    if (meta0) {
+      meta0.innerHTML = \`
+        <div class="row"><span>format</span><strong>\${contentType}</strong></div>
+        <div class="row"><span>size</span><strong>\${formatBytes(result.size)}</strong></div>
+        <div class="row"><span>delivery</span><strong>\${encodeMarker || 'passthrough'}</strong></div>
+        <div class="row"><span>cache</span><strong>\${cache}</strong></div>
+      \`;
+    }
+
     const img = document.createElement('img');
     img.src = path;
     img.alt = 'original source';
     img.onload = () => {
       tile.dataset.sourceW = String(img.naturalWidth);
       tile.dataset.sourceH = String(img.naturalHeight);
-      tile.classList.remove('loading');
       const heading = tile.querySelector('h2');
       heading.innerHTML = \`Original source <span style="color: var(--text-dim); font-weight: 400; font-size: 13px;">\${img.naturalWidth} × \${img.naturalHeight}</span>\`;
       const meta = tile.querySelector('.baseline-meta');
@@ -803,18 +818,18 @@ function formatMetaBlock(entry) {
          '<div class="row"><span>size</span><strong>' + formatBytes(entry.size) + '</strong></div>';
 }
 
-function getViewportInnerWidth() {
-  // The width available for the canvas = viewport client width (excludes scrollbar)
-  return compareViewport.clientWidth;
-}
-
 function applyZoom() {
-  const vpW = getViewportInnerWidth();
-  if (vpW <= 0) return;
-  // Canvas width = viewport width × zoom. Each cell gets half.
-  const canvasW = Math.max(1, Math.round(vpW * compareState.zoom));
-  compareCanvas.style.width = canvasW + 'px';
-  zoomReadout.textContent = Math.round(compareState.zoom * 100) + '%';
+  // Canvas width as a percentage of the viewport. At 100%, canvas fits the
+  // viewport. At 200%, canvas is twice as wide and the viewport scrolls.
+  // Each cell is 50% of canvas (grid-template-columns: 1fr 1fr), so both
+  // panels stay the same display size at every zoom level.
+  // Using a percentage instead of measuring clientWidth avoids a timing bug
+  // where the modal layout hasn't run yet when renderCompare first fires
+  // (display:none → display:flex doesn't synchronously trigger layout, so
+  // clientWidth returned 0 and the canvas stayed widthless).
+  const pct = Math.max(1, Math.round(compareState.zoom * 100));
+  compareCanvas.style.width = pct + '%';
+  zoomReadout.textContent = pct + '%';
 }
 
 function setZoom(z) {
@@ -929,11 +944,6 @@ comparePickerRight.addEventListener('change', () => {
 zoomInBtn.addEventListener('click', () => setZoom(compareState.zoom * 1.5));
 zoomOutBtn.addEventListener('click', () => setZoom(compareState.zoom / 1.5));
 zoomFitBtn.addEventListener('click', setZoomFit);
-
-// Recalculate canvas width if the window resizes (keeps the zoom ratio)
-window.addEventListener('resize', () => {
-  if (modalBackdrop.classList.contains('open')) applyZoom();
-});
 
 // Tile click → open compare modal with that tile pre-selected on the right
 grid.addEventListener('click', (e) => {
