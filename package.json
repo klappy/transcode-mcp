@@ -9,7 +9,7 @@
     "tail": "wrangler tail"
   },
   "dependencies": {
-    "@cloudflare/agents": "^0.0.1"
+    "agents": "^0.0.16"
   },
   "devDependencies": {
     "wrangler": "^3.0.0"

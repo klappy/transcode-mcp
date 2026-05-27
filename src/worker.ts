@@ -1,7 +1,7 @@
 // src/worker.ts
 // Proxy-first + lazy transcoding Worker using official Cloudflare Agents SDK
 
-import { createMcpHandler } from '@cloudflare/agents/mcp';
+import { createMcpHandler } from 'agents/mcp';
 
 // Half-class perceptual overshoot (from canon)
 function halfClass(target: number): number {
