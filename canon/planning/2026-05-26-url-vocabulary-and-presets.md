@@ -1,12 +1,22 @@
 ---
 title: "URL Vocabulary and Presets"
 date: 2026-05-26
+status: working
 mode: planning
-status: draft
-project: transcode-mcp
+derives_from: canon/handoffs/2026-05-26-planning-journal.md
 ---
 
 # URL Vocabulary and Presets
+
+> The proxy URL is `https://transcode.klappy.dev/{media_type}/{options}/{source_url}` where `media_type` is `image` or `audio` (video deferred), `options` is comma-separated `key=value` pairs with no spaces and order-independent, and `source_url` is the rest of the path with no URL-encoding required. Image options: `w`, `h`, `q` (low/medium/high → 20/50/80), `f` (auto/avif/webp/jpeg). Audio options: `preset` (voice/music), `q` (low/medium/high). Quality presets cross-multiply with content type to give six audio combinations from telephone-quality voice (voice+low, 8k mono) to high-quality music (music+high, 128k stereo).
+
+---
+
+## Summary — One URL Shape, Two Media Types, Six Audio Combinations
+
+This document is the binding specification for the URL the proxy serves. It defines the path shape, the option grammar, the quality presets, and the MCP tool schema that wraps them. The URL is the API — both for direct callers (a translation app constructing URLs by string concatenation) and for the MCP tool surface (an LLM picking presets and widths from context). The half-class overshoot is computed by the Worker from the target dimensions and the source dimensions; callers do not specify the encode resolution. Status is `working` because the audio recipes in `canon/planning/2026-05-27-audio-container-recipes.md` have not yet been verified against real source files; the URL vocabulary itself is settled.
+
+---
 
 ## URL Structure
 

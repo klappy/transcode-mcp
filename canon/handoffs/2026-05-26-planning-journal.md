@@ -1,15 +1,23 @@
 ---
 title: "Session Journal — Media Transcoding Proxy, Planning Session 1"
-audience: journal
 date: 2026-05-26
+status: stable
 mode: planning
-status: complete
-project: transcode-mcp
-operator: Christopher Klapp
-prior_session: "2026-05-26-exploration-journal.md"
+derives_from: canon/handoffs/2026-05-26-exploration-journal.md
 ---
 
 # Session Journal — Media Transcoding Proxy, Planning Session 1
+
+> Planning session that started from the exploration session's reference architecture (Worker + Container + R2 modeled on ptxprint-mcp) and arrived at a much simpler model through three successive operator-driven simplifications: R2-folder-as-protocol, then env.IMAGES binding discovery, then "make an actual proxy." The final shape: a stateless HTTP proxy with `/{media_type}/{options}/{source_url}` as the API. Images use the env.IMAGES binding plus Cache API — no R2, no Container, no Durable Objects. Audio uses Container + ffmpeg + R2 because Cloudflare's env.MEDIA binding lacks bitrate/quality controls. Quality presets settled at 20/50/80 (wider spread than 40/60/80 because half-class upsample absorbs artifacts on display downscale). MCP tool is a URL constructor returning strings. No batch API.
+
+---
+
+## Summary — Three Simplifications from a Clone to a Proxy
+
+This session took the exploration session's ptxprint-mcp-clone reference architecture and reduced it three times to its simplest viable form. Each operator challenge removed machinery. The final architecture has fewer moving parts, zero orphan risk for images, and the same content-addressed pure-function caching for audio. The MCP tool is documentation-as-a-tool-surface: it teaches an LLM the URL convention rather than acting on it. The primary use case is offline packaging of pericope media for Bible translation on cheap Android phones — the constraint that licenses aggressive quality cuts. The decisions are encoded in `canon/encodings/2026-05-26-planning-session.tsv` and the open items are queued there for future sessions.
+
+---
+
 
 ## Orientation
 

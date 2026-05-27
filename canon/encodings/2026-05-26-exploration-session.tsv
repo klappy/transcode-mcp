@@ -1,3 +1,8 @@
+# DOLCHEO+ encoding TSV — schema per canon/governance/writing-conventions.md
+# D, O, L, C rows (6 cols): type	title	body	evidence	alternatives	status
+# H rows (4 cols):           type	title	body	owner
+# O-open rows (5 cols):      type	open	priority	title	body
+# Tab-separated. Order within file: D/O/L/C/H first, then O-open at end.
 D	Recreate Sovée Transcribr for the AI world	Build a media transcoding proxy that delivers media at the right filesize for its intended delivery context, best quality for that budget, via an automagic GET-param URL and an MCP control surface for LLM-driven optimization.	The automagic URL is the product identity — drops into an img/audio tag with zero integration. The MCP layer exposes the same parameters to an LLM caller. Sovée Transcribr is the spiritual ancestor, reframed for an AI-mediated world.	Build from scratch as a clean reimplementation	reversible
 O	Patent US9565430B1 is expired	US9565430B1 ("Apparatus and method for video encoding and transcoding system"), priority 2011-12-15, granted 2017, lists Christopher Klapp among inventors, assigned to Kingdom Site Ministries. It lapsed 2021-02-07 for non-payment of maintenance fees.	Google Patents, full patent fetched	verified
 L	Protection comes from execution, not the patent	The expired patent's teachings are public domain — free to reimplement, no licensing or infringement risk, but no enforceable monopoly. The resolution-overshoot trick was never claimed in the patent; it was operator know-how. Protection now rests on execution and AI-era framing.	O: Patent US9565430B1 is expired; patent claims cover adaptive bitrate switching, not the overshoot trick	general

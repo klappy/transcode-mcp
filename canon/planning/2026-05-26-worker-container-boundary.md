@@ -1,17 +1,27 @@
 ---
-title: "transcode-mcp — Worker/Container Boundary"
+title: "Worker / Container Boundary — What the Worker Knows, Doesn't Know, and Is Not"
 date: 2026-05-26
+status: working
 mode: planning
-status: draft
-project: transcode-mcp
+derives_from: canon/handoffs/2026-05-26-planning-journal.md
+modeled_on: klappy/ptxprint-mcp v1.2 spec section 1
 applied_canon:
   - klappy://canon/principles/vodka-architecture
   - klappy://docs/promotions/P0006-vodka-boundary-enumeration-as-spec-convention
-  - klappy://canon/constraints/anti-cache-lying
-modeled_on: "klappy/ptxprint-mcp v1.2 spec section 1"
+  - klappy://odd/constraints/anti-cache-lying
 ---
 
-# transcode-mcp — Worker/Container Boundary
+# Worker / Container Boundary — What the Worker Knows, Doesn't Know, and Is Not
+
+> The Worker owns URL parsing, option validation, half-class arithmetic, env.IMAGES binding calls for images, Cache API lookups, R2 dispatch for audio, and the request/response envelope. It does not own ffmpeg flags, codec internals, audio recipes, perceptual quality judgments, or source media analysis. The only domain opinion in the Worker is the half-class multiplier (1.5x); everything else is preset data or binding API calls. This document enumerates the boundary explicitly because implicit boundaries produce sprawl — ptxprint-mcp attributed its own early v1.0→v1.1 sprawl to exactly this gap.
+
+---
+
+## Summary — Vodka-Thin Worker, ffmpeg Sealed in Container, Recipes as Data
+
+This document is the load-bearing boundary specification for transcode-mcp. It enumerates what the Worker knows (the URL vocabulary, the Cache API, the env.IMAGES binding, the half-class arithmetic, the audio dispatch path), what it does not know (ffmpeg internals, codec flags, audio recipe contents, perceptual quality judgments, source media analysis), and what the project as a whole is not (a CDN, a batch processor, a media editor, a media analysis API, a stateful service). The boundary is the vodka constraint at work: one explicit domain opinion (the half-class multiplier), the rest as data or binding calls. The Container owns ffmpeg, the codec libraries, the recipe files, the content-class detection, and the R2 upload — and nothing else. The boundary closes the sprawl pathway by being written down before any code claims to honor it.
+
+---
 
 ## What This Server Knows
 
