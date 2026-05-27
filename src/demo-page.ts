@@ -174,7 +174,9 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
     display: flex; gap: 16px; flex-wrap: wrap; font-size: 11px;
     color: var(--text-dim); margin-top: 12px;
   }
-  .legend span::before {
+  .legend .target::before,
+  .legend .source::before,
+  .legend .equal::before {
     content: "■"; margin-right: 4px;
   }
   .legend .target::before { color: var(--accent); }
@@ -491,11 +493,14 @@ function openModalForTile(tile) {
       'for display — that downscale is the artifact filter, the same mechanism canon describes for ' +
       '"control the character of the loss."';
   } else if (binding === 'source') {
+    const scaleVerb = encodeW < displayWidth ? 'upscaling' : encodeW > displayWidth ? 'downscaling' : 'rendering 1:1';
+    const scaleClause = encodeW === displayWidth
+      ? 'and your browser is rendering 1:1 at ' + displayWidth + 'px'
+      : 'and your browser is ' + scaleVerb + ' from ' + encodeW + 'px to ' + displayWidth + 'px for display';
     explain =
       'Source is small enough that <code>source × 1.5 = ' + encodeW + 'px</code> binds instead of ' +
-      'target × 1.5. The proxy encoded at the modest overshoot, and your browser is upscaling ' +
-      'from ' + encodeW + 'px to ' + displayWidth + 'px for display. Without the <code>source × 1.5</code> ' +
-      'cap, this would have manufactured pixels from no signal.';
+      'target × 1.5. The proxy encoded at the modest overshoot, ' + scaleClause + '. ' +
+      'Without the <code>source × 1.5</code> cap, this would have manufactured pixels from no signal.';
   } else if (binding === 'equal') {
     explain =
       'Source dimensions already match the target. No scaling at the encoder; the only work is ' +
