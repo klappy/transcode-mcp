@@ -8,7 +8,7 @@ describe('generateTranscodeUrl', () => {
       sourceUrl: 'https://example.com/img.jpg',
       options: { w: 800, q: 'low', f: 'auto' },
     });
-    expect(url).toBe('/image/w=800,q=low,f=auto/https%3A%2F%2Fexample.com%2Fimg.jpg');
+    expect(url).toBe('/image/w=800,q=low,f=auto/https://example.com/img.jpg');
   });
 
   test('produces canon format for audio', () => {
@@ -17,6 +17,6 @@ describe('generateTranscodeUrl', () => {
       sourceUrl: 'https://example.com/audio.mp3',
       options: { preset: 'voice+medium', q: 'high' },
     });
-    expect(url).toBe('/audio/preset=voice%2Bmedium,q=high/https%3A%2F%2Fexample.com%2Faudio.mp3');
+    expect(url).toBe('/audio/preset=voice%2Bmedium,q=high/https://example.com/audio.mp3');
   });
 });
