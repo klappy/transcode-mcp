@@ -8,7 +8,7 @@ export const RawOptionsSchema = z.string().transform((raw) => {
     if (!pair) continue;
     const eq = pair.indexOf("=");
     if (eq === -1) continue;
-    out[pair.slice(0, eq)] = pair.slice(eq + 1);
+    out[pair.slice(0, eq)] = decodeURIComponent(pair.slice(eq + 1));
   }
   return out;
 });

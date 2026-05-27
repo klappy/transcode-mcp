@@ -28,5 +28,8 @@ export function generateTranscodeUrl(input: GenerateTranscodeUrlInput): string {
     .map(([key, value]) => `${key}=${encodeURIComponent(String(value))}`)
     .join(",");
 
-  return `/${mediaType}/${optionSegment}/${encodeURIComponent(sourceUrl)}`;
+  const encodedSource = encodeURIComponent(sourceUrl);
+  return optionSegment
+    ? `/${mediaType}/${optionSegment}/${encodedSource}`
+    : `/${mediaType}/${encodedSource}`;
 }
