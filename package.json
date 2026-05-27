@@ -1,1 +1,20 @@
-{"name":"transcode-mcp","version":"0.1.0","private":true,"type":"module","scripts":{"typecheck":"tsc --noEmit","test":"bun test","smoke-test":"bun run smoke-test.ts"},"devDependencies":{"@types/bun":"latest","typescript":"^5.4.0","zod":"^3.23.8"}}
+{
+  "name": "transcode-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "smoke-test": "bun run smoke-test.ts"
+  },
+  "dependencies": {
+    "@cloudflare/agents": "latest",
+    "@modelcontextprotocol/sdk": "latest",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.4.0"
+  }
+}
