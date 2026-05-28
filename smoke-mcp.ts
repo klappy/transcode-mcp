@@ -11,15 +11,25 @@
 
 const DEFAULTS = {
   prod: "https://transcode-mcp.klappy.workers.dev",
-  preview: "https://feat-mcp-url-guidance-transcode-mcp.klappy.workers.dev",
 };
+
+// Mirror the CI slug rule: replace '/' with '-' in the current git branch,
+// then build the Cloudflare per-branch preview hostname. Keeps the shorthand
+// honest as branches come and go (the CI workflow does the same thing from
+// github.head_ref || github.ref_name).
+function currentBranchPreviewUrl(): string {
+  const { execSync } = require("node:child_process") as typeof import("node:child_process");
+  const ref = execSync("git rev-parse --abbrev-ref HEAD", { encoding: "utf8" }).trim();
+  const slug = ref.replace(/\//g, "-");
+  return `https://${slug}-transcode-mcp.klappy.workers.dev`;
+}
 
 const arg = process.argv[2] ?? "prod";
 const baseUrl =
   arg === "prod"
     ? DEFAULTS.prod
     : arg === "preview"
-      ? DEFAULTS.preview
+      ? currentBranchPreviewUrl()
       : arg.replace(/\/$/, "");
 
 const endpoint = baseUrl + "/mcp";
