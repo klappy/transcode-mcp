@@ -40,7 +40,8 @@ Comma-separated key=value pairs. No spaces. Order does not matter.
 
 | Key | Values                      | Default  | Description |
 |-----|-----------------------------|----------|-------------|
-| w   | integer (pixels)            | auto     | Target display width. Half-class overshoot applied automatically. |
+| s   | integer (pixels)            | auto     | Target SHORTEST side. Preferred sizing input: stable across device rotation. The worker maps it to a width from the source orientation, then applies the half-class overshoot. |
+| w   | integer (pixels)            | auto     | Target display width (advanced). Overrides s. Half-class overshoot applied automatically. |
 | h   | integer (pixels)            | auto     | Target display height. Maintains aspect ratio with w. |
 | q   | low, medium, high           | medium   | Quality preset. |
 | f   | auto, avif, webp, jpeg      | auto     | Output format. auto selects best for the requesting browser. |
@@ -81,6 +82,26 @@ q=20 produces usable results where it normally would not.
 | music+low    | 64k     | 24000 Hz    | stereo   | Background music, low-bandwidth |
 | music+medium | 128k    | 44100 Hz    | stereo   | General music delivery |
 | music+high   | 192k    | 48000 Hz    | stereo   | High-quality music, good playback chain |
+
+## Shortest-Side Sizing (`s`)
+
+`s` is the preferred way to size images. It names the **shortest side** of the
+intended display, in CSS pixels. Because a phone rotates — the same photo is
+landscape or portrait depending on how it's held — a literal `w` (width) is an
+arbitrary axis. The shortest side is the stable "resolution class": an `s=720`
+image carries the same per-pixel quality whether shown 720 wide (portrait) or
+720 tall (landscape).
+
+The Worker resolves `s` to a target width at request time, using the measured
+source orientation:
+
+    portrait or square (sourceW <= sourceH):  width = s
+    landscape          (sourceW >  sourceH):  width = round(s * sourceW / sourceH)
+
+That width then feeds the half-class overshoot below. Callers do not compute
+this — only the Worker knows the true orientation at request time, so the
+mapping lives there. `w` remains available as an advanced escape hatch and
+overrides `s` when both are present.
 
 ## Half-Class Resolution Overshoot
 

@@ -12,6 +12,7 @@ export interface ParsedImageRequest {
   options: {
     w?: number;
     h?: number;
+    s?: number;
     q?: "low" | "medium" | "high";
     f?: "auto" | "avif" | "webp" | "jpeg";
   };
@@ -121,6 +122,13 @@ function validateImageOptions(raw: Record<string, string>): ParsedImageRequest["
       throw new ProxyPathError(`Invalid h=${raw.h}`);
     }
     out.h = n;
+  }
+  if (raw.s !== undefined) {
+    const n = parseInt(raw.s, 10);
+    if (!Number.isFinite(n) || n <= 0 || n > 8192) {
+      throw new ProxyPathError(`Invalid s=${raw.s}`);
+    }
+    out.s = n;
   }
   if (raw.q !== undefined) {
     if (raw.q !== "low" && raw.q !== "medium" && raw.q !== "high") {

@@ -25,6 +25,22 @@ describe("parseProxyPath — image", () => {
     expect(result.options).toEqual({ w: 800 });
   });
 
+  test("parses image with shortest-side s only", () => {
+    const result = parseProxyPath(
+      "/image/s=720,q=low/https://example.com/photo.jpg",
+    );
+    expect(result.options).toEqual({ s: 720, q: "low" });
+  });
+
+  test("rejects invalid s", () => {
+    expect(() =>
+      parseProxyPath("/image/s=0/https://example.com/photo.jpg"),
+    ).toThrow(ProxyPathError);
+    expect(() =>
+      parseProxyPath("/image/s=99999/https://example.com/photo.jpg"),
+    ).toThrow(ProxyPathError);
+  });
+
   test("handles options in any order", () => {
     const result = parseProxyPath(
       "/image/q=high,f=webp,w=1080/https://example.com/photo.jpg",
