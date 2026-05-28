@@ -30,48 +30,90 @@ jobs:
       - name: Type check
         run: bun run tsc --noEmit
 
-      - name: Lint (if configured)
-        run: bun run lint || echo "No lint script defined yet"
-        continue-on-error: true
-
       - name: Run unit tests
         run: bun test
 
-      - name: Upload test results (optional)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: |
-            coverage/
-            test-results/
-          retention-days: 7
-
-  smoke-test:
-    name: Smoke Test (Live Worker)
+  # Compute the per-branch Cloudflare preview URL once and share it with the
+  # smoke jobs. The slug rule (confirmed from Cloudflare docs):
+  #   <= 63 chars: <branch-name>-<worker-name>.<subdomain>.workers.dev,
+  #   with '/' replaced by '-'. Longer names get truncated + a hash, which
+  #   we don't try to derive — rare for this repo. On push to main the
+  #   branch is 'main' so the URL resolves to the production-style host
+  #   'main-transcode-mcp.<subdomain>.workers.dev', which CF aliases live.
+  resolve-preview:
+    name: Resolve preview URL
     runs-on: ubuntu-latest
     needs: test
-    if: ${{ secrets.WORKER_PREVIEW_URL != '' }}
+    outputs:
+      base_url: ${{ steps.url.outputs.base_url }}
+    steps:
+      - name: Compute branch slug + URL
+        id: url
+        run: |
+          REF="${{ github.head_ref || github.ref_name }}"
+          # Cloudflare replaces '/' with '-'; leave the rest of the slug
+          # rules to CF (rare-case truncation handled by their hash scheme).
+          SLUG="${REF//\//-}"
+          BASE_URL="https://${SLUG}-transcode-mcp.klappy.workers.dev"
+          echo "base_url=${BASE_URL}" >> "$GITHUB_OUTPUT"
+          echo "Branch: ${REF}"
+          echo "Preview: ${BASE_URL}"
 
+      # Cloudflare's auto-deploy runs in parallel with this workflow, so the
+      # preview may not be live yet when smoke jobs start. Wait (up to ~5 min)
+      # for the root path to return 200 before the smoke jobs assume it's up.
+      - name: Wait for preview deploy to be reachable
+        run: |
+          URL="${{ steps.url.outputs.base_url }}/"
+          echo "Polling ${URL}"
+          for i in $(seq 1 60); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")
+            if [ "$CODE" = "200" ]; then
+              echo "Preview is live (HTTP 200) after ${i} attempt(s)."
+              exit 0
+            fi
+            echo "  attempt ${i}: HTTP ${CODE} — waiting 5s"
+            sleep 5
+          done
+          echo "Preview did not become reachable in time."
+          exit 1
+
+  smoke-proxy:
+    name: Smoke — proxy (canon worked examples)
+    runs-on: ubuntu-latest
+    needs: resolve-preview
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Run smoke tests against preview Worker
+      - name: Run proxy smoke against preview
         env:
-          WORKER_BASE_URL: ${{ secrets.WORKER_PREVIEW_URL }}
+          WORKER_BASE_URL: ${{ needs.resolve-preview.outputs.base_url }}
         run: bun run smoke-test.ts
 
-      - name: Upload smoke evidence
-        if: always()
-        uses: actions/upload-artifact@v4
+  smoke-mcp:
+    name: Smoke — MCP protocol (JSON-RPC over /mcp)
+    runs-on: ubuntu-latest
+    needs: resolve-preview
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          name: smoke-evidence
-          path: smoke-results/
-          retention-days: 14
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run MCP smoke against preview
+        run: bun smoke-mcp.ts "${{ needs.resolve-preview.outputs.base_url }}"
