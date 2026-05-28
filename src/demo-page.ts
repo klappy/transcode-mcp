@@ -1459,7 +1459,7 @@ function toggleCompareSelection(id, checked) {
 
 // Minimal attribute-value escape for querySelector (ids are target:q:f).
 function cssEscape(s) {
-  return String(s).replace(/[^a-zA-Z0-9_-]/g, (c) => '\\' + c);
+  return String(s).replace(/[^a-zA-Z0-9_-]/g, (c) => '\\\\' + c);
 }
 
 function updateCompareBar() {
