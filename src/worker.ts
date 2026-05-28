@@ -238,7 +238,7 @@ async function handleImageProxy(
   }
 
   // If no transform options given, return passthrough
-  if (!options.w && !options.h && !options.q && !options.f) {
+  if (!options.w && !options.h && !options.q && !options.f && !options.s) {
     return new Response(sourceResponse.body, {
       status: 200,
       headers: {
