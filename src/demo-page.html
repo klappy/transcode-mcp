@@ -415,24 +415,27 @@
   }
   .cmp-panel {
     flex: 0 0 auto;
-    display: flex; flex-direction: column; gap: 8px;
+    display: flex; flex-direction: column; gap: 0;
     max-width: 90vw;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden;
   }
-  /* Fixed viewport window — image renders true-size inside and scrolls
-     (lockstep across panels) when it overflows this window. */
+  .cmp-panel-source { border-color: var(--accent-2); }
+  .cmp-panel-source .tile-header .target { color: var(--accent-2); }
+  /* The panel reuses .tile-header and .tile-meta so its stats render
+     identically to a grid tile. */
+  .cmp-panel .tile-header { padding: 10px 12px; }
+  .cmp-panel .tile-meta { max-width: min(560px, 80vw); }
+  /* Fixed viewport window — image renders at the display-box size inside and
+     scrolls (lockstep across panels) when it overflows this window. */
   .cmp-viewport {
     background: #000;
     width: min(560px, 80vw);
     height: min(560px, 60vh);
     overflow: auto;
-    border: 1px solid var(--border); border-radius: 8px;
     position: relative;
   }
   .cmp-img { display: block; max-width: none; }
-  .cmp-caption {
-    font-family: var(--mono); font-size: 11px; color: var(--text-dim);
-    line-height: 1.5; max-width: min(560px, 80vw);
-  }
   details { margin-top: 24px; }
   summary { cursor: pointer; color: var(--text-dim); font-size: 13px; padding: 8px 0; }
   details[open] summary { color: var(--text); }
@@ -1199,6 +1202,31 @@ function intendedDisplayBox(e) {
   return { w: Math.round(boxW), h: Math.round(boxH) };
 }
 
+// The six stat rows shown for an entry. Shared by the grid tile and the
+// compare-popup panel so the source and every transform display IDENTICAL
+// stats in both places. The source (isSource) labels its dimension row
+// "native" and its binding "none"; everything else is the same.
+function statRowsHtml(e) {
+  const bppStr = e.bpp > 0 ? e.bpp.toFixed(3) : '?';
+  return (
+    '<div class="row"><span>' + (e.isSource ? 'native' : 'encode') + '</span><strong>' + e.encodeW + ' × ' + e.encodeH + '</strong></div>' +
+    '<div class="row"><span>binds</span><strong>' + (e.isSource ? 'none' : (e.binding || '—')) + '</strong></div>' +
+    '<div class="row"><span>quality</span><strong>' + (e.quality || '?') + '</strong></div>' +
+    '<div class="row"><span>format</span><strong>' + (e.format || '?') + '</strong></div>' +
+    '<div class="row"><span>size</span><strong>' + formatBytes(e.size) + '</strong></div>' +
+    '<div class="row"><span>bytes/px</span><strong>' + bppStr + '</strong></div>'
+  );
+}
+
+// The display box for an entry, honoring the current render mode. True-size
+// uses the intended-display-size math (with the css/physical pixel toggle);
+// fit returns a uniform thumbnail box so the image scales to a card. Shared by
+// the grid and the compare popup so both honor the same view controls.
+const FIT_BOX = { w: 260, h: 195 };
+function displayBoxFor(e) {
+  return currentRenderMode === 'fit' ? FIT_BOX : intendedDisplayBox(e);
+}
+
 function renderExplorerGrid(items) {
   // Rebuild the grid in sorted order. Reusing existing tiles avoids image
   // re-fetching since the proxy URL is the same and browser caches it.
@@ -1278,12 +1306,7 @@ function renderExplorerGrid(items) {
       '</div>' +
       imageHtml +
       '<div class="tile-meta">' +
-        '<div class="row"><span>' + (e.isSource ? 'native' : 'encode') + '</span><strong>' + e.encodeW + ' × ' + e.encodeH + '</strong></div>' +
-        '<div class="row"><span>binds</span><strong>' + (e.isSource ? 'none' : (e.binding || '—')) + '</strong></div>' +
-        '<div class="row"><span>quality</span><strong>' + (e.quality || '?') + '</strong></div>' +
-        '<div class="row"><span>format</span><strong>' + (e.format || '?') + '</strong></div>' +
-        '<div class="row"><span>size</span><strong>' + formatBytes(e.size) + '</strong></div>' +
-        '<div class="row"><span>bytes/px</span><strong>' + bppStr + '</strong></div>' +
+        statRowsHtml(e) +
       '</div>';
     grid.appendChild(tile);
   }
@@ -1373,6 +1396,7 @@ function setRenderMode(mode) {
   }
   updateRenderControlsVisibility();
   renderExplorer();
+  renderCompareView();
 }
 
 function setPixelMode(mode) {
@@ -1385,15 +1409,20 @@ function setPixelMode(mode) {
     pixelPhysicalBtn.classList.add('active');
   }
   renderExplorer();
+  renderCompareView();
 }
 
 // Render and pixel toggles only apply to the grid in true-size mode. Hide the
 // render toggle entirely in table view; hide the pixel toggle unless we're in
 // grid + true-size (it has no meaning when fitting or in the table).
 function updateRenderControlsVisibility() {
+  // The render/pixel toggles drive both the grid AND the compare popup. Show
+  // them when we're in grid view, or whenever the compare popup is open (it
+  // can be opened from table view, and must still honor these controls).
+  const compareOpen = compareModal && compareModal.classList.contains('open');
   const inGrid = currentViewMode === 'grid';
-  renderModeGroup.hidden = !inGrid;
-  pixelModeGroup.hidden = !(inGrid && currentRenderMode === 'truesize');
+  renderModeGroup.hidden = !(inGrid || compareOpen);
+  pixelModeGroup.hidden = !((inGrid || compareOpen) && currentRenderMode === 'truesize');
 }
 
 function escapeHtml(s) {
@@ -1418,25 +1447,10 @@ const compareModalBody = document.getElementById('compare-modal-body');
 
 // Look up a loaded entry by its id (comboId). Baseline is a synthetic entry.
 function findResultById(id) {
-  if (id === 'baseline') {
-    const bt = document.querySelector('.baseline-tile');
-    if (!bt || !bt.dataset.path) return null;
-    const d = bt.dataset;
-    return {
-      id: 'baseline',
-      isBaseline: true,
-      target: 0,
-      path: d.path,
-      sourceW: parseInt(d.sourceW || '0', 10),
-      sourceH: parseInt(d.sourceH || '0', 10),
-      encodeW: parseInt(d.sourceW || '0', 10),
-      encodeH: parseInt(d.sourceH || '0', 10),
-      binding: 'source',
-      quality: '—',
-      format: d.format || '',
-      size: parseInt(d.size || '0', 10),
-    };
-  }
+  // The source/baseline uses the SAME entry shape as the grid (buildSourceEntry)
+  // so the compare popup renders identical stats and uses the same display-box
+  // math. One source of truth — no divergent minimal source object.
+  if (id === 'baseline') return buildSourceEntry();
   return explorerResults.find((e) => e.id === id) || null;
 }
 
@@ -1507,8 +1521,19 @@ grid.addEventListener('click', onTileActivate);
 compareBarOpen.addEventListener('click', openCompareView);
 compareBarClear.addEventListener('click', clearCompareSelection);
 
-// Build and open the comparison popup with all selected entries at true size.
+// Build and open the comparison popup with all selected entries. Rendering is
+// factored into renderCompareView() so the open popup can re-render live when
+// the grid's view/zoom toggles change.
 function openCompareView() {
+  if (selectedForCompare.size < 1) return;
+  compareModal.classList.add('open');
+  updateRenderControlsVisibility();
+  renderCompareView();
+  compareModalClose.focus();
+}
+
+function renderCompareView() {
+  if (!compareModal.classList.contains('open')) return;
   const ids = Array.from(selectedForCompare);
   const entries = ids.map(findResultById).filter(Boolean);
   if (entries.length < 1) return;
@@ -1521,37 +1546,51 @@ function openCompareView() {
 
   for (const e of entries) {
     const panel = document.createElement('div');
-    panel.className = 'cmp-panel';
+    panel.className = 'cmp-panel' + (e.isSource ? ' cmp-panel-source' : '');
 
-    const box = e.isBaseline
-      ? { w: e.encodeW, h: e.encodeH }
-      : intendedDisplayBox(e);
+    // Same display-box math as the grid: honors render mode (true size / fit)
+    // and pixel mode (css / physical). The source goes through the identical
+    // path — no special-casing to full native dims.
+    const box = displayBoxFor(e);
 
-    const label = e.isBaseline
-      ? 'Source baseline · ' + e.encodeW + '×' + e.encodeH
-      : e.target + 'px shortest · q=' + e.quality + ' · ' + e.format +
-        ' · ' + formatBytes(e.size) + ' · ' + box.w + '×' + box.h + ' @ ' +
-        (currentPixelMode === 'physical' ? 'physical' : 'css');
+    // Header mirrors the grid tile header (source vs transform).
+    const headerHtml = e.isSource
+      ? '<span class="target">⬡ original source</span>' +
+        '<span class="formula">' + e.sourceW + '×' + e.sourceH + ' · no transform</span>'
+      : '<span class="target">' + e.target + 'px shortest</span>' +
+        '<span class="formula">q=' + e.requestedQuality + ',f=' + e.requestedFormat +
+        (e.requestedW && e.requestedW !== e.target ? '  (w=' + e.requestedW + ')' : '') + '</span>';
 
-    // The viewport is a fixed window; the image renders at true size inside it
-    // and scrolls (lockstep across panels) when it overflows.
+    const header = document.createElement('div');
+    header.className = 'tile-header';
+    header.innerHTML = headerHtml;
+
+    // The viewport is a fixed window; the image renders at the display-box size
+    // inside it and scrolls (lockstep across panels) when it overflows.
     const viewport = document.createElement('div');
     viewport.className = 'cmp-viewport';
     const img = document.createElement('img');
     img.src = e.path;
-    img.alt = label;
+    img.alt = e.isSource ? 'original source' : (e.target + 'px shortest side');
     img.style.width = box.w + 'px';
     img.style.height = box.h + 'px';
     img.className = 'cmp-img';
     viewport.appendChild(img);
     scrollEls.push(viewport);
 
-    const cap = document.createElement('div');
-    cap.className = 'cmp-caption';
-    cap.textContent = label;
+    // Identical stat rows to the grid, plus a render-context line so you know
+    // what size/mode you're looking at.
+    const meta = document.createElement('div');
+    meta.className = 'tile-meta';
+    const ctx = currentRenderMode === 'fit'
+      ? 'fit'
+      : box.w + '×' + box.h + ' @ ' + (currentPixelMode === 'physical' ? 'physical' : 'css');
+    meta.innerHTML = statRowsHtml(e) +
+      '<div class="row"><span>shown</span><strong>' + ctx + '</strong></div>';
 
+    panel.appendChild(header);
     panel.appendChild(viewport);
-    panel.appendChild(cap);
+    panel.appendChild(meta);
     compareModalBody.appendChild(panel);
   }
 
@@ -1581,6 +1620,9 @@ function openCompareView() {
 function closeCompareView() {
   compareModal.classList.remove('open');
   compareModalBody.innerHTML = '';
+  // Toggles may have been shown only because the popup was open (e.g. opened
+  // from table view) — re-evaluate so they hide again.
+  updateRenderControlsVisibility();
 }
 
 compareModalClose.addEventListener('click', closeCompareView);
