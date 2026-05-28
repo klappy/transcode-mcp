@@ -1187,13 +1187,35 @@ function renderExplorer() {
   }
 }
 
+// The honest intended-display size for an entry: the encode brought back down
+// by the overshoot factor, capped so a source-bound encode never claims more
+// than the source could deliver. Derived from encode/overshoot (NOT the
+// requested target), so target 3840 off a 1024 source reports ~1024, not 3840.
+// The source isn't transformed, so its render size IS its native (encode) size.
+// This is the single source of truth shared by the 'render' stat row, the
+// true-size rendered display box, and the corner-note label.
+const RENDER_OVERSHOOT = 1.5;
+function renderSize(e) {
+  const ew = e.encodeW || 0;
+  const eh = e.encodeH || 0;
+  if (!ew || !eh) return { w: e.target, h: e.target };
+  if (e.isSource) return { w: ew, h: eh };
+  const encShort = Math.min(ew, eh);
+  const renderShort = Math.min(e.target, encShort / RENDER_OVERSHOOT);
+  const scale = renderShort / encShort;
+  return { w: Math.round(ew * scale), h: Math.round(eh * scale) };
+}
+
 // Computes the display box for an entry given the current pixel mode.
-//  - 'rendered': the encode scaled so its SHORTEST side equals the target —
-//    how the image actually looks at its intended display size.
+//  - 'rendered': the intended display size — the encode brought back down by
+//    the overshoot factor, capped so a source-bound encode never claims more
+//    than the source could deliver. This MUST match the 'render' stat row
+//    (renderSize) exactly, or the image, the corner note, and the stat
+//    disagree (the source-bound bug: target 3840 off a 1024 source was being
+//    scaled back up to 3840 and zoomed way in).
 //  - 'peep': the encode at its FULL encoded resolution (1 encoded px = 1 CSS
 //    px), i.e. larger than rendered by the ~1.5× overshoot, so you can
-//    inspect the actual encoded pixels enlarged. No devicePixelRatio math —
-//    that made the relative sizing flip around the overshoot ratio.
+//    inspect the actual encoded pixels enlarged. No devicePixelRatio math.
 // Returns w, h in CSS pixels.
 function intendedDisplayBox(e) {
   const ew = e.encodeW || 0;
@@ -1203,10 +1225,8 @@ function intendedDisplayBox(e) {
     // Full encoded resolution — show every encoded pixel 1:1 in CSS px.
     return { w: ew, h: eh };
   }
-  // Rendered: scale the encode so its shortest side equals the target.
-  const shortestEncode = Math.min(ew, eh);
-  const scale = e.target / shortestEncode;
-  return { w: Math.round(ew * scale), h: Math.round(eh * scale) };
+  // Rendered: the honest intended display size (same math as renderSize()).
+  return renderSize(e);
 }
 
 // The six stat rows shown for an entry. Shared by the grid tile and the
@@ -1215,27 +1235,12 @@ function intendedDisplayBox(e) {
 // "native" and its binding "none"; everything else is the same.
 function statRowsHtml(e) {
   const bppStr = e.bpp > 0 ? e.bpp.toFixed(3) : '?';
-  // Render resolution = the intended display size, i.e. what the image
-  // actually shows at — independent of the peep toggle. The encode is the
-  // ~1.5x overshoot the proxy stores; on its own that's confusing, so we pair
-  // it with the render size. We derive render from encode/overshoot rather than
-  // from the requested target, so when the source was too small to hit the
-  // target (binding=source) the render size honestly reflects the smaller
-  // delivered pixels instead of overstating the target. The source isn't
-  // transformed, so its render size IS its native size.
-  const OVERSHOOT = 1.5;
-  let renderW, renderH;
-  if (e.isSource) {
-    renderW = e.encodeW;
-    renderH = e.encodeH;
-  } else if (e.encodeW && e.encodeH) {
-    const encShort = Math.min(e.encodeW, e.encodeH);
-    const renderShort = Math.min(e.target, encShort / OVERSHOOT);
-    const scale = renderShort / encShort;
-    renderW = Math.round(e.encodeW * scale);
-    renderH = Math.round(e.encodeH * scale);
-  }
-  const renderStr = renderW && renderH ? renderW + ' × ' + renderH : '?';
+  // Render resolution = the intended display size (see renderSize): what the
+  // image actually shows at, capped honestly for source-bound encodes. Shared
+  // with the true-size display box so the stat, the image, and the corner note
+  // all agree.
+  const r = renderSize(e);
+  const renderStr = r.w && r.h ? r.w + ' × ' + r.h : '?';
   return (
     '<div class="row"><span>render</span><strong>' + renderStr + '</strong></div>' +
     '<div class="row"><span>' + (e.isSource ? 'native' : 'encode') + '</span><strong>' + e.encodeW + ' × ' + e.encodeH + '</strong></div>' +
