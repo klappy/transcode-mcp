@@ -565,8 +565,8 @@
   <div class="control-group">
     <label for="sort-select">Sort by</label>
     <select id="sort-select">
-      <option value="bpp" selected>bytes / pixel (efficiency)</option>
-      <option value="size">file size (smallest first)</option>
+      <option value="bpp">bytes / pixel (efficiency)</option>
+      <option value="size" selected>file size (smallest first)</option>
       <option value="size-desc">file size (largest first)</option>
       <option value="target">target resolution</option>
       <option value="quality">quality preset</option>
@@ -725,7 +725,7 @@ const progressLabel = document.getElementById('progress-label');
 // the compare modal needs.
 let explorerResults = [];
 let currentViewMode = 'grid';
-let currentSortKey = 'bpp';
+let currentSortKey = 'size';
 let currentSortDir = 'asc';
 // Render mode: 'truesize' shows each image at its intended display size (the
 // target value as real screen units); 'fit' scales the whole image into a
@@ -1743,7 +1743,7 @@ function writeUrlState() {
   const defaultTargetsSorted = DEFAULT_TARGETS.slice().sort((a, b) => a - b).join(',');
   const wSorted = w.slice().sort((a, b) => a - b).join(',');
   if (wSorted !== defaultTargetsSorted) params.set('w', w.join(','));
-  if (currentSortKey !== 'bpp' || currentSortDir !== 'asc') {
+  if (currentSortKey !== 'size' || currentSortDir !== 'asc') {
     const sortValue = currentSortDir === 'desc' ? currentSortKey + '-desc' : currentSortKey;
     params.set('sort', sortValue);
   }
