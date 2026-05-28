@@ -340,138 +340,96 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
   }
 
   /* Modal */
-  .modal-backdrop {
+  /* Per-tile compare checkbox */
+  .tile-compare-check {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    cursor: pointer; float: right; user-select: none;
+  }
+  .tile-compare-check input { accent-color: var(--accent); cursor: pointer; margin: 0; }
+  .tile.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .results-table .check-col { width: 28px; text-align: center; }
+  .results-table .check-col input { accent-color: var(--accent); cursor: pointer; }
+  .results-table tr.selected td { background: rgba(122, 184, 255, 0.10); }
+
+  /* Floating compare bar — appears when ≥1 result is selected */
+  .compare-bar {
+    position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+    z-index: 90;
+    display: flex; align-items: center; gap: 14px;
+    background: var(--panel); border: 1px solid var(--accent);
+    border-radius: 10px; padding: 10px 16px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  }
+  .compare-bar-count { font-size: 13px; color: var(--text); font-weight: 600; }
+  .compare-bar-open {
+    background: var(--accent); color: #0a1320; border: 0;
+    border-radius: 6px; padding: 8px 14px; font-size: 13px;
+    font-weight: 600; cursor: pointer;
+  }
+  .compare-bar-open:disabled { opacity: 0.5; cursor: default; }
+  .compare-bar-clear {
+    background: transparent; color: var(--text-dim); border: 0;
+    font-size: 13px; cursor: pointer; padding: 8px 4px;
+  }
+  .compare-bar-clear:hover { color: var(--text); }
+
+  /* Comparison popup */
+  .compare-modal-backdrop {
     position: fixed; inset: 0;
-    background: rgba(0,0,0,0.85);
+    background: rgba(0,0,0,0.88);
     display: none;
     z-index: 100;
-    overflow-y: auto;
     padding: 24px;
   }
-  .modal-backdrop.open { display: flex; align-items: flex-start; justify-content: center; }
-  .modal {
+  .compare-modal-backdrop.open { display: flex; align-items: stretch; justify-content: center; }
+  .compare-modal-shell {
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 12px;
-    max-width: calc(100vw - 48px);
-    width: auto;
-    margin: auto;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    width: min(1800px, calc(100vw - 48px));
+    margin: auto; max-height: calc(100vh - 48px);
     display: flex; flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
   }
-  .compare-modal {
-    width: min(1600px, calc(100vw - 48px));
-  }
-  .modal-header {
+  .compare-modal-header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 18px;
-    border-bottom: 1px solid var(--border);
-    gap: 16px;
+    padding: 14px 18px; border-bottom: 1px solid var(--border); gap: 16px;
   }
-  .modal-title { font-size: 15px; font-weight: 600; flex: 1; }
-  .modal-title .target { color: var(--accent); }
-  .modal-title .display-info { color: var(--text-dim); font-weight: 400; font-size: 12px; margin-left: 8px; }
-  .modal-close {
+  .compare-modal-title { font-size: 15px; font-weight: 600; }
+  .compare-modal-close {
     background: var(--panel-2); border: 1px solid var(--border);
     color: var(--text); width: 32px; height: 32px;
     border-radius: 6px; cursor: pointer; font-size: 18px;
     display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
   }
-  .modal-close:hover { background: var(--border); }
-
-  /* Zoom controls */
-  .zoom-controls {
-    display: flex; align-items: center; gap: 6px;
-    flex-shrink: 0;
+  .compare-modal-close:hover { background: var(--border); }
+  /* Body: horizontal row of panels, each a fixed-height true-size viewport.
+     The whole body scrolls horizontally if many panels are selected. */
+  .compare-modal-body {
+    display: flex; gap: 16px; padding: 16px;
+    overflow-x: auto; overflow-y: hidden;
+    align-items: flex-start;
   }
-  .zoom-btn {
-    background: var(--panel-2); border: 1px solid var(--border);
-    color: var(--text); border-radius: 6px; padding: 6px 10px;
-    cursor: pointer; font-size: 13px; font-weight: 500;
-    min-width: 32px; line-height: 1.2;
+  .cmp-panel {
+    flex: 0 0 auto;
+    display: flex; flex-direction: column; gap: 8px;
+    max-width: 90vw;
   }
-  .zoom-btn:hover { background: var(--border); }
-  .zoom-readout {
-    color: var(--text-dim); font-family: var(--mono); font-size: 12px;
-    min-width: 52px; text-align: center; user-select: none;
-  }
-  .zoom-fit { font-size: 12px; padding: 6px 8px; }
-
-  /* Compare panel headers */
-  .compare-panels {
-    display: grid; grid-template-columns: 1fr 1fr;
-    border-bottom: 1px solid var(--border);
-  }
-  .compare-panel {
-    padding: 12px 14px;
-    border-right: 1px solid var(--border);
-  }
-  .compare-panel:last-child { border-right: 0; }
-  .compare-panel-header {
-    display: flex; flex-direction: column; gap: 6px;
-  }
-  .compare-picker-label {
-    font-size: 10px; color: var(--text-dim);
-    text-transform: uppercase; letter-spacing: 0.08em;
-  }
-  .compare-picker {
-    background: var(--panel-2); color: var(--text);
-    border: 1px solid var(--border); border-radius: 6px;
-    padding: 6px 8px; font-size: 12px; font-family: var(--mono);
-    width: 100%;
-  }
-  .compare-panel-meta {
-    font-family: var(--mono); font-size: 10px;
-    color: var(--text-dim);
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-    gap: 3px 12px;
-    margin-top: 4px;
-  }
-  .compare-panel-meta .row { display: flex; justify-content: space-between; gap: 6px; }
-  .compare-panel-meta strong { color: var(--text); font-weight: 500; }
-
-  /* The shared scrolling viewport: one container, two image cells side by side.
-     Pan/zoom is "free" because they share the scroll position. */
-  .compare-viewport {
+  /* Fixed viewport window — image renders true-size inside and scrolls
+     (lockstep across panels) when it overflows this window. */
+  .cmp-viewport {
     background: #000;
+    width: min(560px, 80vw);
+    height: min(560px, 60vh);
     overflow: auto;
-    max-height: calc(100vh - 380px);
-    min-height: 320px;
+    border: 1px solid var(--border); border-radius: 8px;
     position: relative;
   }
-  .compare-canvas {
-    display: grid; grid-template-columns: 1fr 1fr;
-    width: 100%; /* default — JS overrides to (zoom × 100)% to scale both panels */
-  }
-  .compare-image-cell {
-    display: flex; align-items: flex-start; justify-content: center;
-    background: #000;
-    position: relative;
-    overflow: hidden;
-  }
-  .compare-image-cell::before {
-    content: attr(data-side);
-    position: absolute; top: 6px; left: 6px;
-    background: rgba(0,0,0,0.65); color: var(--text);
-    font-size: 10px; font-family: var(--mono);
-    padding: 2px 6px; border-radius: 3px;
-    text-transform: uppercase; letter-spacing: 0.08em;
-    z-index: 2;
-  }
-  .compare-image-cell img {
-    display: block; width: 100%; height: auto;
-  }
-  .modal-explanation {
-    padding: 14px 18px;
-    font-size: 12px;
-    color: var(--text-dim);
-    border-top: 1px solid var(--border);
-    line-height: 1.6;
-  }
-  .modal-explanation code {
-    background: var(--panel-2); padding: 1px 5px;
-    border-radius: 3px; font-size: 11px;
-    color: var(--text);
+  .cmp-img { display: block; max-width: none; }
+  .cmp-caption {
+    font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+    line-height: 1.5; max-width: min(560px, 80vw);
   }
   details { margin-top: 24px; }
   summary { cursor: pointer; color: var(--text-dim); font-size: 13px; padding: 8px 0; }
@@ -630,6 +588,7 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
   <table class="results-table">
     <thead>
       <tr>
+        <th class="check-col"></th>
         <th data-sort-key="target">shortest side</th>
         <th data-sort-key="encode">encode</th>
         <th data-sort-key="quality">q</th>
@@ -645,48 +604,21 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
   </table>
 </div>
 
-<div id="modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-  <div class="modal compare-modal" id="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="modal-title">Compare</div>
-      <div class="zoom-controls" id="zoom-controls">
-        <button class="zoom-btn" id="zoom-out" aria-label="Zoom out" title="Zoom out (−)">−</button>
-        <span class="zoom-readout" id="zoom-readout">100%</span>
-        <button class="zoom-btn" id="zoom-in" aria-label="Zoom in" title="Zoom in (+)">+</button>
-        <button class="zoom-btn zoom-fit" id="zoom-fit" title="Reset zoom (0)">Reset</button>
-      </div>
-      <button class="modal-close" id="modal-close" aria-label="Close">×</button>
-    </div>
+<!-- Floating bar: appears when results are selected via their checkboxes -->
+<div id="compare-bar" class="compare-bar" hidden>
+  <span class="compare-bar-count" id="compare-bar-count">0 selected</span>
+  <button id="compare-bar-open" class="compare-bar-open">Compare selected</button>
+  <button id="compare-bar-clear" class="compare-bar-clear">Clear</button>
+</div>
 
-    <div class="compare-panels">
-      <div class="compare-panel" data-side="left">
-        <div class="compare-panel-header">
-          <label class="compare-picker-label">A — left</label>
-          <select class="compare-picker" id="compare-picker-left"></select>
-          <div class="compare-panel-meta" id="compare-meta-left"></div>
-        </div>
-      </div>
-      <div class="compare-panel" data-side="right">
-        <div class="compare-panel-header">
-          <label class="compare-picker-label">B — right</label>
-          <select class="compare-picker" id="compare-picker-right"></select>
-          <div class="compare-panel-meta" id="compare-meta-right"></div>
-        </div>
-      </div>
+<!-- Comparison popup: selected images at true size, side by side, lockstep pan -->
+<div id="compare-modal" class="compare-modal-backdrop" role="dialog" aria-modal="true" aria-label="Compare selected images">
+  <div class="compare-modal-shell">
+    <div class="compare-modal-header">
+      <div class="compare-modal-title">Comparison — true size, locked pan</div>
+      <button class="compare-modal-close" id="compare-modal-close" aria-label="Close">×</button>
     </div>
-
-    <div class="compare-viewport" id="compare-viewport">
-      <div class="compare-canvas" id="compare-canvas">
-        <div class="compare-image-cell" data-side="left">
-          <img id="compare-img-left" alt="left comparison">
-        </div>
-        <div class="compare-image-cell" data-side="right">
-          <img id="compare-img-right" alt="right comparison">
-        </div>
-      </div>
-    </div>
-
-    <div class="modal-explanation" id="modal-explanation"></div>
+    <div class="compare-modal-body" id="compare-modal-body"></div>
   </div>
 </div>
 
@@ -696,7 +628,7 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
   <span class="target">target × 1.5 binds (normal case)</span>
   <span class="source">source × 1.5 binds (tiny-source cap)</span>
   <span class="equal">source equals target</span>
-  <span style="color: var(--accent); margin-left: auto;">→ click any tile to view at target size</span>
+  <span style="color: var(--accent); margin-left: auto;">→ check any tiles, then Compare selected
 </div>
 
 <details>
@@ -768,6 +700,9 @@ let currentSortDir = 'asc';
 let currentRenderMode = 'truesize';
 let currentPixelMode = 'css';
 let baselineBytes = 0; // For "vs baseline" ratios in table view
+// Set of selected entry ids (comboId) for comparison. Driven entirely by
+// per-tile checkboxes — no dropdowns. The compare popup shows exactly these.
+const selectedForCompare = new Set();
 // Incremented on each loadExplorer() call. Workers from a prior invocation
 // check their captured generation against this and abort their writes if
 // stale, preventing mixed results when the user changes source/filters
@@ -873,9 +808,10 @@ async function loadBaseline(source) {
 
   // Skeleton
   baselineWrap.innerHTML = \`
-    <div class="baseline-tile loading">
+    <div class="baseline-tile loading" data-id="baseline">
       <div class="baseline-image"></div>
       <div class="baseline-info">
+        <label class="tile-compare-check" title="Select for comparison"><input type="checkbox" class="compare-checkbox"> compare</label>
         <span class="baseline-label">Baseline — Original Source</span>
         <h2>Loading source…</h2>
         <div class="baseline-meta"></div>
@@ -1238,7 +1174,8 @@ function renderExplorerGrid(items) {
       continue;
     }
     tile.className = 'tile ' + bindingClass(e.binding);
-    // Same dataset shape the modal/compare expects
+    // Same dataset shape the compare popup expects
+    tile.dataset.id = e.id;
     tile.dataset.target = String(e.target);
     tile.dataset.path = e.path;
     tile.dataset.sourceW = String(e.sourceW);
@@ -1250,12 +1187,11 @@ function renderExplorerGrid(items) {
     tile.dataset.format = e.format;
     tile.dataset.cache = e.cache;
     tile.dataset.size = String(e.size);
-    tile.setAttribute('role', 'button');
-    tile.setAttribute('tabindex', '0');
-    tile.setAttribute('aria-label', 'Open ' + e.target + 'px shortest-side preview');
+    if (selectedForCompare.has(e.id)) tile.classList.add('selected');
 
     const bppStr = e.bpp > 0 ? e.bpp.toFixed(3) : '?';
     const wHint = e.requestedW && e.requestedW !== e.target ? '  (w=' + e.requestedW + ')' : '';
+    const checked = selectedForCompare.has(e.id) ? ' checked' : '';
 
     // Build the image area. In true-size mode the image box is sized to the
     // intended display size and the tile width follows it; in fit mode it's a
@@ -1283,6 +1219,9 @@ function renderExplorerGrid(items) {
 
     tile.innerHTML =
       '<div class="tile-header">' +
+        '<label class="tile-compare-check" title="Select for comparison">' +
+          '<input type="checkbox" class="compare-checkbox"' + checked + '> compare' +
+        '</label>' +
         '<span class="target">' + e.target + 'px shortest</span>' +
         '<span class="formula">q=' + e.requestedQuality + ',f=' + e.requestedFormat + wHint + '</span>' +
       '</div>' +
@@ -1314,11 +1253,12 @@ function renderExplorerTable(items) {
   for (const e of items) {
     const tr = document.createElement('tr');
     if (e.error) {
-      tr.innerHTML = '<td>' + e.target + '</td><td colspan="8">failed: ' + escapeHtml(e.error) + '</td>';
+      tr.innerHTML = '<td></td><td>' + e.target + '</td><td colspan="8">failed: ' + escapeHtml(e.error) + '</td>';
       tableBody.appendChild(tr);
       continue;
     }
     tr.classList.add('row-binding-' + (e.binding || 'unknown'));
+    tr.dataset.id = e.id;
     tr.dataset.target = String(e.target);
     tr.dataset.path = e.path;
     tr.dataset.sourceW = String(e.sourceW);
@@ -1330,14 +1270,15 @@ function renderExplorerTable(items) {
     tr.dataset.format = e.format;
     tr.dataset.cache = e.cache;
     tr.dataset.size = String(e.size);
-    tr.setAttribute('role', 'button');
-    tr.setAttribute('tabindex', '0');
+    if (selectedForCompare.has(e.id)) tr.classList.add('selected');
 
     const ratio = baselineBytes > 0 ? (e.size / baselineBytes) : 0;
     const ratioStr = ratio > 0 ? (ratio * 100).toFixed(1) + '%' : '—';
     const ratioCls = ratio > 0 && ratio < 0.5 ? 'ratio-better' : ratio > 1 ? 'ratio-worse' : '';
     const bppStr = e.bpp > 0 ? e.bpp.toFixed(3) : '?';
+    const checked = selectedForCompare.has(e.id) ? ' checked' : '';
     tr.innerHTML =
+      '<td class="check-col"><input type="checkbox" class="compare-checkbox"' + checked + '></td>' +
       '<td>' + e.target + 'px</td>' +
       '<td>' + e.encodeW + ' × ' + e.encodeH + '</td>' +
       '<td>' + (e.quality || '?') + '</td>' +
@@ -1408,313 +1349,195 @@ function escapeHtml(s) {
   }[c]));
 }
 
-// Compare modal
-const modalBackdrop = document.getElementById('modal-backdrop');
-const modalTitle = document.getElementById('modal-title');
-const modalExplanation = document.getElementById('modal-explanation');
-const modalCloseBtn = document.getElementById('modal-close');
-const comparePickerLeft = document.getElementById('compare-picker-left');
-const comparePickerRight = document.getElementById('compare-picker-right');
-const compareMetaLeft = document.getElementById('compare-meta-left');
-const compareMetaRight = document.getElementById('compare-meta-right');
-const compareImgLeft = document.getElementById('compare-img-left');
-const compareImgRight = document.getElementById('compare-img-right');
-const compareViewport = document.getElementById('compare-viewport');
-const compareCanvas = document.getElementById('compare-canvas');
-const zoomReadout = document.getElementById('zoom-readout');
-const zoomInBtn = document.getElementById('zoom-in');
-const zoomOutBtn = document.getElementById('zoom-out');
-const zoomFitBtn = document.getElementById('zoom-fit');
+// ===========================================================================
+// Comparison — driven entirely by per-tile/per-row checkboxes. No dropdowns.
+// Select any number of results via their checkbox; a floating bar shows the
+// count and opens a popup that renders the selected images at true size,
+// side by side, with lockstep pan when they overflow.
 
-// Comparison entries built from baseline + all loaded tiles. The id is a
-// short stable string used in the picker dropdowns.
-let compareEntries = [];
-const compareState = {
-  leftId: null,
-  rightId: null,
-  zoom: 1.0,
-};
-const ZOOM_MIN = 0.25;
-const ZOOM_MAX = 16;
+const compareBar = document.getElementById('compare-bar');
+const compareBarCount = document.getElementById('compare-bar-count');
+const compareBarOpen = document.getElementById('compare-bar-open');
+const compareBarClear = document.getElementById('compare-bar-clear');
+const compareModal = document.getElementById('compare-modal');
+const compareModalClose = document.getElementById('compare-modal-close');
+const compareModalBody = document.getElementById('compare-modal-body');
 
-function gatherCompareEntries() {
-  const entries = [];
-
-  // Baseline (passthrough source) — always entry #1 if loaded
-  const baselineTile = document.querySelector('.baseline-tile');
-  if (baselineTile && !baselineTile.classList.contains('loading') && !baselineTile.classList.contains('error')) {
-    const d = baselineTile.dataset;
-    entries.push({
+// Look up a loaded entry by its id (comboId). Baseline is a synthetic entry.
+function findResultById(id) {
+  if (id === 'baseline') {
+    const bt = document.querySelector('.baseline-tile');
+    if (!bt || !bt.dataset.path) return null;
+    const d = bt.dataset;
+    return {
       id: 'baseline',
-      kind: 'baseline',
-      label: 'Source baseline — ' + (d.sourceW || '?') + '×' + (d.sourceH || '?') + ' ' + (d.format || ''),
+      isBaseline: true,
+      target: 0,
       path: d.path,
       sourceW: parseInt(d.sourceW || '0', 10),
       sourceH: parseInt(d.sourceH || '0', 10),
-      naturalW: parseInt(d.sourceW || '0', 10),
-      naturalH: parseInt(d.sourceH || '0', 10),
-      target: null,
-      encodeW: null,
-      encodeH: null,
-      binding: 'passthrough',
-      quality: 'n/a',
-      format: d.format || '?',
+      encodeW: parseInt(d.sourceW || '0', 10),
+      encodeH: parseInt(d.sourceH || '0', 10),
+      binding: 'source',
+      quality: '—',
+      format: d.format || '',
       size: parseInt(d.size || '0', 10),
-      cache: d.cache || '—',
-    });
+    };
+  }
+  return explorerResults.find((e) => e.id === id) || null;
+}
+
+// Toggle selection for an id and sync the floating bar + tile/row highlight.
+function toggleCompareSelection(id, checked) {
+  if (!id) return;
+  if (checked) selectedForCompare.add(id);
+  else selectedForCompare.delete(id);
+  updateCompareBar();
+  // Reflect the .selected class without a full re-render
+  document.querySelectorAll('[data-id="' + cssEscape(id) + '"]').forEach((el) => {
+    el.classList.toggle('selected', checked);
+  });
+}
+
+// Minimal attribute-value escape for querySelector (ids are target:q:f).
+function cssEscape(s) {
+  return String(s).replace(/[^a-zA-Z0-9_-]/g, (c) => '\\' + c);
+}
+
+function updateCompareBar() {
+  const n = selectedForCompare.size;
+  compareBarCount.textContent = n === 1 ? '1 selected' : n + ' selected';
+  compareBar.hidden = n === 0;
+  compareBarOpen.disabled = n < 1;
+}
+
+function clearCompareSelection() {
+  selectedForCompare.clear();
+  document.querySelectorAll('.tile.selected, tr.selected').forEach((el) =>
+    el.classList.remove('selected'),
+  );
+  document.querySelectorAll('.compare-checkbox').forEach((cb) => {
+    cb.checked = false;
+  });
+  updateCompareBar();
+}
+
+// Checkbox change delegation — works for both grid tiles and table rows.
+function onCompareCheckboxChange(e) {
+  const cb = e.target;
+  if (!cb.classList || !cb.classList.contains('compare-checkbox')) return;
+  const host = cb.closest('[data-id]');
+  if (!host) return;
+  toggleCompareSelection(host.dataset.id, cb.checked);
+}
+grid.addEventListener('change', onCompareCheckboxChange);
+tableBody.addEventListener('change', onCompareCheckboxChange);
+baselineWrap.addEventListener('change', onCompareCheckboxChange);
+
+// Clicking a tile (not on the checkbox) also toggles its selection, so the
+// whole card is a selection target — but clicks on the checkbox itself are
+// handled by the change event above (don't double-toggle).
+function onTileActivate(e) {
+  if (e.target.closest('.compare-checkbox') || e.target.closest('.tile-compare-check')) return;
+  const tile = e.target.closest('.tile');
+  if (!tile || !tile.dataset.id) return;
+  if (tile.classList.contains('loading') || tile.classList.contains('error')) return;
+  const id = tile.dataset.id;
+  const nowSelected = !selectedForCompare.has(id);
+  const cb = tile.querySelector('.compare-checkbox');
+  if (cb) cb.checked = nowSelected;
+  toggleCompareSelection(id, nowSelected);
+}
+grid.addEventListener('click', onTileActivate);
+
+// Floating bar actions
+compareBarOpen.addEventListener('click', openCompareView);
+compareBarClear.addEventListener('click', clearCompareSelection);
+
+// Build and open the comparison popup with all selected entries at true size.
+function openCompareView() {
+  const ids = Array.from(selectedForCompare);
+  const entries = ids.map(findResultById).filter(Boolean);
+  if (entries.length < 1) return;
+
+  // Sort the selected entries by target then quality so the lineup is stable
+  entries.sort((a, b) => (a.target - b.target) || String(a.quality).localeCompare(String(b.quality)));
+
+  compareModalBody.innerHTML = '';
+  const scrollEls = [];
+
+  for (const e of entries) {
+    const panel = document.createElement('div');
+    panel.className = 'cmp-panel';
+
+    const box = e.isBaseline
+      ? { w: e.encodeW, h: e.encodeH }
+      : intendedDisplayBox(e);
+
+    const label = e.isBaseline
+      ? 'Source baseline · ' + e.encodeW + '×' + e.encodeH
+      : e.target + 'px shortest · q=' + e.quality + ' · ' + e.format +
+        ' · ' + formatBytes(e.size) + ' · ' + box.w + '×' + box.h + ' @ ' +
+        (currentPixelMode === 'physical' ? 'physical' : 'css');
+
+    // The viewport is a fixed window; the image renders at true size inside it
+    // and scrolls (lockstep across panels) when it overflows.
+    const viewport = document.createElement('div');
+    viewport.className = 'cmp-viewport';
+    const img = document.createElement('img');
+    img.src = e.path;
+    img.alt = label;
+    img.style.width = box.w + 'px';
+    img.style.height = box.h + 'px';
+    img.className = 'cmp-img';
+    viewport.appendChild(img);
+    scrollEls.push(viewport);
+
+    const cap = document.createElement('div');
+    cap.className = 'cmp-caption';
+    cap.textContent = label;
+
+    panel.appendChild(viewport);
+    panel.appendChild(cap);
+    compareModalBody.appendChild(panel);
   }
 
-  // Every loaded transcoded tile (from grid view) or table row
-  const selector = currentViewMode === 'grid' ? '.tile' : '.results-table tbody tr';
-  document.querySelectorAll(selector).forEach(el => {
-    if (el.classList.contains('loading') || el.classList.contains('error')) return;
-    if (!el.dataset.path) return; // header row or non-result row
-    const d = el.dataset;
-    const target = parseInt(d.target, 10);
-    const encodeW = parseInt(d.encodeW || '0', 10);
-    const encodeH = parseInt(d.encodeH || '0', 10);
-    const id = 'tile-' + target + '-' + (d.quality || '?') + '-' + (d.format || '?');
-    entries.push({
-      id,
-      kind: 'tile',
-      label: 'target ' + target + 'px — encode ' + encodeW + '×' + encodeH + ' q=' + d.quality + ' ' + d.format,
-      path: d.path,
-      sourceW: parseInt(d.sourceW || '0', 10),
-      sourceH: parseInt(d.sourceH || '0', 10),
-      naturalW: encodeW,
-      naturalH: encodeH,
-      target: target,
-      encodeW: encodeW,
-      encodeH: encodeH,
-      binding: d.binding,
-      quality: d.quality,
-      format: d.format,
-      size: parseInt(d.size || '0', 10),
-      cache: d.cache || '—',
-    });
+  // Lockstep pan: when any viewport scrolls, mirror to the others. Guarded so
+  // a programmatic scroll doesn't recurse. Different-sized images clamp
+  // naturally at their own max scroll, so a small image just stops early.
+  let syncing = false;
+  function syncScroll(src) {
+    if (syncing) return;
+    syncing = true;
+    for (const el of scrollEls) {
+      if (el === src) continue;
+      el.scrollLeft = src.scrollLeft;
+      el.scrollTop = src.scrollTop;
+    }
+    // release on next frame so the mirrored scroll events are absorbed
+    requestAnimationFrame(() => { syncing = false; });
+  }
+  scrollEls.forEach((el) => {
+    el.addEventListener('scroll', () => syncScroll(el));
   });
 
-  return entries;
+  compareModal.classList.add('open');
+  compareModalClose.focus();
 }
 
-function populateCompareDropdowns() {
-  const options = compareEntries.map(e =>
-    '<option value="' + e.id + '">' + escapeHtml(e.label) + '</option>'
-  ).join('');
-  comparePickerLeft.innerHTML = options;
-  comparePickerRight.innerHTML = options;
-  comparePickerLeft.value = compareState.leftId;
-  comparePickerRight.value = compareState.rightId;
+function closeCompareView() {
+  compareModal.classList.remove('open');
+  compareModalBody.innerHTML = '';
 }
 
-function findEntry(id) {
-  return compareEntries.find(e => e.id === id);
-}
-
-function formatMetaBlock(entry) {
-  if (entry.kind === 'baseline') {
-    return '<div class="row"><span>dim</span><strong>' + entry.naturalW + '×' + entry.naturalH + '</strong></div>' +
-           '<div class="row"><span>format</span><strong>' + entry.format + '</strong></div>' +
-           '<div class="row"><span>size</span><strong>' + formatBytes(entry.size) + '</strong></div>' +
-           '<div class="row"><span>delivery</span><strong>passthrough</strong></div>';
-  }
-  return '<div class="row"><span>target</span><strong>' + entry.target + 'px</strong></div>' +
-         '<div class="row"><span>encode</span><strong>' + entry.encodeW + '×' + entry.encodeH + '</strong></div>' +
-         '<div class="row"><span>binds</span><strong>' + entry.binding + '</strong></div>' +
-         '<div class="row"><span>q</span><strong>' + entry.quality + '</strong></div>' +
-         '<div class="row"><span>format</span><strong>' + entry.format + '</strong></div>' +
-         '<div class="row"><span>size</span><strong>' + formatBytes(entry.size) + '</strong></div>';
-}
-
-function applyZoom() {
-  // Canvas width as a percentage of the viewport. At 100%, canvas fits the
-  // viewport. At 200%, canvas is twice as wide and the viewport scrolls.
-  // Each cell is 50% of canvas (grid-template-columns: 1fr 1fr), so both
-  // panels stay the same display size at every zoom level.
-  // Using a percentage instead of measuring clientWidth avoids a timing bug
-  // where the modal layout hasn't run yet when renderCompare first fires
-  // (display:none → display:flex doesn't synchronously trigger layout, so
-  // clientWidth returned 0 and the canvas stayed widthless).
-  const pct = Math.max(1, Math.round(compareState.zoom * 100));
-  compareCanvas.style.width = pct + '%';
-  zoomReadout.textContent = pct + '%';
-}
-
-function setZoom(z) {
-  compareState.zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
-  applyZoom();
-}
-
-function setZoomFit() {
-  setZoom(1.0);
-}
-
-function renderCompare() {
-  const left = findEntry(compareState.leftId);
-  const right = findEntry(compareState.rightId);
-  if (!left || !right) return;
-
-  compareImgLeft.src = left.path;
-  compareImgLeft.alt = left.label;
-  compareImgRight.src = right.path;
-  compareImgRight.alt = right.label;
-
-  compareMetaLeft.innerHTML = formatMetaBlock(left);
-  compareMetaRight.innerHTML = formatMetaBlock(right);
-
-  comparePickerLeft.value = left.id;
-  comparePickerRight.value = right.id;
-
-  // Title summarizes what we're comparing
-  modalTitle.innerHTML =
-    '<span class="target">Compare:</span> ' +
-    '<span style="color: var(--accent-2);">' + escapeHtml(left.label.split(' — ')[0]) + '</span> ' +
-    'vs ' +
-    '<span style="color: var(--accent);">' + escapeHtml(right.label.split(' — ')[0]) + '</span>';
-
-  // Explanation pulled from the right-hand entry's binding (the "strategy")
-  let explain = '';
-  if (left.kind === 'baseline' && right.kind === 'baseline') {
-    explain = 'Both panels show the unmodified source. Pan and zoom to inspect the original.';
-  } else if (right.kind === 'baseline') {
-    explain = 'Right panel shows the unmodified source. Compare against the left panel'+'\u2019'+'s encode.';
-  } else if (right.binding === 'target') {
-    explain =
-      'Right panel: proxy encoded at <code>' + right.encodeW + '×' + right.encodeH + '</code> ' +
-      '(target × 1.5, mod-16). At equal display size, the browser downscales the encode to the panel — ' +
-      'that downscale is the artifact filter. Zoom in to compare pixel-level differences against the left panel.';
-  } else if (right.binding === 'source') {
-    explain =
-      'Right panel: source × 1.5 bound the encode at <code>' + right.encodeW + 'px</code>. ' +
-      'Zoom in to see whether the modest overshoot preserved detail you can recognize against the baseline.';
-  } else if (right.binding === 'equal') {
-    explain =
-      'Right panel: source dimensions already matched target — no scaling at encoder. The only loss is quality/format.';
-  }
-  // If comparing two non-baseline encodes, add a strategy hint
-  if (left.kind === 'tile' && right.kind === 'tile') {
-    const sizeRatio = right.size > 0 ? (left.size / right.size) : 0;
-    if (sizeRatio > 0) {
-      explain += ' Byte budget: left=' + formatBytes(left.size) + ', right=' + formatBytes(right.size) +
-        ' (left is ' + sizeRatio.toFixed(2) + '× right). ' +
-        'When file sizes are comparable, look for which encode'+'\u2019'+'s artifacts are easier on the eye.';
-    }
-  }
-  modalExplanation.innerHTML = explain;
-
-  applyZoom();
-}
-
-function openCompareModal(initialRightId = null) {
-  compareEntries = gatherCompareEntries();
-  if (compareEntries.length < 1) return;
-
-  // Default left: baseline if available, otherwise the first entry
-  const defaultLeft = compareEntries.find(e => e.kind === 'baseline') || compareEntries[0];
-  // Default right: caller's chosen tile, or fall back to the first non-baseline tile
-  let defaultRight = initialRightId ? findEntryInArray(compareEntries, initialRightId) : null;
-  if (!defaultRight) defaultRight = compareEntries.find(e => e.kind === 'tile') || defaultLeft;
-
-  compareState.leftId = defaultLeft.id;
-  compareState.rightId = defaultRight.id;
-
-  populateCompareDropdowns();
-  modalBackdrop.classList.add('open');
-
-  // Reset zoom and render
-  compareState.zoom = 1.0;
-  renderCompare();
-  modalCloseBtn.focus();
-}
-
-function findEntryInArray(arr, id) {
-  return arr.find(e => e.id === id);
-}
-
-function closeModal() {
-  modalBackdrop.classList.remove('open');
-  // Free image bandwidth/memory on close
-  compareImgLeft.removeAttribute('src');
-  compareImgRight.removeAttribute('src');
-}
-
-// Picker change handlers
-comparePickerLeft.addEventListener('change', () => {
-  compareState.leftId = comparePickerLeft.value;
-  renderCompare();
-});
-comparePickerRight.addEventListener('change', () => {
-  compareState.rightId = comparePickerRight.value;
-  renderCompare();
-});
-
-// Zoom controls
-zoomInBtn.addEventListener('click', () => setZoom(compareState.zoom * 1.5));
-zoomOutBtn.addEventListener('click', () => setZoom(compareState.zoom / 1.5));
-zoomFitBtn.addEventListener('click', setZoomFit);
-
-// Tile click → open compare modal with that tile pre-selected on the right
-function tileEntryId(el) {
-  const target = el.dataset.target;
-  const q = el.dataset.quality || '?';
-  const f = el.dataset.format || '?';
-  return target ? 'tile-' + target + '-' + q + '-' + f : null;
-}
-
-grid.addEventListener('click', (e) => {
-  const tile = e.target.closest('.tile');
-  if (!tile || tile.classList.contains('loading') || tile.classList.contains('error')) return;
-  openCompareModal(tileEntryId(tile));
-});
-grid.addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter' && e.key !== ' ') return;
-  const tile = e.target.closest('.tile');
-  if (!tile || tile.classList.contains('loading') || tile.classList.contains('error')) return;
-  e.preventDefault();
-  openCompareModal(tileEntryId(tile));
-});
-
-// Table row click → open compare modal with that row as right panel
-tableBody.addEventListener('click', (e) => {
-  const row = e.target.closest('tr');
-  if (!row || !row.dataset.path) return;
-  openCompareModal(tileEntryId(row));
-});
-tableBody.addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter' && e.key !== ' ') return;
-  const row = e.target.closest('tr');
-  if (!row || !row.dataset.path) return;
-  e.preventDefault();
-  openCompareModal(tileEntryId(row));
-});
-
-// Baseline tile click → open compare modal with baseline on both sides initially
-baselineWrap.addEventListener('click', (e) => {
-  const tile = e.target.closest('.baseline-tile');
-  if (!tile || tile.classList.contains('loading') || tile.classList.contains('error')) return;
-  openCompareModal('baseline');
-});
-baselineWrap.addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter' && e.key !== ' ') return;
-  const tile = e.target.closest('.baseline-tile');
-  if (!tile || tile.classList.contains('loading') || tile.classList.contains('error')) return;
-  e.preventDefault();
-  openCompareModal('baseline');
-});
-
-// Close handlers
-modalCloseBtn.addEventListener('click', closeModal);
-modalBackdrop.addEventListener('click', (e) => {
-  if (e.target === modalBackdrop) closeModal();
+compareModalClose.addEventListener('click', closeCompareView);
+compareModal.addEventListener('click', (e) => {
+  if (e.target === compareModal) closeCompareView();
 });
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && modalBackdrop.classList.contains('open')) closeModal();
-  if (!modalBackdrop.classList.contains('open')) return;
-  // Zoom hotkeys
-  if (e.key === '+' || e.key === '=') { e.preventDefault(); setZoom(compareState.zoom * 1.5); }
-  else if (e.key === '-' || e.key === '_') { e.preventDefault(); setZoom(compareState.zoom / 1.5); }
-  else if (e.key === '0') { e.preventDefault(); setZoomFit(); }
+  if (e.key === 'Escape' && compareModal.classList.contains('open')) closeCompareView();
 });
+
 
 // URL state — read on load, write on change. The page URL itself becomes the
 // shareable state: ?source=...&q=...&f=... lets anyone link to a specific view.
