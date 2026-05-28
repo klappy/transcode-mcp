@@ -224,6 +224,34 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 16px;
   }
+  /* Fit mode keeps the original uniform-card grid. */
+  .grid-fit {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+  /* True-size mode: tiles flow at their natural (intended-display) widths and
+     wrap. A 320 tile is small, a 1080 tile is large — honestly different
+     sizes sitting next to each other. align-items:flex-start so a row of
+     mismatched heights tops-aligns rather than stretching. */
+  .grid-truesize {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .grid-truesize .tile { flex: 0 0 auto; }
+  /* The true-size image box. width is set inline to the intended display
+     width. If that exceeds the column the tile caps via max-width and the
+     image scrolls horizontally inside this clip. */
+  .tile-image.truesize {
+    overflow: auto;
+    max-width: 100%;
+    min-height: 0;
+    display: block;
+  }
+  .tile-image.truesize img {
+    max-width: none; /* override the global max-width:100% so 1:1 holds */
+    display: block;
+  }
   .tile {
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 8px; overflow: hidden; display: flex; flex-direction: column;
@@ -563,6 +591,20 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
       <button class="view-btn" data-view="table" id="view-table-btn">Table</button>
     </div>
   </div>
+  <div class="control-group" id="render-mode-group">
+    <label title="True size renders each image at its intended display size (the target), so you see real quality at the size it'll be shown. Fit scales the whole image to a uniform thumbnail.">Render</label>
+    <div class="view-toggle">
+      <button class="view-btn active" data-render="truesize" id="render-truesize-btn">True size</button>
+      <button class="view-btn" data-render="fit" id="render-fit-btn">Fit</button>
+    </div>
+  </div>
+  <div class="control-group" id="pixel-mode-group">
+    <label title="CSS pixels: how the image looks on a normal screen (the browser upscales on high-DPI displays). Physical pixels: pixel-for-pixel encoder output, accounting for your screen's device pixel ratio.">Pixels</label>
+    <div class="view-toggle">
+      <button class="view-btn active" data-pixel="css" id="pixel-css-btn">CSS</button>
+      <button class="view-btn" data-pixel="physical" id="pixel-physical-btn">Physical</button>
+    </div>
+  </div>
   <div style="display: flex; gap: 8px; flex-shrink: 0;">
     <button id="reload">Reload</button>
     <button id="share-link" class="btn-secondary" title="Copy a shareable link to this view">Share link</button>
@@ -691,6 +733,12 @@ const targetDefaultBtn = document.getElementById('target-default');
 const sortSelect = document.getElementById('sort-select');
 const viewGridBtn = document.getElementById('view-grid-btn');
 const viewTableBtn = document.getElementById('view-table-btn');
+const renderTruesizeBtn = document.getElementById('render-truesize-btn');
+const renderFitBtn = document.getElementById('render-fit-btn');
+const renderModeGroup = document.getElementById('render-mode-group');
+const pixelCssBtn = document.getElementById('pixel-css-btn');
+const pixelPhysicalBtn = document.getElementById('pixel-physical-btn');
+const pixelModeGroup = document.getElementById('pixel-mode-group');
 const reloadBtn = document.getElementById('reload');
 const sourceInfo = document.getElementById('source-info');
 const grid = document.getElementById('grid');
@@ -707,6 +755,14 @@ let explorerResults = [];
 let currentViewMode = 'grid';
 let currentSortKey = 'bpp';
 let currentSortDir = 'asc';
+// Render mode: 'truesize' shows each image at its intended display size (the
+// target value as real screen units); 'fit' scales the whole image into a
+// uniform thumbnail card. Pixel mode (only meaningful in truesize): 'css'
+// sizes the box in CSS pixels (how it looks on a normal screen); 'physical'
+// divides by devicePixelRatio so the box occupies that many physical pixels
+// (pixel-for-pixel encoder output).
+let currentRenderMode = 'truesize';
+let currentPixelMode = 'css';
 let baselineBytes = 0; // For "vs baseline" ratios in table view
 // Incremented on each loadExplorer() call. Workers from a prior invocation
 // check their captured generation against this and abort their writes if
@@ -1133,11 +1189,39 @@ function renderExplorer() {
   }
 }
 
+// Computes the intended display box for an entry: a box whose SHORTEST side
+// equals the target value, scaled from the encode's aspect ratio. This is the
+// size the image is meant to be shown at. In physical-pixel mode we divide by
+// devicePixelRatio so the box occupies target physical pixels rather than
+// target CSS pixels. Returns w, h in CSS pixels (what we set on the box).
+function intendedDisplayBox(e) {
+  const ew = e.encodeW || 0;
+  const eh = e.encodeH || 0;
+  if (!ew || !eh) return { w: e.target, h: e.target };
+  // Scale the encode so its shortest side equals the target. The encode is
+  // ~1.5× the target (the overshoot); displaying it in this box makes the
+  // browser downsample, which is the supersampling the overshoot exists for.
+  const shortestEncode = Math.min(ew, eh);
+  const scale = e.target / shortestEncode;
+  let boxW = ew * scale;
+  let boxH = eh * scale;
+  if (currentPixelMode === 'physical') {
+    const dpr = window.devicePixelRatio || 1;
+    boxW = boxW / dpr;
+    boxH = boxH / dpr;
+  }
+  return { w: Math.round(boxW), h: Math.round(boxH) };
+}
+
 function renderExplorerGrid(items) {
   // Rebuild the grid in sorted order. Reusing existing tiles avoids image
   // re-fetching since the proxy URL is the same and browser caches it.
-  // We just replace the contents in the right order.
   grid.innerHTML = '';
+  // The grid class toggles between uniform thumbnail cards (fit mode) and a
+  // flowing layout where each tile is as wide as its intended display size
+  // (true-size mode).
+  grid.className = currentRenderMode === 'truesize' ? 'grid grid-truesize' : 'grid grid-fit';
+
   for (const e of items) {
     const tile = document.createElement('div');
     if (e.error) {
@@ -1150,7 +1234,7 @@ function renderExplorerGrid(items) {
       continue;
     }
     tile.className = 'tile ' + bindingClass(e.binding);
-    // Same dataset shape the modal expects
+    // Same dataset shape the modal/compare expects
     tile.dataset.target = String(e.target);
     tile.dataset.path = e.path;
     tile.dataset.sourceW = String(e.sourceW);
@@ -1167,15 +1251,34 @@ function renderExplorerGrid(items) {
     tile.setAttribute('aria-label', 'Open ' + e.target + 'px shortest-side preview');
 
     const bppStr = e.bpp > 0 ? e.bpp.toFixed(3) : '?';
-    // For display, show what the user asked for (shortest side) + the
-    // actual proxy w= we sent (only meaningfully different on landscape).
     const wHint = e.requestedW && e.requestedW !== e.target ? '  (w=' + e.requestedW + ')' : '';
+
+    // Build the image area. In true-size mode the image box is sized to the
+    // intended display size and the tile width follows it; in fit mode it's a
+    // uniform thumbnail (image scaled to fill the card).
+    let imageHtml;
+    if (currentRenderMode === 'truesize') {
+      const box = intendedDisplayBox(e);
+      // The image element is the box size; if the box is wider than the
+      // viewport, an outer .tile-image-clip wrapper constrains and lets us pan.
+      imageHtml =
+        '<div class="tile-image truesize" style="width:' + box.w + 'px;">' +
+          '<img loading="lazy" src="' + escapeHtml(e.path) + '" ' +
+          'style="width:' + box.w + 'px;height:' + box.h + 'px;" ' +
+          'alt="' + e.target + 'px intended display size">' +
+        '</div>';
+    } else {
+      imageHtml =
+        '<div class="tile-image"><img loading="lazy" src="' + escapeHtml(e.path) +
+        '" alt="' + e.target + 'px shortest side"></div>';
+    }
+
     tile.innerHTML =
       '<div class="tile-header">' +
         '<span class="target">' + e.target + 'px shortest</span>' +
         '<span class="formula">q=' + e.requestedQuality + ',f=' + e.requestedFormat + wHint + '</span>' +
       '</div>' +
-      '<div class="tile-image"><img loading="lazy" src="' + escapeHtml(e.path) + '" alt="' + e.target + 'px shortest side"></div>' +
+      imageHtml +
       '<div class="tile-meta">' +
         '<div class="row"><span>encode</span><strong>' + e.encodeW + ' × ' + e.encodeH + '</strong></div>' +
         '<div class="row"><span>binds</span><strong>' + (e.binding || '—') + '</strong></div>' +
@@ -1253,7 +1356,42 @@ function setViewMode(mode) {
     viewGridBtn.classList.remove('active');
     viewTableBtn.classList.add('active');
   }
+  updateRenderControlsVisibility();
   renderExplorer();
+}
+
+function setRenderMode(mode) {
+  currentRenderMode = mode;
+  if (mode === 'truesize') {
+    renderTruesizeBtn.classList.add('active');
+    renderFitBtn.classList.remove('active');
+  } else {
+    renderTruesizeBtn.classList.remove('active');
+    renderFitBtn.classList.add('active');
+  }
+  updateRenderControlsVisibility();
+  renderExplorer();
+}
+
+function setPixelMode(mode) {
+  currentPixelMode = mode;
+  if (mode === 'css') {
+    pixelCssBtn.classList.add('active');
+    pixelPhysicalBtn.classList.remove('active');
+  } else {
+    pixelCssBtn.classList.remove('active');
+    pixelPhysicalBtn.classList.add('active');
+  }
+  renderExplorer();
+}
+
+// Render and pixel toggles only apply to the grid in true-size mode. Hide the
+// render toggle entirely in table view; hide the pixel toggle unless we're in
+// grid + true-size (it has no meaning when fitting or in the table).
+function updateRenderControlsVisibility() {
+  const inGrid = currentViewMode === 'grid';
+  renderModeGroup.hidden = !inGrid;
+  pixelModeGroup.hidden = !(inGrid && currentRenderMode === 'truesize');
 }
 
 function escapeHtml(s) {
@@ -1583,6 +1721,8 @@ function readUrlState() {
     w: params.get('w'),       // comma-separated list of target widths
     sort: params.get('sort'), // sort key
     view: params.get('view'), // 'grid' or 'table'
+    render: params.get('render'), // 'truesize' or 'fit'
+    px: params.get('px'),     // 'css' or 'physical'
   };
 }
 
@@ -1607,6 +1747,10 @@ function writeUrlState() {
     params.set('sort', sortValue);
   }
   if (currentViewMode !== 'grid') params.set('view', currentViewMode);
+  // Render mode defaults to truesize; pixel mode defaults to css. Only encode
+  // when non-default to keep URLs short.
+  if (currentRenderMode !== 'truesize') params.set('render', currentRenderMode);
+  if (currentPixelMode !== 'css') params.set('px', currentPixelMode);
 
   const qs = params.toString();
   const newUrl = window.location.pathname + (qs ? '?' + qs : '');
@@ -1614,7 +1758,7 @@ function writeUrlState() {
 }
 
 function applyUrlState() {
-  const { source, q, f, w, sort, view } = readUrlState();
+  const { source, q, f, w, sort, view, render, px } = readUrlState();
   if (source) {
     const matchingOption = Array.from(sourceSelect.options).find(opt => opt.value === source);
     if (matchingOption) {
@@ -1642,6 +1786,12 @@ function applyUrlState() {
       currentSortDir = isDesc ? 'desc' : 'asc';
       sortSelect.value = baseKey === 'size' && isDesc ? 'size-desc' : baseKey;
     }
+  }
+  if (render === 'fit') {
+    setRenderMode('fit');
+  }
+  if (px === 'physical') {
+    setPixelMode('physical');
   }
   if (view === 'table') {
     setViewMode('table');
@@ -1778,6 +1928,14 @@ sortSelect.addEventListener('change', () => {
 viewGridBtn.addEventListener('click', () => { setViewMode('grid'); writeUrlState(); });
 viewTableBtn.addEventListener('click', () => { setViewMode('table'); writeUrlState(); });
 
+// Render mode toggle (true size vs fit)
+renderTruesizeBtn.addEventListener('click', () => { setRenderMode('truesize'); writeUrlState(); });
+renderFitBtn.addEventListener('click', () => { setRenderMode('fit'); writeUrlState(); });
+
+// Pixel mode toggle (CSS vs physical pixels)
+pixelCssBtn.addEventListener('click', () => { setPixelMode('css'); writeUrlState(); });
+pixelPhysicalBtn.addEventListener('click', () => { setPixelMode('physical'); writeUrlState(); });
+
 // Table header click → sort by that column
 document.querySelectorAll('.results-table th[data-sort-key]').forEach(th => {
   th.addEventListener('click', () => {
@@ -1797,6 +1955,7 @@ document.querySelectorAll('.results-table th[data-sort-key]').forEach(th => {
 // Initial load
 applyUrlState();
 updateTargetSummary();
+updateRenderControlsVisibility();
 loadExplorer();
 writeUrlState();
 </script>
