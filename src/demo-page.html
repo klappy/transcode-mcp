@@ -276,6 +276,26 @@
   }
   .tile-meta .row { display: flex; justify-content: space-between; gap: 8px; }
   .tile-meta .row strong { color: var(--text); font-weight: 500; }
+  /* Copyable image URL — the product the user came for. */
+  .url-row {
+    display: flex; gap: 6px; margin-top: 8px;
+    padding-top: 8px; border-top: 1px solid var(--border);
+  }
+  .url-field {
+    flex: 1; min-width: 0;
+    background: var(--bg); color: var(--text-dim);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 4px 6px; font-family: var(--mono); font-size: 10px;
+    text-overflow: ellipsis;
+  }
+  .url-field:focus { color: var(--text); border-color: var(--accent); outline: none; }
+  .url-copy {
+    flex: 0 0 auto;
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 4px 10px; font-size: 11px; cursor: pointer;
+  }
+  .url-copy:hover { background: var(--accent); color: #0a1320; border-color: var(--accent); }
   .tile.error .tile-image { background: #2a1a1a; color: #ff8b8b; font-size: 12px; padding: 16px; text-align: center; }
   .tile.loading .tile-image::before {
     content: "loading…"; color: var(--text-dim); font-size: 12px;
@@ -1215,13 +1235,21 @@ function intendedDisplayBox(e) {
 // "native" and its binding "none"; everything else is the same.
 function statRowsHtml(e) {
   const bppStr = e.bpp > 0 ? e.bpp.toFixed(3) : '?';
+  // The full proxy URL is the product — what the user came for. They can copy
+  // it to use directly, or as the ?source= baseline for their own app.
+  const fullUrl = window.location.origin + e.path;
   return (
     '<div class="row"><span>' + (e.isSource ? 'native' : 'encode') + '</span><strong>' + e.encodeW + ' × ' + e.encodeH + '</strong></div>' +
     '<div class="row"><span>binds</span><strong>' + (e.isSource ? 'none' : (e.binding || '—')) + '</strong></div>' +
     '<div class="row"><span>quality</span><strong>' + (e.quality || '?') + '</strong></div>' +
     '<div class="row"><span>format</span><strong>' + (e.format || '?') + '</strong></div>' +
     '<div class="row"><span>size</span><strong>' + formatBytes(e.size) + '</strong></div>' +
-    '<div class="row"><span>bytes/px</span><strong>' + bppStr + '</strong></div>'
+    '<div class="row"><span>bytes/px</span><strong>' + bppStr + '</strong></div>' +
+    '<div class="url-row">' +
+      '<input class="url-field" type="text" readonly value="' + escapeHtml(fullUrl) + '" ' +
+        'title="' + escapeHtml(fullUrl) + '" onclick="this.select()">' +
+      '<button class="url-copy" type="button" data-copy-url="' + escapeHtml(fullUrl) + '" title="Copy image URL">copy</button>' +
+    '</div>'
   );
 }
 
@@ -1513,6 +1541,8 @@ baselineWrap.addEventListener('change', onCompareCheckboxChange);
 // handled by the change event above (don't double-toggle).
 function onTileActivate(e) {
   if (e.target.closest('.compare-checkbox') || e.target.closest('.tile-compare-check')) return;
+  // Clicks on the URL field or its copy button are not selection toggles.
+  if (e.target.closest('.url-row')) return;
   const tile = e.target.closest('.tile');
   if (!tile || !tile.dataset.id) return;
   if (tile.classList.contains('loading') || tile.classList.contains('error')) return;
@@ -1750,34 +1780,49 @@ function showToast(message, duration = 2200) {
   toastTimer = setTimeout(() => toast.classList.remove('visible'), duration);
 }
 
-// Share-link button: copies the current URL to clipboard
-const shareLinkBtn = document.getElementById('share-link');
-shareLinkBtn.addEventListener('click', async () => {
-  // Make sure the URL reflects current state first
-  writeUrlState();
-  const link = window.location.href;
+// Copy arbitrary text to the clipboard with graceful fallbacks. Shared by the
+// share-link button and the per-result "copy URL" buttons.
+async function copyToClipboard(text, successMessage) {
+  const msg = successMessage || 'Copied to clipboard';
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      await navigator.clipboard.writeText(link);
-      showToast('Link copied to clipboard');
-    } else {
-      // Fallback: select the link in a temporary element
-      const ta = document.createElement('textarea');
-      ta.value = link;
-      ta.setAttribute('readonly', '');
-      ta.style.position = 'absolute';
-      ta.style.left = '-9999px';
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      showToast('Link copied to clipboard');
+      await navigator.clipboard.writeText(text);
+      showToast(msg);
+      return;
     }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'absolute';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast(msg);
   } catch (err) {
-    // Last fallback: show the link in a prompt so they can copy manually
-    showToast('Copy this link manually (clipboard blocked)');
-    window.prompt('Copy this link:', link);
+    showToast('Copy this manually (clipboard blocked)');
+    window.prompt('Copy:', text);
   }
+}
+
+// Share-link button: copies the current URL to clipboard
+const shareLinkBtn = document.getElementById('share-link');
+// Per-result "copy URL" buttons (grid tiles + compare panels). Delegated
+// because tiles/panels re-render. Stop propagation so copying doesn't also
+// toggle the tile's compare selection.
+document.addEventListener('click', (ev) => {
+  const btn = ev.target.closest('[data-copy-url]');
+  if (!btn) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  copyToClipboard(btn.getAttribute('data-copy-url'), 'Image URL copied');
+});
+
+shareLinkBtn.addEventListener('click', () => {
+  // Make sure the URL reflects current state first
+  writeUrlState();
+  copyToClipboard(window.location.href, 'Link copied to clipboard');
 });
 
 // Debounce checkbox changes so toggling several pills doesn't fire N reloads
