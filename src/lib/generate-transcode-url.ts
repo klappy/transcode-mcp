@@ -29,11 +29,12 @@ export function generateTranscodeUrl(input: GenerateTranscodeUrlInput): string {
     .map(([key, value]) => `${key}=${encodeURIComponent(String(value))}`)
     .join(",");
 
-  const encodedSourceUrl = encodeURIComponent(sourceUrl);
-
+  // Source URL is embedded raw (NOT percent-encoded). The worker's
+  // parseProxyPath finds it by searching for a literal `http://`/`https://`
+  // prefix, so an encoded URL would 400. See parse-proxy-path.ts.
   return optionSegment
-    ? `/${mediaType}/${optionSegment}/${encodedSourceUrl}`
-    : `/${mediaType}/${encodedSourceUrl}`;
+    ? `/${mediaType}/${optionSegment}/${sourceUrl}`
+    : `/${mediaType}/${sourceUrl}`;
 }
 
 // Resolve a shortest-side value (s) to a target WIDTH using measured source
