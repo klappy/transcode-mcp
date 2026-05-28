@@ -154,6 +154,19 @@ async function main() {
   assert(imgPayload.request?.viewport === 720, "request echoes viewport");
   assert((imgPayload.guidance?.length ?? 0) > 50, "guidance string is substantial");
 
+  // The tool's job is to produce URLs the proxy can actually serve. A URL
+  // that returns 400/404 means the tool's grammar is out of sync with the
+  // worker's parser (this exact class of bug shipped once: source URL was
+  // being percent-encoded into a form the parser couldn't recover from).
+  // Use an example.com source so the worker's image-binding fetch will fail
+  // gracefully — we ONLY assert that the proxy's path PARSER accepted it
+  // (i.e. not 400 "Invalid path / bad request"). 5xx is fine for this check.
+  const fetchRes = await fetch(imgPayload.full_url!, { method: "GET" });
+  assert(
+    fetchRes.status !== 400 && fetchRes.status !== 404,
+    "constructed full_url is parseable by the proxy (got HTTP " + fetchRes.status + ")",
+  );
+
   // 4. tools/call — w escape hatch
   console.log("\n4. tools/call generate_transcode_url (w=1500 overrides viewport)");
   const adv = await rpc(
