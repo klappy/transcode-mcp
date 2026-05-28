@@ -566,10 +566,10 @@
     </div>
   </div>
   <div class="control-group" id="pixel-mode-group">
-    <label title="CSS pixels: how the image looks on a normal screen (the browser upscales on high-DPI displays). Physical pixels: pixel-for-pixel encoder output, accounting for your screen's device pixel ratio.">Pixels</label>
+    <label title="Rendered: how the image actually looks on screen at its intended size. Pixel peep: every encoded pixel shown 1:1 (accounts for high-DPI screens) so you can scrutinize compression artifacts up close.">Display</label>
     <div class="view-toggle">
-      <button class="view-btn active" data-pixel="css" id="pixel-css-btn">CSS</button>
-      <button class="view-btn" data-pixel="physical" id="pixel-physical-btn">Physical</button>
+      <button class="view-btn active" data-pixel="css" id="pixel-css-btn">Rendered</button>
+      <button class="view-btn" data-pixel="physical" id="pixel-physical-btn">Pixel peep</button>
     </div>
   </div>
   <div style="display: flex; gap: 8px; flex-shrink: 0;">
@@ -1277,7 +1277,7 @@ function renderExplorerGrid(items) {
       // density). The .tile-image.truesize wrapper is a FIXED window that
       // crops it via overflow:hidden — you see a centered slice at 1:1. The
       // card itself stays uniform.
-      const note = box.w + '×' + box.h + ' @ ' + (currentPixelMode === 'physical' ? 'physical' : 'css');
+      const note = box.w + '×' + box.h + ' · ' + (currentPixelMode === 'physical' ? 'pixel peep' : 'rendered');
       imageHtml =
         '<div class="tile-image truesize">' +
           '<img loading="lazy" src="' + escapeHtml(e.path) + '" ' +
@@ -1584,7 +1584,7 @@ function renderCompareView() {
     meta.className = 'tile-meta';
     const ctx = currentRenderMode === 'fit'
       ? 'fit'
-      : box.w + '×' + box.h + ' @ ' + (currentPixelMode === 'physical' ? 'physical' : 'css');
+      : box.w + '×' + box.h + ' · ' + (currentPixelMode === 'physical' ? 'pixel peep' : 'rendered');
     meta.innerHTML = statRowsHtml(e) +
       '<div class="row"><span>shown</span><strong>' + ctx + '</strong></div>';
 
