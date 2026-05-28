@@ -57,6 +57,64 @@ See full details in [canon/values/project-identity.md](canon/values/project-iden
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for current state.
 
+## Testing
+
+The MCP server is tested at four layers, in order of feedback speed:
+
+### 1. Unit tests (fast, run on every change)
+
+`bun test` runs the suite. The pure URL-construction and tool-response builders are tested directly (no MCP SDK, no network):
+
+```sh
+bun test
+```
+
+Covers: viewport → `s=` mapping, raw `w/h` escape hatch precedence, quality and format passthrough, the full response shape (`proxy_path`, `full_url`, `embed`, request echo, guidance), audio passthrough, source-aspect-aware shortest-side resolution, URL parser validation.
+
+### 2. Live smoke test (proves the protocol works end-to-end)
+
+`smoke-mcp.ts` is a no-mocks JSON-RPC client that POSTs to a deployed `/mcp` endpoint and asserts the responses. Same protocol Claude Desktop / Cursor / the Inspector would use.
+
+```sh
+bun smoke-mcp.ts                 # production
+bun smoke-mcp.ts preview         # current branch preview
+bun smoke-mcp.ts https://your-deploy.workers.dev
+```
+
+Covers: `initialize` handshake (protocol version, server info, tools capability), `tools/list` (schema advertises `viewport` + `q/f/w/h`), `tools/call` for image (viewport → `s=`, `w` overrides), `tools/call` for audio. Exits non-zero on first failure.
+
+### 3. MCP Inspector (interactive verification)
+
+The [official MCP Inspector](https://github.com/modelcontextprotocol/inspector) is a web UI that connects to any MCP server, shows the advertised tools/schemas, and lets you fire `tools/call` requests by hand. Best for human verification and exploring the response payload.
+
+```sh
+npx @modelcontextprotocol/inspector
+# In the UI:
+#   Transport: Streamable HTTP
+#   URL: https://transcode-mcp.klappy.workers.dev/mcp
+```
+
+### 4. Real MCP client (the actual product use case)
+
+Point a real client at the deployed `/mcp` endpoint to verify it integrates correctly with the runtime an LLM agent would actually use.
+
+**Claude Desktop** — edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS):
+
+```json
+{
+  "mcpServers": {
+    "transcode-mcp": {
+      "type": "http",
+      "url": "https://transcode-mcp.klappy.workers.dev/mcp"
+    }
+  }
+}
+```
+
+Restart Claude Desktop. Ask the model to "use the transcode tool to make a proxy URL for [image URL] at 720px shortest side."
+
+**Cursor / Claude Code** — same config shape in their respective MCP settings, pointing at the same `/mcp` URL.
+
 ## Canon & Governance
 
 The project's durable record lives in `canon/`. Exploration artifacts, planning decisions, and session journals are committed there as they are produced. The canon is the source of truth — not this README, not inline comments, not conversation memory.
