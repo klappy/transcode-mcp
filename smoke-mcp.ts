@@ -168,6 +168,7 @@ async function main() {
     },
     { sessionId },
   );
+  assert(!adv.error, "no JSON-RPC error: " + JSON.stringify(adv.error));
   const advText = (adv.result as { content?: Array<{ text?: string }> }).content?.[0]?.text;
   const advPayload = JSON.parse(advText!) as { proxy_path?: string };
   assert(advPayload.proxy_path?.includes("w=1500"), "w= present");
@@ -188,6 +189,7 @@ async function main() {
     },
     { sessionId },
   );
+  assert(!aud.error, "no JSON-RPC error: " + JSON.stringify(aud.error));
   const audText = (aud.result as { content?: Array<{ text?: string }> }).content?.[0]?.text;
   const audPayload = JSON.parse(audText!) as { proxy_path?: string; embed?: string; guidance?: string };
   assert(audPayload.proxy_path?.startsWith("/audio/"), "audio path");
