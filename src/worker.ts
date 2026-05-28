@@ -14,7 +14,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { parseProxyPath, ProxyPathError } from "./lib/parse-proxy-path";
 import { encodeDimension, QUALITY_MAP, type Quality } from "./lib/encode-dimension";
-import { generateTranscodeUrl } from "./lib/generate-transcode-url";
+import { generateTranscodeUrl, shortestSideToWidth } from "./lib/generate-transcode-url";
 import { DEMO_PAGE_HTML } from "./demo-page";
 
 interface Env {
@@ -38,49 +38,113 @@ interface ImagesResult {
   image(): ReadableStream;
 }
 
-function createServer() {
-  const server = new McpServer({ name: "transcode-mcp", version: "0.2.0" });
+function createServer(request: Request) {
+  const server = new McpServer({ name: "transcode-mcp", version: "0.3.0" });
 
   server.tool(
     "generate_transcode_url",
     {
-      media_type: z.enum(["image", "audio"]),
-      source_url: z.string().url(),
-      w: z.number().int().positive().optional(),
-      h: z.number().int().positive().optional(),
-      q: z.enum(["low", "medium", "high"]).optional(),
-      f: z.enum(["auto", "avif", "webp", "jpeg"]).optional(),
-      preset: z.enum(["voice", "music"]).optional(),
+      source_url: z.string().url().describe("The image (or audio) URL to serve through the proxy."),
+      media_type: z.enum(["image", "audio"]).optional().describe("Defaults to image."),
+      // Primary image input: the shortest-side display size. Stable across
+      // phone rotation, which is why it's preferred over a literal width.
+      viewport: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe(
+          "PRIMARY for images: the shortest-side display size in CSS px you intend to show the image at (e.g. 320 thumbnail, 1080 hero). Emitted as s= so the proxy binds the shortest side regardless of orientation — the stable 'resolution class' even when a phone rotates. Prefer this over w/h.",
+        ),
+      q: z
+        .enum(["low", "medium", "high"])
+        .optional()
+        .describe("Quality preset: low=20, medium=50, high=80. With the half-class overshoot, even low looks good. Defaults to the proxy default (medium)."),
+      f: z
+        .enum(["auto", "webp", "jpeg"])
+        .optional()
+        .describe("Output format. auto lets the proxy pick; webp is smallest; jpeg is universal."),
+      // Advanced escape hatch — raw pixel control. w wins over viewport.
+      w: z.number().int().positive().optional().describe("ADVANCED: raw output width in px. Overrides viewport. Most callers should use viewport."),
+      h: z.number().int().positive().optional().describe("ADVANCED: raw output height in px. Rarely needed."),
+      preset: z.enum(["voice", "music"]).optional().describe("Audio only: encoding preset."),
     },
-    async (args) => {
-      const { media_type, source_url, ...rest } = args;
+    (args) => {
+      const mediaType = args.media_type ?? "image";
+      const origin = new URL(request.url).origin;
       let proxyPath: string;
-      if (media_type === "image") {
-        const options: Record<string, string | number> = {};
-        if (rest.w !== undefined) options.w = rest.w;
-        if (rest.h !== undefined) options.h = rest.h;
-        if (rest.q !== undefined) options.q = rest.q;
-        if (rest.f !== undefined) options.f = rest.f;
-        proxyPath = generateTranscodeUrl({
-          mediaType: "image",
-          sourceUrl: source_url,
-          options: options as any,
-        });
-      } else {
+      let guidance: string;
+
+      if (mediaType === "audio") {
         const options: Record<string, string> = {};
-        if (rest.preset !== undefined) options.preset = rest.preset;
-        if (rest.q !== undefined) options.q = rest.q;
+        if (args.preset !== undefined) options.preset = args.preset;
+        if (args.q !== undefined) options.q = args.q;
         proxyPath = generateTranscodeUrl({
           mediaType: "audio",
-          sourceUrl: source_url,
+          sourceUrl: args.source_url,
           options: options as any,
         });
+        guidance =
+          "Use this URL directly as an <audio> src. Audio is currently passthrough " +
+          "(container transcoding is not yet deployed), so preset/q are recorded but " +
+          "not yet applied.";
+      } else {
+        // Pure URL construction — no fetching, no client-side math. viewport is
+        // emitted as s= (shortest side); the WORKER resolves it to the right
+        // width from the source orientation at request time and applies the
+        // half-class overshoot. w (if given) overrides viewport.
+        const options: Record<string, string | number> = {};
+        if (args.w !== undefined) {
+          options.w = args.w;
+        } else if (args.viewport !== undefined) {
+          options.s = args.viewport;
+        }
+        if (args.h !== undefined) options.h = args.h;
+        if (args.q !== undefined) options.q = args.q;
+        if (args.f !== undefined) options.f = args.f;
+        proxyPath = generateTranscodeUrl({
+          mediaType: "image",
+          sourceUrl: args.source_url,
+          options: options as any,
+        });
+        guidance =
+          "Drop this URL straight into an <img> src, or use it as the ?source= base " +
+          "for your own integration (e.g. an Aquifer-style image window). The proxy " +
+          "is stateless and cacheable: the same URL always returns the same bytes. " +
+          "s= is the shortest side you intend to display at (stable across phone " +
+          "rotation); the worker maps it to the correct width from the source's " +
+          "orientation and encodes at ~1.5x (half-class overshoot) so the browser " +
+          "downscale stays crisp. Change q=low|medium|high for the size/quality " +
+          "tradeoff. You do not specify the encode resolution — the proxy computes it.";
       }
+
+      const fullUrl = origin + proxyPath;
+      const embed =
+        mediaType === "audio"
+          ? '<audio src="' + fullUrl + '" controls></audio>'
+          : '<img src="' + fullUrl + '" alt="" loading="lazy">';
+
       return {
         content: [
           {
             type: "text",
-            text: JSON.stringify({ proxy_path: proxyPath }),
+            text: JSON.stringify(
+              {
+                proxy_path: proxyPath,
+                full_url: fullUrl,
+                embed,
+                request: {
+                  media_type: mediaType,
+                  source_url: args.source_url,
+                  viewport: args.viewport ?? null,
+                  q: args.q ?? "default",
+                  f: args.f ?? "auto",
+                },
+                guidance,
+              },
+              null,
+              2,
+            ),
           },
         ],
       };
@@ -96,7 +160,7 @@ export default {
 
     // MCP endpoint
     if (url.pathname.startsWith("/mcp")) {
-      const server = createServer();
+      const server = createServer(request);
       const handler = createMcpHandler(server);
       return handler(request, env, ctx);
     }
@@ -205,14 +269,23 @@ async function handleImageProxy(
     const sourceW = info.width;
     const sourceH = info.height;
 
-    // Target width comes from options.w; if missing but h is given, derive
-    // from source aspect ratio. If neither, just apply quality/format.
+    // Resolve the target width. Precedence: explicit w (advanced escape hatch)
+    // wins; otherwise s (shortest side) maps to a width using the MEASURED
+    // source orientation. s is the stable "resolution class" across phone
+    // rotation — the worker does this mapping because only it knows the real
+    // orientation at request time (the URL builder cannot without fetching):
+    //   portrait/square (sourceW <= sourceH): shortest side IS the width  -> w = s
+    //   landscape       (sourceW >  sourceH): shortest side is the height -> w = round(s * sourceW / sourceH)
+    let targetW: number | undefined = options.w;
+    if (targetW === undefined && options.s !== undefined) {
+      targetW = shortestSideToWidth(options.s, sourceW, sourceH);
+    }
+
     let encodeW: number | undefined;
     let encodeH: number | undefined;
     let bindingResult = "none";
 
-    if (options.w) {
-      const targetW = options.w;
+    if (targetW) {
       const targetH = options.h;
       const result = encodeDimension({
         sourceW,
