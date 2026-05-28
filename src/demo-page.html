@@ -243,6 +243,24 @@
     transform: translate(-50%, -50%);
     display: block;
   }
+  /* Fit pixel-peep: a FIXED uniform-size window (same for every tile) that
+     crops the image shown at its full encoded resolution (1:1 encoded px).
+     Because the window size and the 1:1 pixel scale are identical for every
+     tile, on-screen text stays locked regardless of the image's resolution —
+     a higher-res encode just shows a smaller fraction of itself. */
+  .tile-image.fitpeep {
+    overflow: hidden;
+    position: relative;
+    display: block;
+    margin: 0 auto;
+  }
+  .tile-image.fitpeep img {
+    max-width: none;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    display: block;
+  }
   /* A small caption noting the crop is showing true pixels, not the whole image */
   .truesize-note {
     position: absolute; bottom: 4px; right: 4px;
@@ -1296,7 +1314,21 @@ function renderExplorerGrid(items) {
           'alt="' + e.target + 'px intended display size">' +
           '<span class="truesize-note">' + note + '</span>' +
         '</div>';
+    } else if (currentPixelMode === 'peep') {
+      // Fit + pixel peep: a uniform fixed window (FIT_BOX) cropping the image
+      // shown at its FULL encoded resolution (1:1 encoded px). Same window and
+      // same pixel scale for every tile ⇒ on-screen text locked across
+      // resolutions; a higher-res encode just reveals a smaller fraction.
+      const note = e.encodeW + '×' + e.encodeH + ' · pixel peep';
+      imageHtml =
+        '<div class="tile-image fitpeep" style="width:' + FIT_BOX.w + 'px;height:' + FIT_BOX.h + 'px;">' +
+          '<img loading="lazy" src="' + escapeHtml(e.path) + '" ' +
+          'style="width:' + e.encodeW + 'px;height:' + e.encodeH + 'px;" ' +
+          'alt="' + e.target + 'px, encoded pixels 1:1">' +
+          '<span class="truesize-note">' + note + '</span>' +
+        '</div>';
     } else {
+      // Fit + rendered: whole image scaled to fit the uniform card (contain).
       imageHtml =
         '<div class="tile-image"><img loading="lazy" src="' + escapeHtml(e.path) +
         '" alt="' + e.target + 'px shortest side"></div>';
@@ -1429,11 +1461,13 @@ function setPixelMode(mode) {
 function updateRenderControlsVisibility() {
   // The render/pixel toggles drive both the grid AND the compare popup. Show
   // them when we're in grid view, or whenever the compare popup is open (it
-  // can be opened from table view, and must still honor these controls).
+  // can be opened from table view, and must still honor these controls). The
+  // pixel toggle now applies to BOTH render modes (true-size and fit), so it
+  // shows whenever the render toggle does.
   const compareOpen = compareModal && compareModal.classList.contains('open');
   const inGrid = currentViewMode === 'grid';
   renderModeGroup.hidden = !(inGrid || compareOpen);
-  pixelModeGroup.hidden = !((inGrid || compareOpen) && currentRenderMode === 'truesize');
+  pixelModeGroup.hidden = !(inGrid || compareOpen);
 }
 
 function escapeHtml(s) {
@@ -1583,14 +1617,22 @@ function renderCompareView() {
     const img = document.createElement('img');
     img.src = e.path;
     img.alt = e.isSource ? 'original source' : (e.target + 'px shortest side');
-    if (currentRenderMode === 'fit') {
-      // Fit: scale the WHOLE image into the viewport preserving aspect ratio.
-      // Do NOT set fixed width+height — that would distort a portrait image
-      // into the landscape viewport. CSS (.cmp-img.fit) handles the contain.
+    if (currentRenderMode === 'fit' && currentPixelMode === 'peep') {
+      // Fit + pixel peep: render at FULL encoded resolution (1:1 encoded px)
+      // inside the fixed viewport window. Same window + same pixel scale for
+      // every panel ⇒ text locked; higher-res encodes overflow more and pan
+      // in lockstep. This matches the grid's fit-peep behavior.
+      img.style.width = e.encodeW + 'px';
+      img.style.height = e.encodeH + 'px';
+      img.className = 'cmp-img';
+    } else if (currentRenderMode === 'fit') {
+      // Fit + rendered: scale the WHOLE image into the viewport preserving
+      // aspect ratio. Do NOT set fixed width+height — that would distort a
+      // portrait image into the landscape viewport. CSS (.cmp-img.fit) contains.
       img.className = 'cmp-img fit';
     } else {
-      // True size: render at the intended-display box (real pixel density) and
-      // let it overflow the fixed viewport for lockstep pan.
+      // True size: render at the intended-display box (honors rendered/peep via
+      // intendedDisplayBox) and let it overflow the fixed viewport for pan.
       img.style.width = box.w + 'px';
       img.style.height = box.h + 'px';
       img.className = 'cmp-img';
@@ -1603,7 +1645,7 @@ function renderCompareView() {
     const meta = document.createElement('div');
     meta.className = 'tile-meta';
     const ctx = currentRenderMode === 'fit'
-      ? 'fit'
+      ? (currentPixelMode === 'peep' ? e.encodeW + '×' + e.encodeH + ' · fit · pixel peep' : 'fit · rendered')
       : box.w + '×' + box.h + ' · ' + (currentPixelMode === 'peep' ? 'pixel peep' : 'rendered');
     meta.innerHTML = statRowsHtml(e) +
       '<div class="row"><span>shown</span><strong>' + ctx + '</strong></div>';
