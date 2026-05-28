@@ -519,16 +519,16 @@
   <div class="control-group">
     <label>Quality presets</label>
     <div class="checkbox-group" id="quality-group">
-      <label class="checkbox-pill"><input type="checkbox" value="low" checked> low (q=20)</label>
+      <label class="checkbox-pill"><input type="checkbox" value="low"> low (q=20)</label>
       <label class="checkbox-pill"><input type="checkbox" value="medium" checked> medium (q=50)</label>
-      <label class="checkbox-pill"><input type="checkbox" value="high" checked> high (q=80)</label>
+      <label class="checkbox-pill"><input type="checkbox" value="high"> high (q=80)</label>
     </div>
   </div>
   <div class="control-group">
     <label>Output formats</label>
     <div class="checkbox-group" id="format-group">
       <label class="checkbox-pill"><input type="checkbox" value="webp" checked> webp</label>
-      <label class="checkbox-pill"><input type="checkbox" value="jpeg" checked> jpeg</label>
+      <label class="checkbox-pill"><input type="checkbox" value="jpeg"> jpeg</label>
     </div>
   </div>
   <div class="control-group" style="min-width: 200px;">
@@ -546,18 +546,18 @@
         </div>
         <div class="checkbox-group dropdown-checkboxes" id="target-group">
           <label class="checkbox-pill"><input type="checkbox" value="320" checked> 320</label>
-          <label class="checkbox-pill"><input type="checkbox" value="480" checked> 480</label>
+          <label class="checkbox-pill"><input type="checkbox" value="480"> 480</label>
           <label class="checkbox-pill"><input type="checkbox" value="640"> 640</label>
-          <label class="checkbox-pill"><input type="checkbox" value="720" checked> 720</label>
+          <label class="checkbox-pill"><input type="checkbox" value="720"> 720</label>
           <label class="checkbox-pill"><input type="checkbox" value="854"> 854</label>
           <label class="checkbox-pill"><input type="checkbox" value="960"> 960</label>
-          <label class="checkbox-pill"><input type="checkbox" value="1080" checked> 1080</label>
+          <label class="checkbox-pill"><input type="checkbox" value="1080"> 1080</label>
           <label class="checkbox-pill"><input type="checkbox" value="1280"> 1280</label>
           <label class="checkbox-pill"><input type="checkbox" value="1600"> 1600</label>
           <label class="checkbox-pill"><input type="checkbox" value="1920"> 1920</label>
-          <label class="checkbox-pill"><input type="checkbox" value="2160" checked> 2160</label>
+          <label class="checkbox-pill"><input type="checkbox" value="2160"> 2160</label>
           <label class="checkbox-pill"><input type="checkbox" value="2560"> 2560</label>
-          <label class="checkbox-pill"><input type="checkbox" value="3840" checked> 3840 (4K)</label>
+          <label class="checkbox-pill"><input type="checkbox" value="3840"> 3840 (4K)</label>
         </div>
       </div>
     </div>
@@ -679,9 +679,14 @@ cache   — X-Transcode-Cache: HIT, MISS, or PASS (passthrough)</pre>
 
 <script>
 const ALL_TARGETS = [320, 480, 640, 720, 854, 960, 1080, 1280, 1600, 1920, 2160, 2560, 3840];
-const DEFAULT_TARGETS = [320, 480, 720, 1080, 2160, 3840];
+// Opinionated default: a single, useful rendering rather than an overwhelming
+// matrix. One target (320 shortest), medium quality, webp — the best
+// general-purpose web delivery combo — shown true-size / rendered.
+const DEFAULT_TARGETS = [320];
 const ALL_QUALITIES = ['low', 'medium', 'high'];
 const ALL_FORMATS = ['webp', 'jpeg'];
+const DEFAULT_QUALITIES = ['medium'];
+const DEFAULT_FORMATS = ['webp'];
 const FETCH_CONCURRENCY = 6;
 
 const sourceSelect = document.getElementById('source-select');
@@ -1724,13 +1729,15 @@ function writeUrlState() {
   const sourceVal = currentSource();
   if (sourceVal) params.set('source', sourceVal);
 
-  // Only encode arrays when they differ from "all checked" (the default).
-  // Keeps shareable URLs short for the common case.
+  // Only encode arrays when they differ from the opinionated default
+  // selection. Keeps shareable URLs short for the common case.
   const q = getCheckedValues(qualityGroup);
   const f = getCheckedValues(formatGroup);
   const w = getCheckedValues(targetGroup).map(Number);
-  if (q.length !== ALL_QUALITIES.length) params.set('q', q.join(','));
-  if (f.length !== ALL_FORMATS.length) params.set('f', f.join(','));
+  const defaultQSorted = DEFAULT_QUALITIES.slice().sort().join(',');
+  const defaultFSorted = DEFAULT_FORMATS.slice().sort().join(',');
+  if (q.slice().sort().join(',') !== defaultQSorted) params.set('q', q.join(','));
+  if (f.slice().sort().join(',') !== defaultFSorted) params.set('f', f.join(','));
   // Targets: only encode if different from the default selection (not "all")
   const defaultTargetsSorted = DEFAULT_TARGETS.slice().sort((a, b) => a - b).join(',');
   const wSorted = w.slice().sort((a, b) => a - b).join(',');
