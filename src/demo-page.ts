@@ -224,33 +224,37 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 16px;
   }
-  /* Fit mode keeps the original uniform-card grid. */
-  .grid-fit {
+  /* Both fit and true-size keep the SAME uniform card grid. The difference is
+     only INSIDE the image area: fit scales the whole image to the card;
+     true-size renders the image at its real intended pixel size and the card's
+     image area crops it to a fixed window. The card never changes size. */
+  .grid-fit, .grid-truesize {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   }
-  /* True-size mode: tiles flow at their natural (intended-display) widths and
-     wrap. A 320 tile is small, a 1080 tile is large — honestly different
-     sizes sitting next to each other. align-items:flex-start so a row of
-     mismatched heights tops-aligns rather than stretching. */
-  .grid-truesize {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
-  }
-  .grid-truesize .tile { flex: 0 0 auto; }
-  /* The true-size image box. width is set inline to the intended display
-     width. If that exceeds the column the tile caps via max-width and the
-     image scrolls horizontally inside this clip. */
+  /* True-size image area: a FIXED-SIZE viewport that crops. The image inside
+     is positioned at its true intended pixel size; overflow:hidden windows it.
+     Centered so you see the middle of the image at 1:1 real pixel density. */
   .tile-image.truesize {
-    overflow: auto;
-    max-width: 100%;
-    min-height: 0;
+    height: 200px;
+    overflow: hidden;
+    position: relative;
     display: block;
   }
   .tile-image.truesize img {
-    max-width: none; /* override the global max-width:100% so 1:1 holds */
+    max-width: none; /* override global max-width:100% so 1:1 holds */
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
     display: block;
+  }
+  /* A small caption noting the crop is showing true pixels, not the whole image */
+  .truesize-note {
+    position: absolute; bottom: 4px; right: 4px;
+    background: rgba(0,0,0,0.7); color: var(--text-dim);
+    font-size: 9px; font-family: var(--mono);
+    padding: 1px 5px; border-radius: 3px;
+    pointer-events: none;
   }
   .tile {
     background: var(--panel); border: 1px solid var(--border);
@@ -1259,13 +1263,17 @@ function renderExplorerGrid(items) {
     let imageHtml;
     if (currentRenderMode === 'truesize') {
       const box = intendedDisplayBox(e);
-      // The image element is the box size; if the box is wider than the
-      // viewport, an outer .tile-image-clip wrapper constrains and lets us pan.
+      // The image element is sized to its intended display size (true pixel
+      // density). The .tile-image.truesize wrapper is a FIXED window that
+      // crops it via overflow:hidden — you see a centered slice at 1:1. The
+      // card itself stays uniform.
+      const note = box.w + '×' + box.h + ' @ ' + (currentPixelMode === 'physical' ? 'physical' : 'css');
       imageHtml =
-        '<div class="tile-image truesize" style="width:' + box.w + 'px;">' +
+        '<div class="tile-image truesize">' +
           '<img loading="lazy" src="' + escapeHtml(e.path) + '" ' +
           'style="width:' + box.w + 'px;height:' + box.h + 'px;" ' +
           'alt="' + e.target + 'px intended display size">' +
+          '<span class="truesize-note">' + note + '</span>' +
         '</div>';
     } else {
       imageHtml =
