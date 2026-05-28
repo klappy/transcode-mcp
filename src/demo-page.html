@@ -1197,7 +1197,29 @@ function intendedDisplayBox(e) {
 // "native" and its binding "none"; everything else is the same.
 function statRowsHtml(e) {
   const bppStr = e.bpp > 0 ? e.bpp.toFixed(3) : '?';
+  // Render resolution = the intended display size, i.e. what the image
+  // actually shows at — independent of the peep toggle. The encode is the
+  // ~1.5x overshoot the proxy stores; on its own that's confusing, so we pair
+  // it with the render size. We derive render from encode/overshoot rather than
+  // from the requested target, so when the source was too small to hit the
+  // target (binding=source) the render size honestly reflects the smaller
+  // delivered pixels instead of overstating the target. The source isn't
+  // transformed, so its render size IS its native size.
+  const OVERSHOOT = 1.5;
+  let renderW, renderH;
+  if (e.isSource) {
+    renderW = e.encodeW;
+    renderH = e.encodeH;
+  } else if (e.encodeW && e.encodeH) {
+    const encShort = Math.min(e.encodeW, e.encodeH);
+    const renderShort = Math.min(e.target, encShort / OVERSHOOT);
+    const scale = renderShort / encShort;
+    renderW = Math.round(e.encodeW * scale);
+    renderH = Math.round(e.encodeH * scale);
+  }
+  const renderStr = renderW && renderH ? renderW + ' × ' + renderH : '?';
   return (
+    '<div class="row"><span>render</span><strong>' + renderStr + '</strong></div>' +
     '<div class="row"><span>' + (e.isSource ? 'native' : 'encode') + '</span><strong>' + e.encodeW + ' × ' + e.encodeH + '</strong></div>' +
     '<div class="row"><span>binds</span><strong>' + (e.isSource ? 'none' : (e.binding || '—')) + '</strong></div>' +
     '<div class="row"><span>quality</span><strong>' + (e.quality || '?') + '</strong></div>' +
