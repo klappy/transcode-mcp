@@ -573,10 +573,10 @@
     </div>
   </div>
   <div class="control-group" id="pixel-mode-group">
-    <label title="Rendered: how the image actually looks on screen at its intended size. Pixel peep: every encoded pixel shown 1:1 (accounts for high-DPI screens) so you can scrutinize compression artifacts up close.">Display</label>
+    <label title="Rendered: the image at its intended display size (shortest side = target) — how it actually looks in use. Pixel peep: the image at its full encoded resolution, larger than rendered, so you can inspect the actual encoded pixels and compression artifacts up close.">Display</label>
     <div class="view-toggle">
-      <button class="view-btn active" data-pixel="css" id="pixel-css-btn">Rendered</button>
-      <button class="view-btn" data-pixel="physical" id="pixel-physical-btn">Pixel peep</button>
+      <button class="view-btn active" data-pixel="rendered" id="pixel-css-btn">Rendered</button>
+      <button class="view-btn" data-pixel="peep" id="pixel-physical-btn">Pixel peep</button>
     </div>
   </div>
   <div style="display: flex; gap: 8px; flex-shrink: 0;">
@@ -705,12 +705,12 @@ let currentSortKey = 'bpp';
 let currentSortDir = 'asc';
 // Render mode: 'truesize' shows each image at its intended display size (the
 // target value as real screen units); 'fit' scales the whole image into a
-// uniform thumbnail card. Pixel mode (only meaningful in truesize): 'css'
-// sizes the box in CSS pixels (how it looks on a normal screen); 'physical'
-// divides by devicePixelRatio so the box occupies that many physical pixels
-// (pixel-for-pixel encoder output).
+// uniform thumbnail card. Pixel mode (only meaningful in truesize):
+// 'rendered' scales the encode so its shortest side = target (how it actually
+// displays); 'peep' shows the encode at full resolution (1 encoded px = 1 CSS
+// px) so you can inspect the real encoded pixels enlarged.
 let currentRenderMode = 'truesize';
-let currentPixelMode = 'css';
+let currentPixelMode = 'rendered';
 let baselineBytes = 0; // For "vs baseline" ratios in table view
 // Set of selected entry ids (comboId) for comparison. Driven entirely by
 // per-tile checkboxes — no dropdowns. The compare popup shows exactly these.
@@ -1169,28 +1169,26 @@ function renderExplorer() {
   }
 }
 
-// Computes the intended display box for an entry: a box whose SHORTEST side
-// equals the target value, scaled from the encode's aspect ratio. This is the
-// size the image is meant to be shown at. In physical-pixel mode we divide by
-// devicePixelRatio so the box occupies target physical pixels rather than
-// target CSS pixels. Returns w, h in CSS pixels (what we set on the box).
+// Computes the display box for an entry given the current pixel mode.
+//  - 'rendered': the encode scaled so its SHORTEST side equals the target —
+//    how the image actually looks at its intended display size.
+//  - 'peep': the encode at its FULL encoded resolution (1 encoded px = 1 CSS
+//    px), i.e. larger than rendered by the ~1.5× overshoot, so you can
+//    inspect the actual encoded pixels enlarged. No devicePixelRatio math —
+//    that made the relative sizing flip around the overshoot ratio.
+// Returns w, h in CSS pixels.
 function intendedDisplayBox(e) {
   const ew = e.encodeW || 0;
   const eh = e.encodeH || 0;
   if (!ew || !eh) return { w: e.target, h: e.target };
-  // Scale the encode so its shortest side equals the target. The encode is
-  // ~1.5× the target (the overshoot); displaying it in this box makes the
-  // browser downsample, which is the supersampling the overshoot exists for.
+  if (currentPixelMode === 'peep') {
+    // Full encoded resolution — show every encoded pixel 1:1 in CSS px.
+    return { w: ew, h: eh };
+  }
+  // Rendered: scale the encode so its shortest side equals the target.
   const shortestEncode = Math.min(ew, eh);
   const scale = e.target / shortestEncode;
-  let boxW = ew * scale;
-  let boxH = eh * scale;
-  if (currentPixelMode === 'physical') {
-    const dpr = window.devicePixelRatio || 1;
-    boxW = boxW / dpr;
-    boxH = boxH / dpr;
-  }
-  return { w: Math.round(boxW), h: Math.round(boxH) };
+  return { w: Math.round(ew * scale), h: Math.round(eh * scale) };
 }
 
 // The six stat rows shown for an entry. Shared by the grid tile and the
@@ -1268,7 +1266,7 @@ function renderExplorerGrid(items) {
       // density). The .tile-image.truesize wrapper is a FIXED window that
       // crops it via overflow:hidden — you see a centered slice at 1:1. The
       // card itself stays uniform.
-      const note = box.w + '×' + box.h + ' · ' + (currentPixelMode === 'physical' ? 'pixel peep' : 'rendered');
+      const note = box.w + '×' + box.h + ' · ' + (currentPixelMode === 'peep' ? 'pixel peep' : 'rendered');
       imageHtml =
         '<div class="tile-image truesize">' +
           '<img loading="lazy" src="' + escapeHtml(e.path) + '" ' +
@@ -1392,7 +1390,7 @@ function setRenderMode(mode) {
 
 function setPixelMode(mode) {
   currentPixelMode = mode;
-  if (mode === 'css') {
+  if (mode === 'rendered') {
     pixelCssBtn.classList.add('active');
     pixelPhysicalBtn.classList.remove('active');
   } else {
@@ -1584,7 +1582,7 @@ function renderCompareView() {
     meta.className = 'tile-meta';
     const ctx = currentRenderMode === 'fit'
       ? 'fit'
-      : box.w + '×' + box.h + ' · ' + (currentPixelMode === 'physical' ? 'pixel peep' : 'rendered');
+      : box.w + '×' + box.h + ' · ' + (currentPixelMode === 'peep' ? 'pixel peep' : 'rendered');
     meta.innerHTML = statRowsHtml(e) +
       '<div class="row"><span>shown</span><strong>' + ctx + '</strong></div>';
 
@@ -1648,7 +1646,7 @@ function readUrlState() {
     sort: params.get('sort'), // sort key
     view: params.get('view'), // 'grid' or 'table'
     render: params.get('render'), // 'truesize' or 'fit'
-    px: params.get('px'),     // 'css' or 'physical'
+    px: params.get('px'),     // 'rendered' or 'peep' (legacy: 'css'/'physical')
   };
 }
 
@@ -1676,7 +1674,7 @@ function writeUrlState() {
   // Render mode defaults to truesize; pixel mode defaults to css. Only encode
   // when non-default to keep URLs short.
   if (currentRenderMode !== 'truesize') params.set('render', currentRenderMode);
-  if (currentPixelMode !== 'css') params.set('px', currentPixelMode);
+  if (currentPixelMode !== 'rendered') params.set('px', currentPixelMode);
 
   const qs = params.toString();
   const newUrl = window.location.pathname + (qs ? '?' + qs : '');
@@ -1716,8 +1714,9 @@ function applyUrlState() {
   if (render === 'fit') {
     setRenderMode('fit');
   }
-  if (px === 'physical') {
-    setPixelMode('physical');
+  if (px === 'peep' || px === 'physical') {
+    // 'physical' is the legacy value name; both mean pixel-peep now.
+    setPixelMode('peep');
   }
   if (view === 'table') {
     setViewMode('table');
@@ -1859,8 +1858,8 @@ renderTruesizeBtn.addEventListener('click', () => { setRenderMode('truesize'); w
 renderFitBtn.addEventListener('click', () => { setRenderMode('fit'); writeUrlState(); });
 
 // Pixel mode toggle (CSS vs physical pixels)
-pixelCssBtn.addEventListener('click', () => { setPixelMode('css'); writeUrlState(); });
-pixelPhysicalBtn.addEventListener('click', () => { setPixelMode('physical'); writeUrlState(); });
+pixelCssBtn.addEventListener('click', () => { setPixelMode('rendered'); writeUrlState(); });
+pixelPhysicalBtn.addEventListener('click', () => { setPixelMode('peep'); writeUrlState(); });
 
 // Table header click → sort by that column
 document.querySelectorAll('.results-table th[data-sort-key]').forEach(th => {
