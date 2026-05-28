@@ -740,9 +740,13 @@ function currentSource() {
   return sourceSelect.value;
 }
 
-function buildProxyPath(sourceUrl, w, q, f) {
+function buildProxyPath(sourceUrl, s, q, f) {
   const opts = [];
-  if (w !== undefined && w !== null) opts.push('w=' + w);
+  // Dogfood the proxy's shortest-side key. We send s= (the shortest-side
+  // target) and let the WORKER resolve it to a width from the source
+  // orientation — the same path external/MCP callers use. No client-side
+  // width math in the URL.
+  if (s !== undefined && s !== null) opts.push('s=' + s);
   if (q && q !== 'medium') opts.push('q=' + q);
   if (f && f !== 'auto') opts.push('f=' + f);
   const optionsSegment = opts.length ? opts.join(',') + '/' : '';
@@ -776,22 +780,11 @@ function bindingClass(binding) {
   return '';
 }
 
-// Resolves with the natural pixel dimensions of an image URL. Returns
-// { w: 0, h: 0 } if the image fails to load — caller can treat that as
-// "unknown" and fall back to interpreting target as width directly.
-function getNaturalDimensions(url) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
-    img.onerror = () => resolve({ w: 0, h: 0 });
-    img.src = url;
-  });
-}
-
-// Converts a "shortest side = S" target into the proxy w= value, given the
-// source's aspect ratio. The proxy's w parameter resizes the image to that
-// width while preserving aspect — so for landscape sources we send the longer
-// side, for portrait we send w=S directly (since w IS the shorter side then).
+// Converts a "shortest side = S" target into the WIDTH the worker will resolve
+// it to, given the source aspect ratio. The proxy now does this mapping itself
+// from the s= key; this client copy is used ONLY for the cosmetic "(w=…)" hint
+// that shows the resolved landscape width next to the shortest-side target.
+// It is not used to build URLs.
 function shortestSideToWidth(shortestSide, sourceW, sourceH) {
   if (!sourceW || !sourceH) return shortestSide; // Unknown source — fall back
   if (sourceW >= sourceH) {
@@ -1020,26 +1013,13 @@ async function loadExplorer() {
     return;
   }
 
-  // Resolve source aspect ratio so we can interpret target as "shortest side".
-  // We need the natural dimensions of the unmodified source. Try the baseline
-  // tile's dataset first (it may already have them from img.onload); if not
-  // there yet, load them via the passthrough URL directly.
-  let srcW = parseInt((baselineTile && baselineTile.dataset.sourceW) || '0', 10);
-  let srcH = parseInt((baselineTile && baselineTile.dataset.sourceH) || '0', 10);
-  if (!srcW || !srcH) {
-    const dims = await getNaturalDimensions('/image/' + source);
-    if (myGeneration !== explorerGeneration) return;
-    srcW = dims.w;
-    srcH = dims.h;
-  }
-
   setProgress(0, combos.length);
 
   await runWithConcurrency(combos, async (combo) => {
-    // combo.target is the shortest-side target. Convert to proxy w= for this
-    // source's aspect ratio.
-    const proxyW = shortestSideToWidth(combo.target, srcW, srcH);
-    const path = buildProxyPath(source, proxyW, combo.quality, combo.format);
+    // Dogfood s=: send the shortest-side target directly; the worker resolves
+    // it to a width from the source orientation. No client-side pre-fetch of
+    // source dimensions and no client-side width math for the URL.
+    const path = buildProxyPath(source, combo.target, combo.quality, combo.format);
     const fullUrl = window.location.origin + path;
     try {
       const result = await fetchHead(fullUrl);
@@ -1060,10 +1040,14 @@ async function loadExplorer() {
       const cache = h['x-transcode-cache'] || '';
       const pixels = encodeW * encodeH;
       const bpp = pixels > 0 ? (result.size / pixels) : 0;
+      // The width the worker resolved s= to (pre-overshoot), derived from the
+      // authoritative source dims in the response — used only for the cosmetic
+      // "(w=…)" hint that shows landscape widening next to the shortest side.
+      const resolvedW = shortestSideToWidth(combo.target, sourceW, sourceH);
       const entry = {
         id: comboId(combo),
-        target: combo.target,             // The shortest-side target (UI semantics)
-        requestedW: proxyW,               // The actual proxy w= we sent
+        target: combo.target,             // The shortest-side target (UI semantics + what we send as s=)
+        requestedW: resolvedW,            // Worker-resolved width (display hint only)
         requestedQuality: combo.quality,
         requestedFormat: combo.format,
         path,
@@ -1083,7 +1067,7 @@ async function loadExplorer() {
       explorerResults.push({
         id: comboId(combo),
         target: combo.target,
-        requestedW: proxyW,
+        requestedW: combo.target,
         requestedQuality: combo.quality,
         requestedFormat: combo.format,
         path: '',
@@ -1660,7 +1644,7 @@ function readUrlState() {
     source: params.get('source'),
     q: params.get('q'),       // comma-separated list of qualities
     f: params.get('f'),       // comma-separated list of formats
-    w: params.get('w'),       // comma-separated list of target widths
+    w: params.get('w'),       // comma-separated list of selected shortest-side targets (demo state; named 'w' for link back-compat)
     sort: params.get('sort'), // sort key
     view: params.get('view'), // 'grid' or 'table'
     render: params.get('render'), // 'truesize' or 'fit'
