@@ -519,7 +519,7 @@
   <div class="control-group">
     <label>Quality presets</label>
     <div class="checkbox-group" id="quality-group">
-      <label class="checkbox-pill"><input type="checkbox" value="low"> low (q=20)</label>
+      <label class="checkbox-pill"><input type="checkbox" value="low" checked> low (q=20)</label>
       <label class="checkbox-pill"><input type="checkbox" value="medium" checked> medium (q=50)</label>
       <label class="checkbox-pill"><input type="checkbox" value="high"> high (q=80)</label>
     </div>
@@ -679,13 +679,14 @@ cache   — X-Transcode-Cache: HIT, MISS, or PASS (passthrough)</pre>
 
 <script>
 const ALL_TARGETS = [320, 480, 640, 720, 854, 960, 1080, 1280, 1600, 1920, 2160, 2560, 3840];
-// Opinionated default: a single, useful rendering rather than an overwhelming
-// matrix. One target (320 shortest), medium quality, webp — the best
-// general-purpose web delivery combo — shown true-size / rendered.
+// Opinionated default: a small, useful comparison rather than an overwhelming
+// matrix. One target (320 shortest), webp, at low + medium quality so people
+// can see the compression/quality tradeoff side by side — shown true-size /
+// rendered.
 const DEFAULT_TARGETS = [320];
 const ALL_QUALITIES = ['low', 'medium', 'high'];
 const ALL_FORMATS = ['webp', 'jpeg'];
-const DEFAULT_QUALITIES = ['medium'];
+const DEFAULT_QUALITIES = ['low', 'medium'];
 const DEFAULT_FORMATS = ['webp'];
 const FETCH_CONCURRENCY = 6;
 
