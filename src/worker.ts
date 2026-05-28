@@ -14,7 +14,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { parseProxyPath, ProxyPathError } from "./lib/parse-proxy-path";
 import { encodeDimension, QUALITY_MAP, type Quality } from "./lib/encode-dimension";
-import { generateTranscodeUrl, shortestSideToWidth } from "./lib/generate-transcode-url";
+import { shortestSideToWidth } from "./lib/generate-transcode-url";
+import { buildToolResponse } from "./lib/mcp-tool";
 import { DEMO_PAGE_HTML } from "./demo-page";
 
 interface Env {
@@ -70,83 +71,10 @@ function createServer(request: Request) {
       preset: z.enum(["voice", "music"]).optional().describe("Audio only: encoding preset."),
     },
     (args) => {
-      const mediaType = args.media_type ?? "image";
       const origin = new URL(request.url).origin;
-      let proxyPath: string;
-      let guidance: string;
-
-      if (mediaType === "audio") {
-        const options: Record<string, string> = {};
-        if (args.preset !== undefined) options.preset = args.preset;
-        if (args.q !== undefined) options.q = args.q;
-        proxyPath = generateTranscodeUrl({
-          mediaType: "audio",
-          sourceUrl: args.source_url,
-          options: options as any,
-        });
-        guidance =
-          "Use this URL directly as an <audio> src. Audio is currently passthrough " +
-          "(container transcoding is not yet deployed), so preset/q are recorded but " +
-          "not yet applied.";
-      } else {
-        // Pure URL construction — no fetching, no client-side math. viewport is
-        // emitted as s= (shortest side); the WORKER resolves it to the right
-        // width from the source orientation at request time and applies the
-        // half-class overshoot. w (if given) overrides viewport.
-        const options: Record<string, string | number> = {};
-        if (args.w !== undefined) {
-          options.w = args.w;
-        } else if (args.viewport !== undefined) {
-          options.s = args.viewport;
-        }
-        if (args.h !== undefined) options.h = args.h;
-        if (args.q !== undefined) options.q = args.q;
-        if (args.f !== undefined) options.f = args.f;
-        proxyPath = generateTranscodeUrl({
-          mediaType: "image",
-          sourceUrl: args.source_url,
-          options: options as any,
-        });
-        guidance =
-          "Drop this URL straight into an <img> src, or use it as the ?source= base " +
-          "for your own integration (e.g. an Aquifer-style image window). The proxy " +
-          "is stateless and cacheable: the same URL always returns the same bytes. " +
-          "s= is the shortest side you intend to display at (stable across phone " +
-          "rotation); the worker maps it to the correct width from the source's " +
-          "orientation and encodes at ~1.5x (half-class overshoot) so the browser " +
-          "downscale stays crisp. Change q=low|medium|high for the size/quality " +
-          "tradeoff. You do not specify the encode resolution — the proxy computes it.";
-      }
-
-      const fullUrl = origin + proxyPath;
-      const embed =
-        mediaType === "audio"
-          ? '<audio src="' + fullUrl + '" controls></audio>'
-          : '<img src="' + fullUrl + '" alt="" loading="lazy">';
-
+      const response = buildToolResponse(args, origin);
       return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              {
-                proxy_path: proxyPath,
-                full_url: fullUrl,
-                embed,
-                request: {
-                  media_type: mediaType,
-                  source_url: args.source_url,
-                  viewport: args.viewport ?? null,
-                  q: args.q ?? "default",
-                  f: args.f ?? "auto",
-                },
-                guidance,
-              },
-              null,
-              2,
-            ),
-          },
-        ],
+        content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
       };
     },
   );
