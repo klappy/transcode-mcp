@@ -1,0 +1,1848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>transcode-mcp — Demo</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #161922;
+    --panel-2: #1d212c;
+    --text: #e6e8ec;
+    --text-dim: #9aa0aa;
+    --accent: #7ab8ff;
+    --accent-2: #c7f7c5;
+    --warn: #ffb86b;
+    --border: #2a2f3a;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { padding: 24px; max-width: 1600px; margin: 0 auto; line-height: 1.5; }
+  h1 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
+  h1 small { color: var(--text-dim); font-weight: 400; font-size: 14px; }
+  p.lead { color: var(--text-dim); margin: 0 0 20px; font-size: 14px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: end;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px; margin-bottom: 24px;
+  }
+  .control-group { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 200px; }
+  label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+  select, input[type="text"] {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px 10px; font-size: 14px; font-family: inherit;
+  }
+  input[type="text"] { font-family: var(--mono); font-size: 12px; }
+  button {
+    background: var(--accent); color: #0a1320; border: 0;
+    border-radius: 6px; padding: 8px 16px; font-weight: 600;
+    cursor: pointer; font-size: 14px;
+  }
+  button:hover { background: #95c8ff; }
+  button.btn-secondary {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border);
+  }
+  button.btn-secondary:hover { background: var(--border); color: var(--text); }
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--accent-2);
+    border-radius: 6px; padding: 10px 16px;
+    font-size: 13px; box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 200;
+  }
+  .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+  .quality-row { display: flex; gap: 8px; align-items: center; }
+  .quality-row label { font-size: 14px; color: var(--text); text-transform: none; letter-spacing: 0; }
+  .source-info {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 16px; margin-bottom: 20px;
+    font-family: var(--mono); font-size: 12px; color: var(--text-dim);
+  }
+  .source-info strong { color: var(--text); }
+
+  /* HTML hidden attribute must override explicit display values in our CSS.
+     Without this, [hidden]="true" doesn't hide .grid (display: grid) or
+     .table-wrap because our rules win over the user-agent stylesheet. */
+  [hidden] { display: none !important; }
+
+  /* Checkbox pill groups for multi-select controls */
+  .checkbox-group {
+    display: flex; flex-wrap: wrap; gap: 4px;
+  }
+
+  /* Multi-select dropdown — compact trigger that opens a checkbox popover */
+  .dropdown-multiselect { position: relative; }
+  .dropdown-trigger {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 7px 10px; font-size: 13px; font-family: inherit;
+    cursor: pointer; min-width: 160px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; font-weight: 500;
+  }
+  .dropdown-trigger:hover { border-color: var(--accent); }
+  .dropdown-trigger[aria-expanded="true"] { border-color: var(--accent); }
+  .dropdown-summary { color: var(--text); }
+  .dropdown-caret { color: var(--text-dim); font-size: 10px; }
+  .dropdown-popover {
+    position: absolute; top: calc(100% + 4px); left: 0;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px;
+    min-width: 280px; max-width: 360px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+    z-index: 50;
+  }
+  .dropdown-popover-header {
+    display: flex; gap: 12px;
+    padding-bottom: 8px; margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .dropdown-link {
+    background: transparent; color: var(--accent);
+    border: 0; padding: 2px 4px;
+    font-size: 12px; cursor: pointer;
+    font-weight: 500;
+  }
+  .dropdown-link:hover { color: var(--text); background: transparent; }
+  .dropdown-checkboxes { gap: 4px; }
+  .checkbox-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 4px; padding: 4px 8px;
+    font-size: 12px; color: var(--text-dim);
+    cursor: pointer; user-select: none;
+    transition: background 0.1s, border-color 0.1s, color 0.1s;
+  }
+  .checkbox-pill:hover { border-color: var(--accent); color: var(--text); }
+  .checkbox-pill input[type="checkbox"] {
+    width: 12px; height: 12px; accent-color: var(--accent);
+    margin: 0;
+  }
+  .checkbox-pill:has(input:checked) {
+    background: rgba(122, 184, 255, 0.12);
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  /* View mode toggle */
+  .view-toggle {
+    display: flex; gap: 0; background: var(--panel-2);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 2px; width: fit-content;
+  }
+  .view-btn {
+    background: transparent; color: var(--text-dim);
+    border: 0; padding: 6px 12px; font-size: 13px;
+    cursor: pointer; border-radius: 4px;
+    font-weight: 500;
+  }
+  .view-btn:hover { color: var(--text); background: transparent; }
+  .view-btn.active {
+    background: var(--accent); color: #0a1320;
+  }
+  .view-btn.active:hover { background: var(--accent); color: #0a1320; }
+
+  /* Progress bar shown while batch is loading */
+  .progress-bar {
+    position: relative;
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 6px; height: 28px; margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    background: var(--accent); height: 100%; width: 0%;
+    transition: width 0.2s;
+  }
+  .progress-label {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-family: var(--mono); color: var(--text);
+    mix-blend-mode: difference;
+  }
+
+  /* Results table view */
+  .table-wrap {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; overflow: auto;
+  }
+  .results-table {
+    width: 100%; border-collapse: collapse;
+    font-family: var(--mono); font-size: 12px;
+  }
+  .results-table th,
+  .results-table td {
+    padding: 8px 12px; text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .results-table th {
+    background: var(--panel-2); color: var(--text-dim);
+    font-weight: 600; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    cursor: pointer; user-select: none;
+    position: sticky; top: 0; z-index: 1;
+  }
+  .results-table th:hover { color: var(--text); }
+  .results-table th.sort-active { color: var(--accent); }
+  .results-table th.sort-active::after { content: " ▾"; font-size: 9px; }
+  .results-table th.sort-active.sort-asc::after { content: " ▴"; }
+  .results-table td { color: var(--text); }
+  .results-table tr.row-binding-target td:first-child { border-left: 3px solid var(--accent); }
+  .results-table tr.row-binding-source td:first-child { border-left: 3px solid var(--accent-2); }
+  .results-table tr.row-binding-equal td:first-child { border-left: 3px solid var(--warn); }
+  .results-table tbody tr {
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .results-table tbody tr:hover { background: var(--panel-2); }
+  .results-table .preview-cell {
+    width: 80px; padding: 4px 8px;
+  }
+  .results-table .preview-cell img {
+    width: 64px; height: 48px; object-fit: cover;
+    border-radius: 3px; display: block;
+  }
+  .results-table .ratio-better { color: var(--accent-2); }
+  .results-table .ratio-worse { color: var(--warn); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  /* Both fit and true-size keep the SAME uniform card grid. The difference is
+     only INSIDE the image area: fit scales the whole image to the card;
+     true-size renders the image at its real intended pixel size and the card's
+     image area crops it to a fixed window. The card never changes size. */
+  .grid-fit, .grid-truesize {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+  /* True-size image area: a FIXED-SIZE viewport that crops. The image inside
+     is positioned at its true intended pixel size; overflow:hidden windows it.
+     Centered so you see the middle of the image at 1:1 real pixel density. */
+  .tile-image.truesize {
+    height: 200px;
+    overflow: hidden;
+    position: relative;
+    display: block;
+  }
+  .tile-image.truesize img {
+    max-width: none; /* override global max-width:100% so 1:1 holds */
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    display: block;
+  }
+  /* A small caption noting the crop is showing true pixels, not the whole image */
+  .truesize-note {
+    position: absolute; bottom: 4px; right: 4px;
+    background: rgba(0,0,0,0.7); color: var(--text-dim);
+    font-size: 9px; font-family: var(--mono);
+    padding: 1px 5px; border-radius: 3px;
+    pointer-events: none;
+  }
+  .tile {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden; display: flex; flex-direction: column;
+    cursor: pointer; transition: border-color 0.15s, transform 0.15s;
+  }
+  .tile:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .tile.loading, .tile.error { cursor: default; }
+  .tile.loading:hover, .tile.error:hover { border-color: var(--border); transform: none; }
+  .tile-header {
+    padding: 10px 12px; border-bottom: 1px solid var(--border);
+    background: var(--panel-2); font-size: 13px; font-weight: 600;
+  }
+  .tile-header .target { color: var(--accent); }
+  .tile-header .formula { color: var(--text-dim); font-weight: 400; font-size: 11px; font-family: var(--mono); margin-top: 2px; display: block; }
+  .tile-image {
+    background: #000; display: flex; align-items: center; justify-content: center;
+    min-height: 160px; position: relative;
+  }
+  .tile-image img { max-width: 100%; height: auto; display: block; }
+  .tile-meta {
+    padding: 10px 12px; font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim); border-top: 1px solid var(--border);
+  }
+  .tile-meta .row { display: flex; justify-content: space-between; gap: 8px; }
+  .tile-meta .row strong { color: var(--text); font-weight: 500; }
+  .tile.error .tile-image { background: #2a1a1a; color: #ff8b8b; font-size: 12px; padding: 16px; text-align: center; }
+  .tile.loading .tile-image::before {
+    content: "loading…"; color: var(--text-dim); font-size: 12px;
+  }
+  .file-size.ok { color: var(--accent-2); }
+  .file-size.high { color: var(--warn); }
+
+  /* Baseline tile — the unmodified source for comparison */
+  .baseline-wrap { margin-bottom: 20px; }
+  .baseline-tile {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden;
+    display: grid; grid-template-columns: 1fr 1fr;
+    cursor: pointer; transition: border-color 0.15s;
+  }
+  .baseline-tile:hover { border-color: var(--accent-2); }
+  .baseline-tile.loading, .baseline-tile.error { cursor: default; }
+  .baseline-tile.loading:hover, .baseline-tile.error:hover { border-color: var(--border); }
+  .baseline-tile .baseline-image {
+    background: #000;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 200px; max-height: 360px; overflow: hidden;
+  }
+  .baseline-tile .baseline-image img {
+    max-width: 100%; max-height: 360px; display: block; object-fit: contain;
+  }
+  .baseline-tile .baseline-info {
+    padding: 18px 20px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .baseline-tile .baseline-label {
+    color: var(--accent-2); font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .baseline-tile h2 {
+    margin: 0; font-size: 16px; font-weight: 600;
+  }
+  .baseline-tile .baseline-meta {
+    margin-top: 6px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 6px 16px;
+  }
+  .baseline-tile .baseline-meta .row { display: flex; justify-content: space-between; gap: 8px; }
+  .baseline-tile .baseline-meta strong { color: var(--text); font-weight: 500; }
+  .baseline-tile .baseline-note {
+    font-size: 11px; color: var(--text-dim); line-height: 1.5;
+    border-top: 1px solid var(--border); padding-top: 10px; margin-top: 4px;
+  }
+  .baseline-tile.error .baseline-image { background: #2a1a1a; color: #ff8b8b; font-size: 12px; padding: 16px; text-align: center; }
+  .baseline-tile.loading .baseline-image::before {
+    content: "loading…"; color: var(--text-dim); font-size: 12px;
+  }
+  @media (max-width: 720px) {
+    .baseline-tile { grid-template-columns: 1fr; }
+  }
+
+  /* Modal */
+  /* Per-tile compare checkbox */
+  .tile-compare-check {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    cursor: pointer; float: right; user-select: none;
+  }
+  .tile-compare-check input { accent-color: var(--accent); cursor: pointer; margin: 0; }
+  .tile.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  /* Source cell — the un-transformed original, ranked inline. Distinct accent
+     so the eye can find the 'do nothing' data point in the ordering. */
+  .tile-source { border-color: var(--accent-2); }
+  .tile-source .tile-header .target { color: var(--accent-2); }
+  .results-table tr.row-source td { background: rgba(126, 231, 179, 0.08); }
+  .results-table tr.row-source td:first-child,
+  .results-table tr.row-source td:nth-child(2) { color: var(--accent-2); }
+  .results-table .check-col { width: 28px; text-align: center; }
+  .results-table .check-col input { accent-color: var(--accent); cursor: pointer; }
+  .results-table tr.selected td { background: rgba(122, 184, 255, 0.10); }
+
+  /* Floating compare bar — appears when ≥1 result is selected */
+  .compare-bar {
+    position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+    z-index: 90;
+    display: flex; align-items: center; gap: 14px;
+    background: var(--panel); border: 1px solid var(--accent);
+    border-radius: 10px; padding: 10px 16px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  }
+  .compare-bar-count { font-size: 13px; color: var(--text); font-weight: 600; }
+  .compare-bar-open {
+    background: var(--accent); color: #0a1320; border: 0;
+    border-radius: 6px; padding: 8px 14px; font-size: 13px;
+    font-weight: 600; cursor: pointer;
+  }
+  .compare-bar-open:disabled { opacity: 0.5; cursor: default; }
+  .compare-bar-clear {
+    background: transparent; color: var(--text-dim); border: 0;
+    font-size: 13px; cursor: pointer; padding: 8px 4px;
+  }
+  .compare-bar-clear:hover { color: var(--text); }
+
+  /* Comparison popup */
+  .compare-modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.88);
+    display: none;
+    z-index: 100;
+    padding: 24px;
+  }
+  .compare-modal-backdrop.open { display: flex; align-items: stretch; justify-content: center; }
+  .compare-modal-shell {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px;
+    width: min(1800px, calc(100vw - 48px));
+    margin: auto; max-height: calc(100vh - 48px);
+    display: flex; flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .compare-modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px; border-bottom: 1px solid var(--border); gap: 16px;
+  }
+  .compare-modal-title { font-size: 15px; font-weight: 600; }
+  .compare-modal-close {
+    background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--text); width: 32px; height: 32px;
+    border-radius: 6px; cursor: pointer; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .compare-modal-close:hover { background: var(--border); }
+  /* Body: horizontal row of panels, each a fixed-height true-size viewport.
+     The whole body scrolls horizontally if many panels are selected. */
+  .compare-modal-body {
+    display: flex; gap: 16px; padding: 16px;
+    overflow-x: auto; overflow-y: hidden;
+    align-items: flex-start;
+  }
+  .cmp-panel {
+    flex: 0 0 auto;
+    display: flex; flex-direction: column; gap: 8px;
+    max-width: 90vw;
+  }
+  /* Fixed viewport window — image renders true-size inside and scrolls
+     (lockstep across panels) when it overflows this window. */
+  .cmp-viewport {
+    background: #000;
+    width: min(560px, 80vw);
+    height: min(560px, 60vh);
+    overflow: auto;
+    border: 1px solid var(--border); border-radius: 8px;
+    position: relative;
+  }
+  .cmp-img { display: block; max-width: none; }
+  .cmp-caption {
+    font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+    line-height: 1.5; max-width: min(560px, 80vw);
+  }
+  details { margin-top: 24px; }
+  summary { cursor: pointer; color: var(--text-dim); font-size: 13px; padding: 8px 0; }
+  details[open] summary { color: var(--text); }
+  pre {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; padding: 12px; font-size: 11px;
+    overflow-x: auto; color: var(--text-dim);
+  }
+  .canon-link { font-size: 12px; color: var(--text-dim); }
+  .legend {
+    display: flex; gap: 16px; flex-wrap: wrap; font-size: 11px;
+    color: var(--text-dim); margin-top: 12px;
+  }
+  .legend .target::before,
+  .legend .source::before,
+  .legend .equal::before {
+    content: "■"; margin-right: 4px;
+  }
+  .legend .target::before { color: var(--accent); }
+  .legend .source::before { color: var(--accent-2); }
+  .legend .equal::before { color: var(--warn); }
+</style>
+</head>
+<body>
+
+<h1>transcode-mcp <small>— half-class overshoot, live</small></h1>
+<p class="lead">
+  Each tile below requests the source image through the proxy at a different target width.
+  The proxy computes the encode dimension via
+  <code>ceil_to_mod16(min(target × 1.5, source × 1.5))</code>
+  and returns the transcoded image. The displayed dimensions and file size come from the
+  <code>X-Transcode-*</code> response headers — nothing here is calculated client-side.
+  <span class="canon-link">Spec: <a href="https://github.com/klappy/transcode-mcp/blob/main/canon/planning/2026-05-27-encode-resolution-arithmetic.md">encode-resolution-arithmetic.md</a></span>
+</p>
+
+<div class="controls">
+  <div class="control-group">
+    <label for="source-select">Source image</label>
+    <select id="source-select">
+      <option value="https://images.unsplash.com/photo-1495020689067-958852a7765e">Person reading newspaper, 6016×4016 (text on paper, real-world test)</option>
+      <option value="https://images.unsplash.com/photo-1457369804613-52c61a468e7d">Wall of open books, 5472×3648 (dense small text)</option>
+      <option value="https://images.unsplash.com/photo-1554224155-6726b3ff858f">Tax forms with calculator, 5563×3192 (forms, text, mixed objects)</option>
+      <option value="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e">Portrait of person, 3840×5760 (face detail, fabric pattern)</option>
+      <option value="https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07">Field of poppies, 4928×3264 (the "confetti" case from canon)</option>
+      <option value="https://images.unsplash.com/photo-1568667256549-094345857637">Library bookshelves, 4000×5600 (portrait, fine detail)</option>
+      <option value="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=850&h=600&fit=crop">Source near target, 850×600 (canon Example 2)</option>
+      <option value="https://images.unsplash.com/photo-1495020689067-958852a7765e?w=400&h=300&fit=crop">Small thumbnail, 400×300 (source × 1.5 binds)</option>
+      <option value="https://picsum.photos/id/1059/64/64">Tiny icon, 64×64 (cap kicks in)</option>
+      <option value="https://picsum.photos/id/237/16/16">Pixel art, 16×16 (extreme cap case)</option>
+    </select>
+  </div>
+  <div class="control-group">
+    <label for="custom-url">Or paste a URL</label>
+    <input type="text" id="custom-url" placeholder="https://example.com/photo.jpg — or pass ?source=URL in this page's URL" autocomplete="off">
+  </div>
+  <div class="control-group">
+    <label>Quality presets</label>
+    <div class="checkbox-group" id="quality-group">
+      <label class="checkbox-pill"><input type="checkbox" value="low" checked> low (q=20)</label>
+      <label class="checkbox-pill"><input type="checkbox" value="medium" checked> medium (q=50)</label>
+      <label class="checkbox-pill"><input type="checkbox" value="high" checked> high (q=80)</label>
+    </div>
+  </div>
+  <div class="control-group">
+    <label>Output formats</label>
+    <div class="checkbox-group" id="format-group">
+      <label class="checkbox-pill"><input type="checkbox" value="webp" checked> webp</label>
+      <label class="checkbox-pill"><input type="checkbox" value="jpeg" checked> jpeg</label>
+    </div>
+  </div>
+  <div class="control-group" style="min-width: 200px;">
+    <label>Target size (shortest side)</label>
+    <div class="dropdown-multiselect" id="target-dropdown">
+      <button type="button" class="dropdown-trigger" id="target-trigger" aria-expanded="false" aria-haspopup="true">
+        <span class="dropdown-summary" id="target-summary">6 sizes</span>
+        <span class="dropdown-caret">▾</span>
+      </button>
+      <div class="dropdown-popover" id="target-popover" hidden>
+        <div class="dropdown-popover-header">
+          <button type="button" class="dropdown-link" id="target-all">all</button>
+          <button type="button" class="dropdown-link" id="target-none">none</button>
+          <button type="button" class="dropdown-link" id="target-default">default</button>
+        </div>
+        <div class="checkbox-group dropdown-checkboxes" id="target-group">
+          <label class="checkbox-pill"><input type="checkbox" value="320" checked> 320</label>
+          <label class="checkbox-pill"><input type="checkbox" value="480" checked> 480</label>
+          <label class="checkbox-pill"><input type="checkbox" value="640"> 640</label>
+          <label class="checkbox-pill"><input type="checkbox" value="720" checked> 720</label>
+          <label class="checkbox-pill"><input type="checkbox" value="854"> 854</label>
+          <label class="checkbox-pill"><input type="checkbox" value="960"> 960</label>
+          <label class="checkbox-pill"><input type="checkbox" value="1080" checked> 1080</label>
+          <label class="checkbox-pill"><input type="checkbox" value="1280"> 1280</label>
+          <label class="checkbox-pill"><input type="checkbox" value="1600"> 1600</label>
+          <label class="checkbox-pill"><input type="checkbox" value="1920"> 1920</label>
+          <label class="checkbox-pill"><input type="checkbox" value="2160" checked> 2160</label>
+          <label class="checkbox-pill"><input type="checkbox" value="2560"> 2560</label>
+          <label class="checkbox-pill"><input type="checkbox" value="3840" checked> 3840 (4K)</label>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="control-group">
+    <label for="sort-select">Sort by</label>
+    <select id="sort-select">
+      <option value="bpp" selected>bytes / pixel (efficiency)</option>
+      <option value="size">file size (smallest first)</option>
+      <option value="size-desc">file size (largest first)</option>
+      <option value="target">target resolution</option>
+      <option value="quality">quality preset</option>
+      <option value="format">format</option>
+      <option value="encode">encode dimension</option>
+      <option value="binding">binding term</option>
+      <option value="ratio">vs baseline</option>
+    </select>
+  </div>
+  <div class="control-group">
+    <label>View</label>
+    <div class="view-toggle">
+      <button class="view-btn active" data-view="grid" id="view-grid-btn">Grid</button>
+      <button class="view-btn" data-view="table" id="view-table-btn">Table</button>
+    </div>
+  </div>
+  <div class="control-group" id="render-mode-group">
+    <label title="True size renders each image at its intended display size (the target), so you see real quality at the size it'll be shown. Fit scales the whole image to a uniform thumbnail.">Render</label>
+    <div class="view-toggle">
+      <button class="view-btn active" data-render="truesize" id="render-truesize-btn">True size</button>
+      <button class="view-btn" data-render="fit" id="render-fit-btn">Fit</button>
+    </div>
+  </div>
+  <div class="control-group" id="pixel-mode-group">
+    <label title="CSS pixels: how the image looks on a normal screen (the browser upscales on high-DPI displays). Physical pixels: pixel-for-pixel encoder output, accounting for your screen's device pixel ratio.">Pixels</label>
+    <div class="view-toggle">
+      <button class="view-btn active" data-pixel="css" id="pixel-css-btn">CSS</button>
+      <button class="view-btn" data-pixel="physical" id="pixel-physical-btn">Physical</button>
+    </div>
+  </div>
+  <div style="display: flex; gap: 8px; flex-shrink: 0;">
+    <button id="reload">Reload</button>
+    <button id="share-link" class="btn-secondary" title="Copy a shareable link to this view">Share link</button>
+  </div>
+</div>
+
+<div id="source-info" class="source-info">Loading source…</div>
+
+<div id="baseline-wrap" class="baseline-wrap"></div>
+
+<div id="progress-bar" class="progress-bar" hidden>
+  <div class="progress-fill" id="progress-fill"></div>
+  <div class="progress-label" id="progress-label">0 / 0</div>
+</div>
+
+<div id="grid" class="grid"></div>
+
+<div id="table-wrap" class="table-wrap" hidden>
+  <table class="results-table">
+    <thead>
+      <tr>
+        <th class="check-col"></th>
+        <th data-sort-key="target">shortest side</th>
+        <th data-sort-key="encode">encode</th>
+        <th data-sort-key="quality">q</th>
+        <th data-sort-key="format">format</th>
+        <th data-sort-key="binding">binds</th>
+        <th data-sort-key="size">size</th>
+        <th data-sort-key="bpp">bytes/px</th>
+        <th data-sort-key="ratio">vs baseline</th>
+        <th>preview</th>
+      </tr>
+    </thead>
+    <tbody id="table-body"></tbody>
+  </table>
+</div>
+
+<!-- Floating bar: appears when results are selected via their checkboxes -->
+<div id="compare-bar" class="compare-bar" hidden>
+  <span class="compare-bar-count" id="compare-bar-count">0 selected</span>
+  <button id="compare-bar-open" class="compare-bar-open">Compare selected</button>
+  <button id="compare-bar-clear" class="compare-bar-clear">Clear</button>
+</div>
+
+<!-- Comparison popup: selected images at true size, side by side, lockstep pan -->
+<div id="compare-modal" class="compare-modal-backdrop" role="dialog" aria-modal="true" aria-label="Compare selected images">
+  <div class="compare-modal-shell">
+    <div class="compare-modal-header">
+      <div class="compare-modal-title">Comparison — true size, locked pan</div>
+      <button class="compare-modal-close" id="compare-modal-close" aria-label="Close">×</button>
+    </div>
+    <div class="compare-modal-body" id="compare-modal-body"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<div class="legend">
+  <span class="target">target × 1.5 binds (normal case)</span>
+  <span class="source">source × 1.5 binds (tiny-source cap)</span>
+  <span class="equal">source equals target</span>
+  <span style="color: var(--accent); margin-left: auto;">→ check any tiles, then Compare selected
+</div>
+
+<details>
+  <summary>Test matrix — target widths</summary>
+  <pre id="matrix-info">320, 480, 640, 720, 800, 854, 960, 1080, 1280, 1600, 1920, 2560</pre>
+</details>
+
+<details>
+  <summary>How to read the tile metadata</summary>
+  <pre>source  — original dimensions (from X-Transcode-Source-W/H)
+encode  — what the proxy actually rendered (from X-Transcode-Encode-W/H)
+binds   — which term of min(target × 1.5, source × 1.5) bound the result
+quality — numeric quality parameter passed to the encoder
+format  — image format negotiated
+size    — Content-Length of the response body
+cache   — X-Transcode-Cache: HIT, MISS, or PASS (passthrough)</pre>
+</details>
+
+<script>
+const ALL_TARGETS = [320, 480, 640, 720, 854, 960, 1080, 1280, 1600, 1920, 2160, 2560, 3840];
+const DEFAULT_TARGETS = [320, 480, 720, 1080, 2160, 3840];
+const ALL_QUALITIES = ['low', 'medium', 'high'];
+const ALL_FORMATS = ['webp', 'jpeg'];
+const FETCH_CONCURRENCY = 6;
+
+const sourceSelect = document.getElementById('source-select');
+const customUrl = document.getElementById('custom-url');
+const qualityGroup = document.getElementById('quality-group');
+const formatGroup = document.getElementById('format-group');
+const targetGroup = document.getElementById('target-group');
+const targetDropdown = document.getElementById('target-dropdown');
+const targetTrigger = document.getElementById('target-trigger');
+const targetPopover = document.getElementById('target-popover');
+const targetSummary = document.getElementById('target-summary');
+const targetAllBtn = document.getElementById('target-all');
+const targetNoneBtn = document.getElementById('target-none');
+const targetDefaultBtn = document.getElementById('target-default');
+const sortSelect = document.getElementById('sort-select');
+const viewGridBtn = document.getElementById('view-grid-btn');
+const viewTableBtn = document.getElementById('view-table-btn');
+const renderTruesizeBtn = document.getElementById('render-truesize-btn');
+const renderFitBtn = document.getElementById('render-fit-btn');
+const renderModeGroup = document.getElementById('render-mode-group');
+const pixelCssBtn = document.getElementById('pixel-css-btn');
+const pixelPhysicalBtn = document.getElementById('pixel-physical-btn');
+const pixelModeGroup = document.getElementById('pixel-mode-group');
+const reloadBtn = document.getElementById('reload');
+const sourceInfo = document.getElementById('source-info');
+const grid = document.getElementById('grid');
+const tableWrap = document.getElementById('table-wrap');
+const tableBody = document.getElementById('table-body');
+const progressBar = document.getElementById('progress-bar');
+const progressFill = document.getElementById('progress-fill');
+const progressLabel = document.getElementById('progress-label');
+
+// All loaded results, accumulated as fetches complete. Each entry holds the
+// metadata we need to render either a tile or a table row, plus everything
+// the compare modal needs.
+let explorerResults = [];
+let currentViewMode = 'grid';
+let currentSortKey = 'bpp';
+let currentSortDir = 'asc';
+// Render mode: 'truesize' shows each image at its intended display size (the
+// target value as real screen units); 'fit' scales the whole image into a
+// uniform thumbnail card. Pixel mode (only meaningful in truesize): 'css'
+// sizes the box in CSS pixels (how it looks on a normal screen); 'physical'
+// divides by devicePixelRatio so the box occupies that many physical pixels
+// (pixel-for-pixel encoder output).
+let currentRenderMode = 'truesize';
+let currentPixelMode = 'css';
+let baselineBytes = 0; // For "vs baseline" ratios in table view
+// Set of selected entry ids (comboId) for comparison. Driven entirely by
+// per-tile checkboxes — no dropdowns. The compare popup shows exactly these.
+const selectedForCompare = new Set();
+// Incremented on each loadExplorer() call. Workers from a prior invocation
+// check their captured generation against this and abort their writes if
+// stale, preventing mixed results when the user changes source/filters
+// while fetches are still in flight.
+let explorerGeneration = 0;
+// rAF-coalesced render flag — many concurrent fetches all completing in
+// the same frame collapse to a single DOM rebuild instead of N rebuilds.
+let renderScheduled = false;
+
+function getCheckedValues(group) {
+  return Array.from(group.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+}
+function setCheckedValues(group, values) {
+  const set = new Set(values);
+  group.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.checked = set.has(cb.value);
+  });
+}
+
+function currentSource() {
+  const custom = customUrl.value.trim();
+  if (custom) return custom;
+  return sourceSelect.value;
+}
+
+function buildProxyPath(sourceUrl, w, q, f) {
+  const opts = [];
+  if (w !== undefined && w !== null) opts.push('w=' + w);
+  if (q && q !== 'medium') opts.push('q=' + q);
+  if (f && f !== 'auto') opts.push('f=' + f);
+  const optionsSegment = opts.length ? opts.join(',') + '/' : '';
+  return '/image/' + optionsSegment + sourceUrl;
+}
+
+async function fetchHead(url) {
+  // The proxy doesn't support HEAD; do a GET and read headers only.
+  const res = await fetch(url, { method: 'GET' });
+  const headers = {};
+  res.headers.forEach((v, k) => headers[k] = v);
+  // Read body length from Content-Length, or measure if absent
+  let size = parseInt(headers['content-length'] || '0', 10);
+  if (!size) {
+    const buf = await res.arrayBuffer();
+    size = buf.byteLength;
+  }
+  return { status: res.status, headers, size };
+}
+
+function formatBytes(n) {
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+  return (n / (1024 * 1024)).toFixed(2) + ' MB';
+}
+
+function bindingClass(binding) {
+  if (binding === 'target') return 'target';
+  if (binding === 'source') return 'source';
+  if (binding === 'equal') return 'equal';
+  return '';
+}
+
+// Resolves with the natural pixel dimensions of an image URL. Returns
+// { w: 0, h: 0 } if the image fails to load — caller can treat that as
+// "unknown" and fall back to interpreting target as width directly.
+function getNaturalDimensions(url) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => resolve({ w: 0, h: 0 });
+    img.src = url;
+  });
+}
+
+// Converts a "shortest side = S" target into the proxy w= value, given the
+// source's aspect ratio. The proxy's w parameter resizes the image to that
+// width while preserving aspect — so for landscape sources we send the longer
+// side, for portrait we send w=S directly (since w IS the shorter side then).
+function shortestSideToWidth(shortestSide, sourceW, sourceH) {
+  if (!sourceW || !sourceH) return shortestSide; // Unknown source — fall back
+  if (sourceW >= sourceH) {
+    // Landscape (or square): height is the shorter side, so w = S × aspect
+    return Math.round(shortestSide * (sourceW / sourceH));
+  }
+  // Portrait: width is the shorter side, so w = S directly
+  return shortestSide;
+}
+
+function fileSizeClass(bytes, target) {
+  // Heuristic only — flag if the file is unusually large for the target
+  const expected = target * target * 0.5; // very loose envelope
+  if (bytes > expected * 4) return 'high';
+  return 'ok';
+}
+
+const baselineWrap = document.getElementById('baseline-wrap');
+
+async function loadBaseline(source) {
+  // Passthrough URL: no options, worker just streams the source bytes through.
+  // This gives us source dimensions and original file size as a baseline for
+  // comparing what the transcoded tiles deliver.
+  const path = '/image/' + source;
+  const fullUrl = window.location.origin + path;
+
+  // Skeleton
+  baselineWrap.innerHTML = `
+    <div class="baseline-tile loading" data-id="baseline">
+      <div class="baseline-image"></div>
+      <div class="baseline-info">
+        <label class="tile-compare-check" title="Select for comparison"><input type="checkbox" class="compare-checkbox"> compare</label>
+        <span class="baseline-label">Baseline — Original Source</span>
+        <h2>Loading source…</h2>
+        <div class="baseline-meta"></div>
+      </div>
+    </div>
+  `;
+
+  const tile = baselineWrap.querySelector('.baseline-tile');
+
+  try {
+    const result = await fetchHead(fullUrl);
+    const h = result.headers;
+    const contentType = (h['content-type'] || 'image/?').replace('image/', '');
+    const cache = h['x-transcode-cache'] || '—';
+    const encodeMarker = h['x-transcode-encode'] || '';
+
+    // For the baseline we need the natural dimensions of the source. The
+    // passthrough path doesn't set X-Transcode-Source-* headers (because no
+    // transform was attempted), so we measure from the loaded image instead.
+    // The tile is usable for compare-mode as soon as the path is set; the
+    // dimensions just enhance its own display tile but aren't required for
+    // the picker to include it.
+    tile.classList.remove('loading');
+    tile.dataset.path = path;
+    tile.dataset.size = String(result.size);
+    tile.dataset.cache = cache;
+    tile.dataset.format = contentType;
+    tile.setAttribute('role', 'button');
+    tile.setAttribute('tabindex', '0');
+    tile.setAttribute('aria-label', 'Open original source preview');
+
+    // Fill in heading + meta immediately. Dimensions get added once the image
+    // decodes and we read naturalWidth/Height.
+    const heading0 = tile.querySelector('h2');
+    if (heading0) heading0.textContent = 'Original source';
+    const meta0 = tile.querySelector('.baseline-meta');
+    if (meta0) {
+      meta0.innerHTML = `
+        <div class="row"><span>format</span><strong>${contentType}</strong></div>
+        <div class="row"><span>size</span><strong>${formatBytes(result.size)}</strong></div>
+        <div class="row"><span>delivery</span><strong>${encodeMarker || 'passthrough'}</strong></div>
+        <div class="row"><span>cache</span><strong>${cache}</strong></div>
+      `;
+    }
+
+    const img = document.createElement('img');
+    img.src = path;
+    img.alt = 'original source';
+    img.onload = () => {
+      tile.dataset.sourceW = String(img.naturalWidth);
+      tile.dataset.sourceH = String(img.naturalHeight);
+      const heading = tile.querySelector('h2');
+      heading.innerHTML = `Original source <span style="color: var(--text-dim); font-weight: 400; font-size: 13px;">${img.naturalWidth} × ${img.naturalHeight}</span>`;
+      const meta = tile.querySelector('.baseline-meta');
+      meta.innerHTML = `
+        <div class="row"><span>dimensions</span><strong>${img.naturalWidth} × ${img.naturalHeight}</strong></div>
+        <div class="row"><span>format</span><strong>${contentType}</strong></div>
+        <div class="row"><span>size</span><strong>${formatBytes(result.size)}</strong></div>
+        <div class="row"><span>delivery</span><strong>${encodeMarker || 'passthrough'}</strong></div>
+        <div class="row"><span>cache</span><strong>${cache}</strong></div>
+      `;
+      // Now that the source has real dimensions, re-render so its inline
+      // sortable cell appears in the grid/table ranking.
+      renderExplorer();
+    };
+    img.onerror = () => {
+      tile.classList.add('error');
+      tile.querySelector('.baseline-image').textContent = 'failed to load source';
+    };
+    tile.querySelector('.baseline-image').appendChild(img);
+
+    // Add a small note explaining the comparison
+    const info = tile.querySelector('.baseline-info');
+    const note = document.createElement('div');
+    note.className = 'baseline-note';
+    note.textContent =
+      'Served through the proxy without any options applied — the worker ' +
+      'streams the origin bytes through unchanged. This is the comparison ' +
+      'baseline: every transcoded tile below is what the proxy delivers when ' +
+      'asked to transform this source for the corresponding target width.';
+    info.appendChild(note);
+  } catch (err) {
+    tile.classList.remove('loading');
+    tile.classList.add('error');
+    tile.querySelector('.baseline-image').textContent = 'failed: ' + err.message;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Explorer — multi-select matrix loader, sortable grid + table render
+
+function getSelectedCombinations() {
+  const targets = getCheckedValues(targetGroup).map(s => parseInt(s, 10)).filter(n => !isNaN(n));
+  const qualities = getCheckedValues(qualityGroup);
+  const formats = getCheckedValues(formatGroup);
+  const combos = [];
+  for (const t of targets) {
+    for (const q of qualities) {
+      for (const f of formats) {
+        combos.push({ target: t, quality: q, format: f });
+      }
+    }
+  }
+  return combos;
+}
+
+function comboId(c) {
+  return c.target + ':' + c.quality + ':' + c.format;
+}
+
+let progressHideTimer = null;
+function setProgress(loaded, total) {
+  if (progressHideTimer !== null) {
+    clearTimeout(progressHideTimer);
+    progressHideTimer = null;
+  }
+  if (total === 0) {
+    progressBar.hidden = true;
+    return;
+  }
+  progressBar.hidden = false;
+  const pct = Math.round((loaded / total) * 100);
+  progressFill.style.width = pct + '%';
+  progressLabel.textContent = loaded + ' / ' + total + ' loaded';
+  if (loaded >= total) {
+    // Briefly show 100% then hide
+    progressHideTimer = setTimeout(() => {
+      progressBar.hidden = true;
+      progressHideTimer = null;
+    }, 600);
+  }
+}
+
+// Run an array of async work with a concurrency cap. onProgress(done, total)
+// fires after each completion.
+async function runWithConcurrency(items, worker, maxConcurrent, onProgress) {
+  let index = 0;
+  let done = 0;
+  const total = items.length;
+  if (onProgress) onProgress(0, total);
+
+  async function runOne() {
+    while (true) {
+      const i = index++;
+      if (i >= items.length) return;
+      try {
+        await worker(items[i], i);
+      } catch (_err) {
+        // Worker handles its own errors; we just continue the queue
+      }
+      done++;
+      if (onProgress) onProgress(done, total);
+    }
+  }
+
+  const runners = Array.from({ length: Math.min(maxConcurrent, items.length) }, runOne);
+  await Promise.all(runners);
+}
+
+function scheduleRender() {
+  if (renderScheduled) return;
+  renderScheduled = true;
+  requestAnimationFrame(() => {
+    renderScheduled = false;
+    renderExplorer();
+  });
+}
+
+async function loadExplorer() {
+  const myGeneration = ++explorerGeneration;
+  const source = currentSource();
+  const combos = getSelectedCombinations();
+
+  sourceInfo.innerHTML = 'Source: <strong>' + escapeHtml(source) + '</strong> · ' +
+    '<span style="color: var(--text-dim);">' + combos.length + ' combinations to evaluate</span>';
+
+  // Reset state
+  explorerResults = [];
+  baselineBytes = 0;
+  grid.innerHTML = '';
+  tableBody.innerHTML = '';
+
+  // Load baseline first — gives us bytes & source dimensions for ratio columns
+  await loadBaseline(source);
+  if (myGeneration !== explorerGeneration) return;
+  // Pick up baseline state from its tile dataset for ratio metrics
+  const baselineTile = document.querySelector('.baseline-tile');
+  if (baselineTile && baselineTile.dataset.size) {
+    baselineBytes = parseInt(baselineTile.dataset.size, 10) || 0;
+  }
+
+  if (combos.length === 0) {
+    setProgress(0, 0);
+    return;
+  }
+
+  // Resolve source aspect ratio so we can interpret target as "shortest side".
+  // We need the natural dimensions of the unmodified source. Try the baseline
+  // tile's dataset first (it may already have them from img.onload); if not
+  // there yet, load them via the passthrough URL directly.
+  let srcW = parseInt((baselineTile && baselineTile.dataset.sourceW) || '0', 10);
+  let srcH = parseInt((baselineTile && baselineTile.dataset.sourceH) || '0', 10);
+  if (!srcW || !srcH) {
+    const dims = await getNaturalDimensions('/image/' + source);
+    if (myGeneration !== explorerGeneration) return;
+    srcW = dims.w;
+    srcH = dims.h;
+  }
+
+  setProgress(0, combos.length);
+
+  await runWithConcurrency(combos, async (combo) => {
+    // combo.target is the shortest-side target. Convert to proxy w= for this
+    // source's aspect ratio.
+    const proxyW = shortestSideToWidth(combo.target, srcW, srcH);
+    const path = buildProxyPath(source, proxyW, combo.quality, combo.format);
+    const fullUrl = window.location.origin + path;
+    try {
+      const result = await fetchHead(fullUrl);
+      if (myGeneration !== explorerGeneration) return;
+      const h = result.headers;
+      const encodeW = parseInt(h['x-transcode-encode-w'] || '0', 10);
+      const encodeH = parseInt(h['x-transcode-encode-h'] || '0', 10);
+      const sourceW = parseInt(h['x-transcode-source-w'] || '0', 10);
+      const sourceH = parseInt(h['x-transcode-source-h'] || '0', 10);
+      const binding = h['x-transcode-binding'] || '';
+      const quality = h['x-transcode-quality'] || '';
+      // WebP and JPEG are both reliably encoded by Cloudflare Images with no
+      // silent fallback (unlike AVIF, which has a 1600px hard limit and
+      // downgrades to WebP). With AVIF removed from the format selector, the
+      // requested format always matches the delivered format, so a single
+      // format field read from Content-Type is sufficient.
+      const format = (h['content-type'] || h['x-transcode-format'] || '').split(';')[0].replace('image/', '');
+      const cache = h['x-transcode-cache'] || '';
+      const pixels = encodeW * encodeH;
+      const bpp = pixels > 0 ? (result.size / pixels) : 0;
+      const entry = {
+        id: comboId(combo),
+        target: combo.target,             // The shortest-side target (UI semantics)
+        requestedW: proxyW,               // The actual proxy w= we sent
+        requestedQuality: combo.quality,
+        requestedFormat: combo.format,
+        path,
+        size: result.size,
+        bpp,
+        sourceW, sourceH,
+        encodeW, encodeH,
+        binding,
+        quality,
+        format,
+        cache,
+      };
+      explorerResults.push(entry);
+      scheduleRender();
+    } catch (err) {
+      if (myGeneration !== explorerGeneration) return;
+      explorerResults.push({
+        id: comboId(combo),
+        target: combo.target,
+        requestedW: proxyW,
+        requestedQuality: combo.quality,
+        requestedFormat: combo.format,
+        path: '',
+        size: 0, bpp: 0,
+        sourceW: 0, sourceH: 0,
+        encodeW: 0, encodeH: 0,
+        binding: 'error',
+        quality: '',
+        format: '',
+        cache: '',
+        error: err && err.message ? err.message : 'fetch failed',
+      });
+      scheduleRender();
+    }
+  }, FETCH_CONCURRENCY, setProgress);
+}
+
+// Sort comparator factory
+function compareResults(a, b, key, dir) {
+  const sign = dir === 'desc' ? -1 : 1;
+  let va, vb;
+  switch (key) {
+    case 'bpp':       va = a.bpp;       vb = b.bpp;       break;
+    case 'size':      va = a.size;      vb = b.size;      break;
+    case 'target':    va = a.target;    vb = b.target;    break;
+    case 'quality':
+      // Map to numeric for sort: low < medium < high
+      const qrank = { low: 0, medium: 1, high: 2 };
+      va = qrank[a.requestedQuality] ?? -1;
+      vb = qrank[b.requestedQuality] ?? -1;
+      break;
+    case 'format':    va = a.format;    vb = b.format;    break;
+    case 'encode':    va = a.encodeW;   vb = b.encodeW;   break;
+    case 'binding':   va = a.binding;   vb = b.binding;   break;
+    case 'ratio':
+      va = baselineBytes > 0 ? a.size / baselineBytes : 0;
+      vb = baselineBytes > 0 ? b.size / baselineBytes : 0;
+      break;
+    default:          va = a.target;    vb = b.target;
+  }
+  if (va < vb) return -1 * sign;
+  if (va > vb) return  1 * sign;
+  return 0;
+}
+
+// Builds a synthetic "source" entry from the baseline tile so the original,
+// un-transformed image ranks inline in the grid/table against the proxy
+// transforms. It has real size and native dimensions, so it computes every
+// sortable column (bpp, size, etc.). Returns null until the baseline has
+// loaded. Always exactly one, regardless of active quality/format/target
+// filters — it's the "do nothing" data point.
+function buildSourceEntry() {
+  const bt = document.querySelector('.baseline-tile');
+  if (!bt || !bt.dataset.path) return null;
+  const d = bt.dataset;
+  const sw = parseInt(d.sourceW || '0', 10);
+  const sh = parseInt(d.sourceH || '0', 10);
+  const size = parseInt(d.size || '0', 10);
+  if (!sw || !sh || !size) return null; // dimensions not measured yet
+  const pixels = sw * sh;
+  const bpp = pixels > 0 ? size / pixels : 0;
+  const shortest = Math.min(sw, sh);
+  return {
+    id: 'baseline',
+    isSource: true,
+    target: shortest,            // ranks by its own native shortest side
+    requestedW: sw,
+    requestedQuality: '—',
+    requestedFormat: d.format || '',
+    path: d.path,
+    size,
+    bpp,
+    sourceW: sw,
+    sourceH: sh,
+    encodeW: sw,                 // "encode" = native dims (no transform)
+    encodeH: sh,
+    binding: 'none',
+    quality: '—',
+    format: d.format || '',
+    cache: d.cache || '—',
+  };
+}
+
+function sortedResults() {
+  const out = explorerResults.slice();
+  // Inject the source as a sortable inline entry (always exactly one).
+  const source = buildSourceEntry();
+  if (source) out.push(source);
+  out.sort((a, b) => compareResults(a, b, currentSortKey, currentSortDir));
+  return out;
+}
+
+function renderExplorer() {
+  const items = sortedResults();
+  if (currentViewMode === 'grid') {
+    renderExplorerGrid(items);
+  } else {
+    renderExplorerTable(items);
+  }
+}
+
+// Computes the intended display box for an entry: a box whose SHORTEST side
+// equals the target value, scaled from the encode's aspect ratio. This is the
+// size the image is meant to be shown at. In physical-pixel mode we divide by
+// devicePixelRatio so the box occupies target physical pixels rather than
+// target CSS pixels. Returns w, h in CSS pixels (what we set on the box).
+function intendedDisplayBox(e) {
+  const ew = e.encodeW || 0;
+  const eh = e.encodeH || 0;
+  if (!ew || !eh) return { w: e.target, h: e.target };
+  // Scale the encode so its shortest side equals the target. The encode is
+  // ~1.5× the target (the overshoot); displaying it in this box makes the
+  // browser downsample, which is the supersampling the overshoot exists for.
+  const shortestEncode = Math.min(ew, eh);
+  const scale = e.target / shortestEncode;
+  let boxW = ew * scale;
+  let boxH = eh * scale;
+  if (currentPixelMode === 'physical') {
+    const dpr = window.devicePixelRatio || 1;
+    boxW = boxW / dpr;
+    boxH = boxH / dpr;
+  }
+  return { w: Math.round(boxW), h: Math.round(boxH) };
+}
+
+function renderExplorerGrid(items) {
+  // Rebuild the grid in sorted order. Reusing existing tiles avoids image
+  // re-fetching since the proxy URL is the same and browser caches it.
+  grid.innerHTML = '';
+  // The grid class toggles between uniform thumbnail cards (fit mode) and a
+  // flowing layout where each tile is as wide as its intended display size
+  // (true-size mode).
+  grid.className = currentRenderMode === 'truesize' ? 'grid grid-truesize' : 'grid grid-fit';
+
+  for (const e of items) {
+    const tile = document.createElement('div');
+    if (e.error) {
+      tile.className = 'tile error';
+      tile.innerHTML = '<div class="tile-header"><span class="target">' + e.target +
+        'px (shortest)</span><span class="formula">q=' + e.requestedQuality + ',f=' + e.requestedFormat +
+        '</span></div><div class="tile-image">failed: ' + escapeHtml(e.error) +
+        '</div><div class="tile-meta"></div>';
+      grid.appendChild(tile);
+      continue;
+    }
+    tile.className = 'tile ' + bindingClass(e.binding) + (e.isSource ? ' tile-source' : '');
+    // Same dataset shape the compare popup expects
+    tile.dataset.id = e.id;
+    tile.dataset.target = String(e.target);
+    tile.dataset.path = e.path;
+    tile.dataset.sourceW = String(e.sourceW);
+    tile.dataset.sourceH = String(e.sourceH);
+    tile.dataset.encodeW = String(e.encodeW);
+    tile.dataset.encodeH = String(e.encodeH);
+    tile.dataset.binding = e.binding;
+    tile.dataset.quality = e.quality;
+    tile.dataset.format = e.format;
+    tile.dataset.cache = e.cache;
+    tile.dataset.size = String(e.size);
+    if (selectedForCompare.has(e.id)) tile.classList.add('selected');
+
+    const bppStr = e.bpp > 0 ? e.bpp.toFixed(3) : '?';
+    const wHint = e.requestedW && e.requestedW !== e.target ? '  (w=' + e.requestedW + ')' : '';
+    const checked = selectedForCompare.has(e.id) ? ' checked' : '';
+
+    // Build the image area. In true-size mode the image box is sized to the
+    // intended display size and the tile width follows it; in fit mode it's a
+    // uniform thumbnail (image scaled to fill the card).
+    let imageHtml;
+    if (currentRenderMode === 'truesize') {
+      const box = intendedDisplayBox(e);
+      // The image element is sized to its intended display size (true pixel
+      // density). The .tile-image.truesize wrapper is a FIXED window that
+      // crops it via overflow:hidden — you see a centered slice at 1:1. The
+      // card itself stays uniform.
+      const note = box.w + '×' + box.h + ' @ ' + (currentPixelMode === 'physical' ? 'physical' : 'css');
+      imageHtml =
+        '<div class="tile-image truesize">' +
+          '<img loading="lazy" src="' + escapeHtml(e.path) + '" ' +
+          'style="width:' + box.w + 'px;height:' + box.h + 'px;" ' +
+          'alt="' + e.target + 'px intended display size">' +
+          '<span class="truesize-note">' + note + '</span>' +
+        '</div>';
+    } else {
+      imageHtml =
+        '<div class="tile-image"><img loading="lazy" src="' + escapeHtml(e.path) +
+        '" alt="' + e.target + 'px shortest side"></div>';
+    }
+
+    const headerLabel = e.isSource
+      ? '<span class="target">⬡ original source</span>' +
+        '<span class="formula">' + e.sourceW + '×' + e.sourceH + ' · no transform</span>'
+      : '<span class="target">' + e.target + 'px shortest</span>' +
+        '<span class="formula">q=' + e.requestedQuality + ',f=' + e.requestedFormat + wHint + '</span>';
+
+    tile.innerHTML =
+      '<div class="tile-header">' +
+        '<label class="tile-compare-check" title="Select for comparison">' +
+          '<input type="checkbox" class="compare-checkbox"' + checked + '> compare' +
+        '</label>' +
+        headerLabel +
+      '</div>' +
+      imageHtml +
+      '<div class="tile-meta">' +
+        '<div class="row"><span>' + (e.isSource ? 'native' : 'encode') + '</span><strong>' + e.encodeW + ' × ' + e.encodeH + '</strong></div>' +
+        '<div class="row"><span>binds</span><strong>' + (e.isSource ? 'none' : (e.binding || '—')) + '</strong></div>' +
+        '<div class="row"><span>quality</span><strong>' + (e.quality || '?') + '</strong></div>' +
+        '<div class="row"><span>format</span><strong>' + (e.format || '?') + '</strong></div>' +
+        '<div class="row"><span>size</span><strong>' + formatBytes(e.size) + '</strong></div>' +
+        '<div class="row"><span>bytes/px</span><strong>' + bppStr + '</strong></div>' +
+      '</div>';
+    grid.appendChild(tile);
+  }
+}
+
+function renderExplorerTable(items) {
+  tableBody.innerHTML = '';
+  // Update sort indicator on headers
+  document.querySelectorAll('.results-table th[data-sort-key]').forEach(th => {
+    th.classList.remove('sort-active', 'sort-asc');
+    if (th.dataset.sortKey === currentSortKey) {
+      th.classList.add('sort-active');
+      if (currentSortDir === 'asc') {
+        th.classList.add('sort-asc');
+      }
+    }
+  });
+  for (const e of items) {
+    const tr = document.createElement('tr');
+    if (e.error) {
+      tr.innerHTML = '<td></td><td>' + e.target + '</td><td colspan="8">failed: ' + escapeHtml(e.error) + '</td>';
+      tableBody.appendChild(tr);
+      continue;
+    }
+    tr.classList.add('row-binding-' + (e.binding || 'unknown'));
+    if (e.isSource) tr.classList.add('row-source');
+    tr.dataset.id = e.id;
+    tr.dataset.target = String(e.target);
+    tr.dataset.path = e.path;
+    tr.dataset.sourceW = String(e.sourceW);
+    tr.dataset.sourceH = String(e.sourceH);
+    tr.dataset.encodeW = String(e.encodeW);
+    tr.dataset.encodeH = String(e.encodeH);
+    tr.dataset.binding = e.binding;
+    tr.dataset.quality = e.quality;
+    tr.dataset.format = e.format;
+    tr.dataset.cache = e.cache;
+    tr.dataset.size = String(e.size);
+    if (selectedForCompare.has(e.id)) tr.classList.add('selected');
+
+    const ratio = baselineBytes > 0 ? (e.size / baselineBytes) : 0;
+    const ratioStr = ratio > 0 ? (ratio * 100).toFixed(1) + '%' : '—';
+    const ratioCls = ratio > 0 && ratio < 0.5 ? 'ratio-better' : ratio > 1 ? 'ratio-worse' : '';
+    const bppStr = e.bpp > 0 ? e.bpp.toFixed(3) : '?';
+    const checked = selectedForCompare.has(e.id) ? ' checked' : '';
+    const shortestLabel = e.isSource ? '⬡ source' : (e.target + 'px');
+    tr.innerHTML =
+      '<td class="check-col"><input type="checkbox" class="compare-checkbox"' + checked + '></td>' +
+      '<td>' + shortestLabel + '</td>' +
+      '<td>' + e.encodeW + ' × ' + e.encodeH + '</td>' +
+      '<td>' + (e.quality || '?') + '</td>' +
+      '<td>' + (e.format || '?') + '</td>' +
+      '<td>' + (e.isSource ? 'none' : (e.binding || '—')) + '</td>' +
+      '<td>' + formatBytes(e.size) + '</td>' +
+      '<td>' + bppStr + '</td>' +
+      '<td class="' + ratioCls + '">' + (e.isSource ? '100%' : ratioStr) + '</td>' +
+      '<td class="preview-cell"><img loading="lazy" src="' + escapeHtml(e.path) + '" alt=""></td>';
+    tableBody.appendChild(tr);
+  }
+}
+
+function setViewMode(mode) {
+  currentViewMode = mode;
+  if (mode === 'grid') {
+    grid.hidden = false;
+    tableWrap.hidden = true;
+    viewGridBtn.classList.add('active');
+    viewTableBtn.classList.remove('active');
+  } else {
+    grid.hidden = true;
+    tableWrap.hidden = false;
+    viewGridBtn.classList.remove('active');
+    viewTableBtn.classList.add('active');
+  }
+  updateRenderControlsVisibility();
+  renderExplorer();
+}
+
+function setRenderMode(mode) {
+  currentRenderMode = mode;
+  if (mode === 'truesize') {
+    renderTruesizeBtn.classList.add('active');
+    renderFitBtn.classList.remove('active');
+  } else {
+    renderTruesizeBtn.classList.remove('active');
+    renderFitBtn.classList.add('active');
+  }
+  updateRenderControlsVisibility();
+  renderExplorer();
+}
+
+function setPixelMode(mode) {
+  currentPixelMode = mode;
+  if (mode === 'css') {
+    pixelCssBtn.classList.add('active');
+    pixelPhysicalBtn.classList.remove('active');
+  } else {
+    pixelCssBtn.classList.remove('active');
+    pixelPhysicalBtn.classList.add('active');
+  }
+  renderExplorer();
+}
+
+// Render and pixel toggles only apply to the grid in true-size mode. Hide the
+// render toggle entirely in table view; hide the pixel toggle unless we're in
+// grid + true-size (it has no meaning when fitting or in the table).
+function updateRenderControlsVisibility() {
+  const inGrid = currentViewMode === 'grid';
+  renderModeGroup.hidden = !inGrid;
+  pixelModeGroup.hidden = !(inGrid && currentRenderMode === 'truesize');
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+// ===========================================================================
+// Comparison — driven entirely by per-tile/per-row checkboxes. No dropdowns.
+// Select any number of results via their checkbox; a floating bar shows the
+// count and opens a popup that renders the selected images at true size,
+// side by side, with lockstep pan when they overflow.
+
+const compareBar = document.getElementById('compare-bar');
+const compareBarCount = document.getElementById('compare-bar-count');
+const compareBarOpen = document.getElementById('compare-bar-open');
+const compareBarClear = document.getElementById('compare-bar-clear');
+const compareModal = document.getElementById('compare-modal');
+const compareModalClose = document.getElementById('compare-modal-close');
+const compareModalBody = document.getElementById('compare-modal-body');
+
+// Look up a loaded entry by its id (comboId). Baseline is a synthetic entry.
+function findResultById(id) {
+  if (id === 'baseline') {
+    const bt = document.querySelector('.baseline-tile');
+    if (!bt || !bt.dataset.path) return null;
+    const d = bt.dataset;
+    return {
+      id: 'baseline',
+      isBaseline: true,
+      target: 0,
+      path: d.path,
+      sourceW: parseInt(d.sourceW || '0', 10),
+      sourceH: parseInt(d.sourceH || '0', 10),
+      encodeW: parseInt(d.sourceW || '0', 10),
+      encodeH: parseInt(d.sourceH || '0', 10),
+      binding: 'source',
+      quality: '—',
+      format: d.format || '',
+      size: parseInt(d.size || '0', 10),
+    };
+  }
+  return explorerResults.find((e) => e.id === id) || null;
+}
+
+// Toggle selection for an id and sync the floating bar + tile/row highlight.
+function toggleCompareSelection(id, checked) {
+  if (!id) return;
+  if (checked) selectedForCompare.add(id);
+  else selectedForCompare.delete(id);
+  updateCompareBar();
+  // Reflect the .selected class without a full re-render
+  document.querySelectorAll('[data-id="' + cssEscape(id) + '"]').forEach((el) => {
+    el.classList.toggle('selected', checked);
+  });
+}
+
+// Minimal attribute-value escape for querySelector (ids are target:q:f).
+function cssEscape(s) {
+  return String(s).replace(/[^a-zA-Z0-9_-]/g, (c) => '\\' + c);
+}
+
+function updateCompareBar() {
+  const n = selectedForCompare.size;
+  compareBarCount.textContent = n === 1 ? '1 selected' : n + ' selected';
+  compareBar.hidden = n === 0;
+  compareBarOpen.disabled = n < 1;
+}
+
+function clearCompareSelection() {
+  selectedForCompare.clear();
+  document.querySelectorAll('.tile.selected, tr.selected').forEach((el) =>
+    el.classList.remove('selected'),
+  );
+  document.querySelectorAll('.compare-checkbox').forEach((cb) => {
+    cb.checked = false;
+  });
+  updateCompareBar();
+}
+
+// Checkbox change delegation — works for both grid tiles and table rows.
+function onCompareCheckboxChange(e) {
+  const cb = e.target;
+  if (!cb.classList || !cb.classList.contains('compare-checkbox')) return;
+  const host = cb.closest('[data-id]');
+  if (!host) return;
+  toggleCompareSelection(host.dataset.id, cb.checked);
+}
+grid.addEventListener('change', onCompareCheckboxChange);
+tableBody.addEventListener('change', onCompareCheckboxChange);
+baselineWrap.addEventListener('change', onCompareCheckboxChange);
+
+// Clicking a tile (not on the checkbox) also toggles its selection, so the
+// whole card is a selection target — but clicks on the checkbox itself are
+// handled by the change event above (don't double-toggle).
+function onTileActivate(e) {
+  if (e.target.closest('.compare-checkbox') || e.target.closest('.tile-compare-check')) return;
+  const tile = e.target.closest('.tile');
+  if (!tile || !tile.dataset.id) return;
+  if (tile.classList.contains('loading') || tile.classList.contains('error')) return;
+  const id = tile.dataset.id;
+  const nowSelected = !selectedForCompare.has(id);
+  const cb = tile.querySelector('.compare-checkbox');
+  if (cb) cb.checked = nowSelected;
+  toggleCompareSelection(id, nowSelected);
+}
+grid.addEventListener('click', onTileActivate);
+
+// Floating bar actions
+compareBarOpen.addEventListener('click', openCompareView);
+compareBarClear.addEventListener('click', clearCompareSelection);
+
+// Build and open the comparison popup with all selected entries at true size.
+function openCompareView() {
+  const ids = Array.from(selectedForCompare);
+  const entries = ids.map(findResultById).filter(Boolean);
+  if (entries.length < 1) return;
+
+  // Sort the selected entries by target then quality so the lineup is stable
+  entries.sort((a, b) => (a.target - b.target) || String(a.quality).localeCompare(String(b.quality)));
+
+  compareModalBody.innerHTML = '';
+  const scrollEls = [];
+
+  for (const e of entries) {
+    const panel = document.createElement('div');
+    panel.className = 'cmp-panel';
+
+    const box = e.isBaseline
+      ? { w: e.encodeW, h: e.encodeH }
+      : intendedDisplayBox(e);
+
+    const label = e.isBaseline
+      ? 'Source baseline · ' + e.encodeW + '×' + e.encodeH
+      : e.target + 'px shortest · q=' + e.quality + ' · ' + e.format +
+        ' · ' + formatBytes(e.size) + ' · ' + box.w + '×' + box.h + ' @ ' +
+        (currentPixelMode === 'physical' ? 'physical' : 'css');
+
+    // The viewport is a fixed window; the image renders at true size inside it
+    // and scrolls (lockstep across panels) when it overflows.
+    const viewport = document.createElement('div');
+    viewport.className = 'cmp-viewport';
+    const img = document.createElement('img');
+    img.src = e.path;
+    img.alt = label;
+    img.style.width = box.w + 'px';
+    img.style.height = box.h + 'px';
+    img.className = 'cmp-img';
+    viewport.appendChild(img);
+    scrollEls.push(viewport);
+
+    const cap = document.createElement('div');
+    cap.className = 'cmp-caption';
+    cap.textContent = label;
+
+    panel.appendChild(viewport);
+    panel.appendChild(cap);
+    compareModalBody.appendChild(panel);
+  }
+
+  // Lockstep pan: when any viewport scrolls, mirror to the others. Guarded so
+  // a programmatic scroll doesn't recurse. Different-sized images clamp
+  // naturally at their own max scroll, so a small image just stops early.
+  let syncing = false;
+  function syncScroll(src) {
+    if (syncing) return;
+    syncing = true;
+    for (const el of scrollEls) {
+      if (el === src) continue;
+      el.scrollLeft = src.scrollLeft;
+      el.scrollTop = src.scrollTop;
+    }
+    // release on next frame so the mirrored scroll events are absorbed
+    requestAnimationFrame(() => { syncing = false; });
+  }
+  scrollEls.forEach((el) => {
+    el.addEventListener('scroll', () => syncScroll(el));
+  });
+
+  compareModal.classList.add('open');
+  compareModalClose.focus();
+}
+
+function closeCompareView() {
+  compareModal.classList.remove('open');
+  compareModalBody.innerHTML = '';
+}
+
+compareModalClose.addEventListener('click', closeCompareView);
+compareModal.addEventListener('click', (e) => {
+  if (e.target === compareModal) closeCompareView();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && compareModal.classList.contains('open')) closeCompareView();
+});
+
+
+// URL state — read on load, write on change. The page URL itself becomes the
+// shareable state: ?source=...&q=...&f=... lets anyone link to a specific view.
+// Aquifer (or any other system) can deep-link by appending ?source=<image-url>.
+
+function readUrlState() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    source: params.get('source'),
+    q: params.get('q'),       // comma-separated list of qualities
+    f: params.get('f'),       // comma-separated list of formats
+    w: params.get('w'),       // comma-separated list of target widths
+    sort: params.get('sort'), // sort key
+    view: params.get('view'), // 'grid' or 'table'
+    render: params.get('render'), // 'truesize' or 'fit'
+    px: params.get('px'),     // 'css' or 'physical'
+  };
+}
+
+function writeUrlState() {
+  const params = new URLSearchParams();
+  const sourceVal = currentSource();
+  if (sourceVal) params.set('source', sourceVal);
+
+  // Only encode arrays when they differ from "all checked" (the default).
+  // Keeps shareable URLs short for the common case.
+  const q = getCheckedValues(qualityGroup);
+  const f = getCheckedValues(formatGroup);
+  const w = getCheckedValues(targetGroup).map(Number);
+  if (q.length !== ALL_QUALITIES.length) params.set('q', q.join(','));
+  if (f.length !== ALL_FORMATS.length) params.set('f', f.join(','));
+  // Targets: only encode if different from the default selection (not "all")
+  const defaultTargetsSorted = DEFAULT_TARGETS.slice().sort((a, b) => a - b).join(',');
+  const wSorted = w.slice().sort((a, b) => a - b).join(',');
+  if (wSorted !== defaultTargetsSorted) params.set('w', w.join(','));
+  if (currentSortKey !== 'bpp' || currentSortDir !== 'asc') {
+    const sortValue = currentSortDir === 'desc' ? currentSortKey + '-desc' : currentSortKey;
+    params.set('sort', sortValue);
+  }
+  if (currentViewMode !== 'grid') params.set('view', currentViewMode);
+  // Render mode defaults to truesize; pixel mode defaults to css. Only encode
+  // when non-default to keep URLs short.
+  if (currentRenderMode !== 'truesize') params.set('render', currentRenderMode);
+  if (currentPixelMode !== 'css') params.set('px', currentPixelMode);
+
+  const qs = params.toString();
+  const newUrl = window.location.pathname + (qs ? '?' + qs : '');
+  history.replaceState(null, '', newUrl);
+}
+
+function applyUrlState() {
+  const { source, q, f, w, sort, view, render, px } = readUrlState();
+  if (source) {
+    const matchingOption = Array.from(sourceSelect.options).find(opt => opt.value === source);
+    if (matchingOption) {
+      sourceSelect.value = source;
+      customUrl.value = '';
+    } else {
+      customUrl.value = source;
+    }
+  }
+  if (q !== null) {
+    setCheckedValues(qualityGroup, q.split(',').filter(s => ALL_QUALITIES.includes(s)));
+  }
+  if (f !== null) {
+    setCheckedValues(formatGroup, f.split(',').filter(s => ALL_FORMATS.includes(s)));
+  }
+  if (w !== null) {
+    setCheckedValues(targetGroup, w.split(',').filter(s => ALL_TARGETS.includes(parseInt(s, 10))));
+  }
+  if (sort) {
+    const validKeys = ['bpp', 'size', 'target', 'quality', 'format', 'encode', 'binding', 'ratio'];
+    const isDesc = sort.endsWith('-desc');
+    const baseKey = isDesc ? sort.slice(0, -'-desc'.length) : sort;
+    if (validKeys.includes(baseKey)) {
+      currentSortKey = baseKey;
+      currentSortDir = isDesc ? 'desc' : 'asc';
+      sortSelect.value = baseKey === 'size' && isDesc ? 'size-desc' : baseKey;
+    }
+  }
+  if (render === 'fit') {
+    setRenderMode('fit');
+  }
+  if (px === 'physical') {
+    setPixelMode('physical');
+  }
+  if (view === 'table') {
+    setViewMode('table');
+  }
+}
+
+// Show toast for feedback (used after Share-link copy)
+const toast = document.getElementById('toast');
+let toastTimer = null;
+function showToast(message, duration = 2200) {
+  toast.textContent = message;
+  toast.classList.add('visible');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('visible'), duration);
+}
+
+// Share-link button: copies the current URL to clipboard
+const shareLinkBtn = document.getElementById('share-link');
+shareLinkBtn.addEventListener('click', async () => {
+  // Make sure the URL reflects current state first
+  writeUrlState();
+  const link = window.location.href;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(link);
+      showToast('Link copied to clipboard');
+    } else {
+      // Fallback: select the link in a temporary element
+      const ta = document.createElement('textarea');
+      ta.value = link;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'absolute';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('Link copied to clipboard');
+    }
+  } catch (err) {
+    // Last fallback: show the link in a prompt so they can copy manually
+    showToast('Copy this link manually (clipboard blocked)');
+    window.prompt('Copy this link:', link);
+  }
+});
+
+// Debounce checkbox changes so toggling several pills doesn't fire N reloads
+let reloadTimer = null;
+function scheduleReload() {
+  writeUrlState();
+  if (reloadTimer) clearTimeout(reloadTimer);
+  reloadTimer = setTimeout(() => { loadExplorer(); }, 280);
+}
+
+// Update the dropdown summary ("6 widths") based on what's selected
+function updateTargetSummary() {
+  const checked = getCheckedValues(targetGroup);
+  const n = checked.length;
+  if (n === 0) {
+    targetSummary.textContent = 'none selected';
+  } else if (n === ALL_TARGETS.length) {
+    targetSummary.textContent = 'all ' + n + ' sizes';
+  } else {
+    targetSummary.textContent = n + ' size' + (n === 1 ? '' : 's');
+  }
+}
+
+// Dropdown open/close + outside-click + Esc to close
+function setTargetDropdownOpen(open) {
+  targetTrigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  targetPopover.hidden = !open;
+}
+targetTrigger.addEventListener('click', (e) => {
+  e.stopPropagation();
+  setTargetDropdownOpen(targetPopover.hidden);
+});
+document.addEventListener('click', (e) => {
+  if (targetPopover.hidden) return;
+  if (!targetDropdown.contains(e.target)) setTargetDropdownOpen(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !targetPopover.hidden) setTargetDropdownOpen(false);
+});
+
+// Quick-set buttons
+targetAllBtn.addEventListener('click', () => {
+  setCheckedValues(targetGroup, ALL_TARGETS.map(String));
+  updateTargetSummary();
+  scheduleReload();
+});
+targetNoneBtn.addEventListener('click', () => {
+  setCheckedValues(targetGroup, []);
+  updateTargetSummary();
+  scheduleReload();
+});
+targetDefaultBtn.addEventListener('click', () => {
+  setCheckedValues(targetGroup, DEFAULT_TARGETS.map(String));
+  updateTargetSummary();
+  scheduleReload();
+});
+
+reloadBtn.addEventListener('click', () => { loadExplorer(); });
+sourceSelect.addEventListener('change', () => {
+  customUrl.value = '';
+  writeUrlState();
+  loadExplorer();
+});
+customUrl.addEventListener('change', () => {
+  writeUrlState();
+  loadExplorer();
+});
+qualityGroup.addEventListener('change', scheduleReload);
+formatGroup.addEventListener('change', scheduleReload);
+targetGroup.addEventListener('change', () => {
+  updateTargetSummary();
+  scheduleReload();
+});
+
+// Sort dropdown — re-renders without re-fetching
+sortSelect.addEventListener('change', () => {
+  const v = sortSelect.value;
+  if (v === 'size-desc') {
+    currentSortKey = 'size';
+    currentSortDir = 'desc';
+  } else {
+    currentSortKey = v;
+    currentSortDir = 'asc';
+  }
+  writeUrlState();
+  renderExplorer();
+});
+
+// View mode toggle
+viewGridBtn.addEventListener('click', () => { setViewMode('grid'); writeUrlState(); });
+viewTableBtn.addEventListener('click', () => { setViewMode('table'); writeUrlState(); });
+
+// Render mode toggle (true size vs fit)
+renderTruesizeBtn.addEventListener('click', () => { setRenderMode('truesize'); writeUrlState(); });
+renderFitBtn.addEventListener('click', () => { setRenderMode('fit'); writeUrlState(); });
+
+// Pixel mode toggle (CSS vs physical pixels)
+pixelCssBtn.addEventListener('click', () => { setPixelMode('css'); writeUrlState(); });
+pixelPhysicalBtn.addEventListener('click', () => { setPixelMode('physical'); writeUrlState(); });
+
+// Table header click → sort by that column
+document.querySelectorAll('.results-table th[data-sort-key]').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.sortKey;
+    if (key === currentSortKey) {
+      currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      currentSortKey = key;
+      currentSortDir = 'asc';
+    }
+    sortSelect.value = currentSortKey === 'size' && currentSortDir === 'desc' ? 'size-desc' : currentSortKey;
+    writeUrlState();
+    renderExplorer();
+  });
+});
+
+// Initial load
+applyUrlState();
+updateTargetSummary();
+updateRenderControlsVisibility();
+loadExplorer();
+writeUrlState();
+</script>
+
+</body>
+</html>
