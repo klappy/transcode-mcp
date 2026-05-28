@@ -349,6 +349,13 @@ export const DEMO_PAGE_HTML = `<!DOCTYPE html>
   }
   .tile-compare-check input { accent-color: var(--accent); cursor: pointer; margin: 0; }
   .tile.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  /* Source cell — the un-transformed original, ranked inline. Distinct accent
+     so the eye can find the 'do nothing' data point in the ordering. */
+  .tile-source { border-color: var(--accent-2); }
+  .tile-source .tile-header .target { color: var(--accent-2); }
+  .results-table tr.row-source td { background: rgba(126, 231, 179, 0.08); }
+  .results-table tr.row-source td:first-child,
+  .results-table tr.row-source td:nth-child(2) { color: var(--accent-2); }
   .results-table .check-col { width: 28px; text-align: center; }
   .results-table .check-col input { accent-color: var(--accent); cursor: pointer; }
   .results-table tr.selected td { background: rgba(122, 184, 255, 0.10); }
@@ -873,6 +880,9 @@ async function loadBaseline(source) {
         <div class="row"><span>delivery</span><strong>\${encodeMarker || 'passthrough'}</strong></div>
         <div class="row"><span>cache</span><strong>\${cache}</strong></div>
       \`;
+      // Now that the source has real dimensions, re-render so its inline
+      // sortable cell appears in the grid/table ranking.
+      renderExplorer();
     };
     img.onerror = () => {
       tile.classList.add('error');
@@ -1114,8 +1124,49 @@ function compareResults(a, b, key, dir) {
   return 0;
 }
 
+// Builds a synthetic "source" entry from the baseline tile so the original,
+// un-transformed image ranks inline in the grid/table against the proxy
+// transforms. It has real size and native dimensions, so it computes every
+// sortable column (bpp, size, etc.). Returns null until the baseline has
+// loaded. Always exactly one, regardless of active quality/format/target
+// filters — it's the "do nothing" data point.
+function buildSourceEntry() {
+  const bt = document.querySelector('.baseline-tile');
+  if (!bt || !bt.dataset.path) return null;
+  const d = bt.dataset;
+  const sw = parseInt(d.sourceW || '0', 10);
+  const sh = parseInt(d.sourceH || '0', 10);
+  const size = parseInt(d.size || '0', 10);
+  if (!sw || !sh || !size) return null; // dimensions not measured yet
+  const pixels = sw * sh;
+  const bpp = pixels > 0 ? size / pixels : 0;
+  const shortest = Math.min(sw, sh);
+  return {
+    id: 'baseline',
+    isSource: true,
+    target: shortest,            // ranks by its own native shortest side
+    requestedW: sw,
+    requestedQuality: '—',
+    requestedFormat: d.format || '',
+    path: d.path,
+    size,
+    bpp,
+    sourceW: sw,
+    sourceH: sh,
+    encodeW: sw,                 // "encode" = native dims (no transform)
+    encodeH: sh,
+    binding: 'none',
+    quality: '—',
+    format: d.format || '',
+    cache: d.cache || '—',
+  };
+}
+
 function sortedResults() {
   const out = explorerResults.slice();
+  // Inject the source as a sortable inline entry (always exactly one).
+  const source = buildSourceEntry();
+  if (source) out.push(source);
   out.sort((a, b) => compareResults(a, b, currentSortKey, currentSortDir));
   return out;
 }
@@ -1173,7 +1224,7 @@ function renderExplorerGrid(items) {
       grid.appendChild(tile);
       continue;
     }
-    tile.className = 'tile ' + bindingClass(e.binding);
+    tile.className = 'tile ' + bindingClass(e.binding) + (e.isSource ? ' tile-source' : '');
     // Same dataset shape the compare popup expects
     tile.dataset.id = e.id;
     tile.dataset.target = String(e.target);
@@ -1217,18 +1268,23 @@ function renderExplorerGrid(items) {
         '" alt="' + e.target + 'px shortest side"></div>';
     }
 
+    const headerLabel = e.isSource
+      ? '<span class="target">⬡ original source</span>' +
+        '<span class="formula">' + e.sourceW + '×' + e.sourceH + ' · no transform</span>'
+      : '<span class="target">' + e.target + 'px shortest</span>' +
+        '<span class="formula">q=' + e.requestedQuality + ',f=' + e.requestedFormat + wHint + '</span>';
+
     tile.innerHTML =
       '<div class="tile-header">' +
         '<label class="tile-compare-check" title="Select for comparison">' +
           '<input type="checkbox" class="compare-checkbox"' + checked + '> compare' +
         '</label>' +
-        '<span class="target">' + e.target + 'px shortest</span>' +
-        '<span class="formula">q=' + e.requestedQuality + ',f=' + e.requestedFormat + wHint + '</span>' +
+        headerLabel +
       '</div>' +
       imageHtml +
       '<div class="tile-meta">' +
-        '<div class="row"><span>encode</span><strong>' + e.encodeW + ' × ' + e.encodeH + '</strong></div>' +
-        '<div class="row"><span>binds</span><strong>' + (e.binding || '—') + '</strong></div>' +
+        '<div class="row"><span>' + (e.isSource ? 'native' : 'encode') + '</span><strong>' + e.encodeW + ' × ' + e.encodeH + '</strong></div>' +
+        '<div class="row"><span>binds</span><strong>' + (e.isSource ? 'none' : (e.binding || '—')) + '</strong></div>' +
         '<div class="row"><span>quality</span><strong>' + (e.quality || '?') + '</strong></div>' +
         '<div class="row"><span>format</span><strong>' + (e.format || '?') + '</strong></div>' +
         '<div class="row"><span>size</span><strong>' + formatBytes(e.size) + '</strong></div>' +
@@ -1258,6 +1314,7 @@ function renderExplorerTable(items) {
       continue;
     }
     tr.classList.add('row-binding-' + (e.binding || 'unknown'));
+    if (e.isSource) tr.classList.add('row-source');
     tr.dataset.id = e.id;
     tr.dataset.target = String(e.target);
     tr.dataset.path = e.path;
@@ -1277,16 +1334,17 @@ function renderExplorerTable(items) {
     const ratioCls = ratio > 0 && ratio < 0.5 ? 'ratio-better' : ratio > 1 ? 'ratio-worse' : '';
     const bppStr = e.bpp > 0 ? e.bpp.toFixed(3) : '?';
     const checked = selectedForCompare.has(e.id) ? ' checked' : '';
+    const shortestLabel = e.isSource ? '⬡ source' : (e.target + 'px');
     tr.innerHTML =
       '<td class="check-col"><input type="checkbox" class="compare-checkbox"' + checked + '></td>' +
-      '<td>' + e.target + 'px</td>' +
+      '<td>' + shortestLabel + '</td>' +
       '<td>' + e.encodeW + ' × ' + e.encodeH + '</td>' +
       '<td>' + (e.quality || '?') + '</td>' +
       '<td>' + (e.format || '?') + '</td>' +
-      '<td>' + (e.binding || '—') + '</td>' +
+      '<td>' + (e.isSource ? 'none' : (e.binding || '—')) + '</td>' +
       '<td>' + formatBytes(e.size) + '</td>' +
       '<td>' + bppStr + '</td>' +
-      '<td class="' + ratioCls + '">' + ratioStr + '</td>' +
+      '<td class="' + ratioCls + '">' + (e.isSource ? '100%' : ratioStr) + '</td>' +
       '<td class="preview-cell"><img loading="lazy" src="' + escapeHtml(e.path) + '" alt=""></td>';
     tableBody.appendChild(tr);
   }
