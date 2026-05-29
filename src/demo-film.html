@@ -441,8 +441,8 @@ function render(p){
 
   // ----- showroom aux devices (top-rail aligned) -----
   tablet.style.opacity=clamp(1-auxOut); laptop.style.opacity=clamp(1-auxOut);
-  place(tablet, lerp(L.auxNear, L.auxFar, auxOut),     railTop+(TH*0.78)/2, lerp(L.auxSc, L.auxScFar, auxOut));
-  place(laptop, lerp(-L.auxNear, -L.auxFar, auxOut),   railTop+(LH*0.82)/2, lerp(L.auxSc+0.04, L.auxScFar, auxOut));
+  place(tablet, lerp(L.auxNear, L.auxFar, auxOut),     railTop+(TH*L.auxSc)/2,        lerp(L.auxSc, L.auxScFar, auxOut));
+  place(laptop, lerp(-L.auxNear, -L.auxFar, auxOut),   railTop+(LH*(L.auxSc+0.04))/2, lerp(L.auxSc+0.04, L.auxScFar, auxOut));
   const auxLock=auxOut>0.4?"none":"auto"; tablet.style.pointerEvents=auxLock; laptop.style.pointerEvents=auxLock;
 
   // ----- phone label: showroom only -----
