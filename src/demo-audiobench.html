@@ -267,9 +267,18 @@
   // The <audio> players stream their own bytes lazily (preload="none") only
   // when the visitor hits play. Fall back to measuring the body only when no
   // size header is present. The fetch is aborted once headers arrive.
+  //
+  // cache: 'no-store' is essential: /audio responses are sent
+  // `Cache-Control: immutable` (correct for content-addressed output), so the
+  // browser would otherwise serve a repeat probe straight from its disk cache
+  // and replay a FROZEN X-Transcode-Cache value — making a server-side HIT
+  // still read as the MISS it was on first fetch. no-store forces every probe
+  // to hit the worker so the cache badge reflects real server state.
   function fetchOne(url) {
     var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    var opts = ctrl ? { method: 'GET', signal: ctrl.signal } : { method: 'GET' };
+    var opts = ctrl
+      ? { method: 'GET', cache: 'no-store', signal: ctrl.signal }
+      : { method: 'GET', cache: 'no-store' };
     return fetch(url, opts).then(function (res) {
       var headers = {};
       res.headers.forEach(function (v, k) { headers[k] = v; });
