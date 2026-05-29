@@ -124,6 +124,8 @@
     Each tile fetches the real <code>/audio/…</code> proxy URL, reads the live
     <code>X-Transcode-*</code> response headers, and plays the bytes the proxy actually returned —
     nothing here is computed client-side. Savings are measured against the passthrough baseline.
+    The default source is an audio-Bible chapter (the primary use case); the longer literary
+    readings show how savings scale on full chapters.
   </p>
 
   <div class="note">
@@ -139,6 +141,7 @@
     <div class="control-group">
       <label class="cap" for="audio-source">Sample source</label>
       <select id="audio-source">
+        <option value="https://archive.org/download/15thanniversarycollection_2008_librivox/fifteen_psalmfifteen_kjv_64kb.mp3">Psalm 15 — KJV (LibriVox, ~58 s, 466 KB) — audio Bible</option>
         <option value="https://archive.org/download/stories_001_librivox/telltale_heart_poe_dm_64kb.mp3">The Tell-Tale Heart — Poe (LibriVox, ~18 min, 8.7 MB)</option>
         <option value="https://archive.org/download/stories_001_librivox/taming_the_bicycle_twain_ep_64kb.mp3">Taming the Bicycle — Twain (LibriVox, ~28 min, 13.5 MB)</option>
         <option value="https://archive.org/download/stories_001_librivox/pigs_is_pigs_butler_blb_64kb.mp3">Pigs Is Pigs — Butler (LibriVox, ~23 min, 11 MB)</option>
