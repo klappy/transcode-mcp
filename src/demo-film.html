@@ -1,0 +1,460 @@
+<!-- Agent-native media proxy — unified scroll film: Showroom -> In-Context -> Race -->
+<!-- Apple-style: scrolling morphs the story forward; scrolling up reverses it. -->
+<!-- Brand is a single variable (BRAND); no legacy product names. -->
+<!-- All imagery + byte numbers are real, measured live from the proxy. -->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Agent-native image proxy — demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;900&family=Instrument+Serif:ital@0;1&family=Spline+Sans+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#050608; --ink:#f3f6fb; --dim:#8b94a6; --faint:#525c6e; --line:#1a2030;
+    --acc:#6ea8ff; --acc2:#9be7ff; --win:#36e3a0; --raw:#ff5d6c;
+    --ui:'Schibsted Grotesk',sans-serif; --serif:'Instrument Serif',serif; --mono:'Spline Sans Mono',monospace;
+  }
+  *{box-sizing:border-box} html,body{margin:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:var(--ui);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  .amb{position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(1100px 620px at 50% -8%,rgba(110,168,255,.16),transparent 60%),
+               radial-gradient(900px 500px at 85% 108%,rgba(54,227,160,.08),transparent 55%)}
+  .grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.04;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
+
+  /* fixed top brand + scroll hint */
+  .topbar{position:fixed;top:0;left:0;right:0;z-index:30;display:flex;justify-content:space-between;align-items:center;
+    padding:18px 26px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);
+    background:linear-gradient(180deg,rgba(5,6,8,.85),transparent)}
+  .topbar .brand{font-weight:900;letter-spacing:-.01em;font-size:16px;color:var(--ink);text-transform:none;display:flex;align-items:center;gap:9px}
+  .topbar .brand .mk{width:22px;height:22px;border-radius:7px;background:conic-gradient(from 200deg,var(--acc),var(--acc2),var(--win),var(--acc));box-shadow:0 0 16px rgba(110,168,255,.5)}
+  .topbar .brand em{font-style:normal;color:var(--acc)}
+  .hint{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:30;color:var(--faint);
+    font-size:11px;letter-spacing:.2em;text-transform:uppercase;display:flex;flex-direction:column;align-items:center;gap:8px;transition:opacity .4s}
+  .hint .ch{width:18px;height:18px;border-right:1.5px solid var(--faint);border-bottom:1.5px solid var(--faint);
+    transform:rotate(45deg);animation:bob 1.6s infinite}
+  @keyframes bob{50%{transform:rotate(45deg) translate(3px,3px)}}
+
+  /* ===== the film ===== */
+  .film{position:relative;height:460vh;z-index:1}
+  .stage{position:sticky;top:0;height:100vh;overflow:hidden;opacity:0;transition:opacity .7s ease}
+  body.ready .stage{opacity:1}
+  .scene{position:absolute;inset:0}
+
+  /* headline blocks */
+  .head{position:absolute;top:8vh;left:0;right:0;text-align:center;padding:0 22px;will-change:opacity,transform}
+  .head .kick{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--acc);margin:0 0 10px}
+  .head h2{font-weight:900;font-size:clamp(26px,4.3vw,46px);line-height:1.04;letter-spacing:-.025em;margin:0;max-width:17ch;margin-inline:auto}
+  .head h2 em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--acc2);letter-spacing:0}
+  .head p{color:var(--dim);font-size:14px;line-height:1.5;max-width:44ch;margin:14px auto 0}
+
+  /* devices */
+  .device{position:absolute;left:50%;top:0;will-change:transform,opacity;transform-origin:center center}
+  .scr{position:relative;overflow:hidden;background:#06070b;box-shadow:0 40px 90px -40px #000, inset 0 0 0 1px rgba(255,255,255,.05)}
+  .scr>img{width:100%;height:100%;object-fit:cover;display:block}
+  .scr::after{content:"";position:absolute;inset:0;background:linear-gradient(120deg,rgba(255,255,255,.10),transparent 42%);pointer-events:none;z-index:5}
+  /* phone */
+  .phone .scr{width:172px;aspect-ratio:9/19.3;border-radius:28px;border:8px solid #14171f}
+  .phone .notch{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:64px;height:17px;background:#14171f;border-radius:0 0 11px 11px;z-index:6}
+  /* tablet / laptop (showroom aux) */
+  .tablet .scr{width:240px;aspect-ratio:3/4;border-radius:18px;border:9px solid #14171f}
+  .laptop .scr{width:340px;aspect-ratio:16/10;border-radius:11px 11px 0 0;border:9px solid #14171f;border-bottom:0}
+  .laptop .base{position:absolute;left:50%;top:100%;transform:translateX(-50%);width:404px;height:13px;
+    background:linear-gradient(180deg,#1c2129,#0d1117);border-radius:0 0 11px 11px;box-shadow:0 30px 50px -26px #000}
+  .dlabel{position:absolute;left:50%;top:-36px;transform:translateX(-50%);white-space:nowrap;text-align:center;z-index:7}
+  .dlabel .c{font-weight:700;font-size:13px} .dlabel .w{font-family:var(--mono);font-size:11px;color:var(--acc);margin-top:2px}
+  .aux{cursor:pointer}
+
+  /* phone content layers */
+  .layer{position:absolute;inset:0;z-index:3;opacity:0;will-change:opacity}
+  .layer.photo{opacity:1}
+  .layer.photo img{width:100%;height:100%;object-fit:cover;display:block}
+  /* in-context app */
+  .app{position:absolute;inset:0;background:#f6f4ef;color:#1a1813;display:flex;flex-direction:column;font-family:var(--ui)}
+  .app .bar{padding:30px 14px 8px;background:#fff;border-bottom:1px solid #ece7dc}
+  .app .bar .k{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#a99d84}
+  .app .bar h3{margin:3px 0 0;font-family:var(--serif);font-size:14px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .app .feed{flex:1;overflow:hidden;padding:8px;display:flex;flex-direction:column;gap:8px}
+  .app .card{background:#fff;border:1px solid #ece7dc;border-radius:13px;overflow:hidden;flex-shrink:0}
+  .app .card .ph{aspect-ratio:12/5;position:relative;background:#e8e2d6;overflow:hidden}
+  .app .card .ph img{width:100%;height:100%;object-fit:cover;display:block}
+  .app .card .cp{display:flex;align-items:center;gap:8px;padding:5px 10px}
+  .app .card .cp .t{font-family:var(--serif);font-size:12px;line-height:1.2;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .app .card .cp .wt{font-family:var(--mono);font-size:9px;color:#7c6f57;background:#efe9dd;border:1px solid #e1dbce;padding:2px 6px;border-radius:5px;white-space:nowrap;flex-shrink:0}
+  /* race overlay */
+  .race{position:absolute;inset:0;z-index:4;opacity:0}
+  .race .fill{position:absolute;left:0;right:0;bottom:0;height:0;z-index:2;background:linear-gradient(0deg,rgba(54,227,160,.22),transparent);border-top:2px solid var(--win)}
+  .phone.lane-raw .race .fill{background:linear-gradient(0deg,rgba(255,93,108,.20),transparent);border-top-color:var(--raw)}
+  .race .skel{position:absolute;inset:0;background:linear-gradient(100deg,#151b26 30%,#2a3340 50%,#151b26 70%);background-size:200% 100%;animation:sh 1.1s linear infinite;opacity:0;transition:opacity .2s;z-index:1}
+  .race .skel.on{opacity:1}
+  @keyframes sh{to{background-position:-200% 0}}
+  .race .pic{position:absolute;inset:0;opacity:0;transform:scale(1.05);filter:blur(8px);z-index:1}
+  .race .pic.in{opacity:1;transform:none;filter:none;transition:opacity .4s,transform .5s,filter .5s}
+  .race .pic img{width:100%;height:100%;object-fit:cover}
+  .lanetag{position:absolute;left:50%;top:-34px;transform:translateX(-50%);white-space:nowrap;font-weight:700;font-size:12px;letter-spacing:.04em;z-index:7}
+  .lane-raw .lanetag{color:var(--raw)} .lane-win .lanetag{color:var(--win)}
+  .lanetime{position:absolute;left:50%;top:100%;margin-top:14px;transform:translateX(-50%);white-space:nowrap;text-align:center;z-index:7}
+  .lanetime .t{font-weight:900;font-size:30px;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+  .lane-raw .lanetime .t{color:var(--raw)} .lane-win .lanetime .t{color:var(--win)}
+  .lanetime .t small{font-family:var(--mono);font-size:.4em;color:var(--dim);font-weight:400}
+  .lanetime .b{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:4px}
+
+  /* verdict (race) */
+  .verdict{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;z-index:8;opacity:0;width:200px;will-change:opacity}
+  .verdict .big{font-weight:900;font-size:clamp(23px,2.8vw,32px);color:var(--win);line-height:1.08;text-shadow:0 2px 18px rgba(0,0,0,.7)}
+  .verdict .big em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--ink)}
+
+  /* control dock */
+  .dock{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:25;display:flex;gap:10px;
+    align-items:center;flex-wrap:wrap;justify-content:center;max-width:94vw;padding:10px 12px;border:1px solid var(--line);
+    border-radius:16px;background:rgba(10,13,20,.72);backdrop-filter:blur(14px);opacity:0;pointer-events:none;transition:opacity .4s}
+  .dock.show{opacity:1;pointer-events:auto}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .seg>span{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);display:flex;align-items:center;padding:0 9px}
+  .seg button{appearance:none;border:0;background:transparent;color:var(--dim);font-family:var(--ui);font-size:12px;
+    font-weight:500;padding:8px 12px;cursor:pointer;transition:.15s}
+  .seg button+button{border-left:1px solid var(--line)}
+  .seg button[aria-pressed=true]{background:var(--acc);color:#04101f;font-weight:700}
+  .dock .net button[aria-pressed=true]{background:var(--win);color:#03261a}
+  .urlmini{font-family:var(--mono);font-size:11px;color:var(--acc2);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    border:1px solid var(--line);border-radius:9px;padding:8px 10px;cursor:pointer;background:#070a10}
+  .urlmini:active{color:var(--ink)}
+
+  /* end / cta after film */
+  .outro{position:relative;z-index:1;text-align:center;padding:14vh 22px 16vh;max-width:780px;margin:0 auto}
+  .outro h2{font-weight:900;font-size:clamp(30px,5vw,56px);letter-spacing:-.025em;margin:0;line-height:1.02}
+  .outro h2 em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--acc2)}
+  .outro p{color:var(--dim);font-size:16px;line-height:1.6;margin:18px auto 0;max-width:52ch}
+  .urlcard{margin:30px auto 0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#080b12;max-width:680px}
+  .urlcard .h{display:flex;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}
+  .urlcard .h b{color:var(--acc)}
+  .urlrow{display:flex}
+  .urlrow code{flex:1;padding:14px 16px;font-family:var(--mono);font-size:12.5px;color:var(--acc2);white-space:nowrap;overflow-x:auto;text-align:left}
+  .urlrow code .v{color:var(--acc);font-weight:600}
+  .urlrow button{border:0;border-left:1px solid var(--line);background:var(--acc);color:#04101f;font-weight:700;font-family:var(--ui);font-size:12px;letter-spacing:.06em;padding:0 22px;cursor:pointer}
+  .urlrow button.done{background:var(--win)}
+  .outro .foot{margin-top:26px;color:var(--faint);font-size:11px;letter-spacing:.08em}
+  /* shared cross-page nav (injected) */
+  .xnav{display:flex;align-items:center;gap:4px}
+  .xnav a{font-family:var(--ui,'Schibsted Grotesk',sans-serif);font-size:12px;font-weight:600;letter-spacing:.02em;
+    color:var(--dim,#8b94a6);text-decoration:none;padding:6px 11px;border-radius:9px;border:1px solid transparent;
+    text-transform:none;transition:.15s;white-space:nowrap}
+  .xnav a:hover{color:var(--ink,var(--text,#f3f6fb));background:rgba(255,255,255,.04)}
+  .xnav a[aria-current="page"]{color:var(--ink,var(--text,#f3f6fb));border-color:var(--line,#1a2030);
+    background:var(--panel,rgba(255,255,255,.05))}
+</style>
+
+<div class="amb"></div><div class="grain"></div>
+
+<div class="topbar">
+  <div class="brand"><span class="mk"></span><span id="brand">untitled</span> <em>proxy</em></div>
+  <nav class="xnav"><a href="/film" aria-current="page">Film</a><a href="/bench">Bench</a><a href="/casestudy">Case study</a></nav>
+</div>
+<div class="hint" id="hint"><span>scroll</span><span class="ch"></span></div>
+
+<div class="film" id="film">
+  <div class="stage">
+
+    <!-- headlines -->
+    <div class="head" id="hS">
+      <p class="kick">One URL · every screen</p>
+      <h2>One source. The <em>right bytes</em> for every screen.</h2>
+      <p>Each screen gets a variant sized for its viewport — tap one to step inside.</p>
+    </div>
+    <div class="head" id="hE" style="opacity:0">
+      <p class="kick">In context</p>
+      <h2>Your app, <em>featherlight</em> — on a $60 phone.</h2>
+      <p>No code change — the app just points its image tags at the proxy.</p>
+    </div>
+    <div class="head" id="hD" style="opacity:0">
+      <p class="kick">The loading race</p>
+      <h2>Same photo. <em>One arrives first.</em></h2>
+      <p>Identical source, one slow connection. Left loads it raw; right loads the proxy URL.</p>
+    </div>
+
+    <!-- devices -->
+    <div class="scene">
+      <div class="device laptop aux" id="laptop" data-go="E">
+        <div class="dlabel"><div class="c">Laptop</div><div class="w" id="wLaptop">—</div></div>
+        <div class="scr"><img id="iLaptop" alt=""></div><div class="base"></div>
+      </div>
+      <div class="device tablet aux" id="tablet" data-go="E">
+        <div class="dlabel"><div class="c">Tablet</div><div class="w" id="wTablet">—</div></div>
+        <div class="scr"><img id="iTablet" alt=""></div>
+      </div>
+
+      <!-- persistent hero phone -->
+      <div class="device phone" id="phone">
+        <div class="dlabel" id="phoneLabel"><div class="c">Phone</div><div class="w" id="wPhone">—</div></div>
+        <div class="lanetag" id="tagWin" style="opacity:0">PROXY</div>
+        <div class="scr">
+          <div class="notch"></div>
+          <div class="layer photo" id="photo"><img id="iPhone" alt=""></div>
+          <div class="layer app" id="appLayer">
+            <div class="bar"><div class="k">Pericope · Matthew 5</div><h3>The Sermon on the Mount</h3></div>
+            <div class="feed" id="feed"></div>
+          </div>
+          <div class="race" id="raceWin">
+            <div class="skel" id="skW"></div><div class="pic" id="picW"><img id="imW"></div><div class="fill" id="fbW"></div>
+          </div>
+        </div>
+        <div class="lanetime" id="timeWin" style="opacity:0"><div class="t" id="tiW">—<small>s</small></div><div class="b" id="byW">—</div></div>
+      </div>
+
+      <!-- second phone (race, raw lane) -->
+      <div class="device phone lane-raw" id="phone2" style="opacity:0">
+        <div class="lanetag">RAW SOURCE</div>
+        <div class="scr">
+          <div class="notch"></div>
+          <div class="race" style="opacity:1">
+            <div class="skel" id="skR"></div><div class="pic" id="picR"><img id="imR"></div><div class="fill" id="fbR"></div>
+          </div>
+        </div>
+        <div class="lanetime"><div class="t" id="tiR">—<small>s</small></div><div class="b" id="byR">—</div></div>
+      </div>
+    </div>
+
+    <div class="verdict" id="verdict"><div class="big" id="vbig"></div></div>
+  </div>
+</div>
+
+<!-- control dock -->
+<div class="dock" id="dock">
+  <div class="seg"><span>Photo</span><div id="cSample" style="display:flex"></div></div>
+  <div class="seg"><span>Size</span>
+    <button data-size="400" aria-pressed="false">S</button>
+    <button data-size="800" aria-pressed="true">M</button>
+    <button data-size="1280" aria-pressed="false">L</button></div>
+  <div class="seg"><span>Quality</span>
+    <button data-q="low" aria-pressed="false">Low</button>
+    <button data-q="medium" aria-pressed="true">Med</button>
+    <button data-q="high" aria-pressed="false">High</button></div>
+  <div class="seg"><span>Format</span>
+    <button data-f="webp" aria-pressed="true">WebP</button>
+    <button data-f="jpeg" aria-pressed="false">JPEG</button></div>
+  <div class="seg net" id="netSeg" style="display:none"><span>Net</span>
+    <button data-bps="62500" aria-pressed="false">2G</button>
+    <button data-bps="187500" aria-pressed="true">3G</button>
+    <button data-bps="625000" aria-pressed="false">4G</button></div>
+  <div class="urlmini" id="urlmini" title="click to copy"></div>
+</div>
+
+<!-- outro -->
+<div class="outro">
+  <h2>One integration. <em>Every</em> screen, every agent.</h2>
+  <p>Humans get a drop-in URL. Agents get an MCP tool that reasons about the delivery target and writes the same URL. No SDK, no signup — the wedge is the link itself.</p>
+  <div class="urlcard">
+    <div class="h"><span>the automagic url</span><b>↓ copy</b></div>
+    <div class="urlrow"><code id="urlBig"></code><button id="copyBig">Copy</button></div>
+  </div>
+  <div class="foot">transcode-mcp.klappy.workers.dev · half-class overshoot · MCP: generate_transcode_url</div>
+</div>
+
+<script>
+/* ===== config ===== */
+const BRAND="untitled";                 // <- single place to set the product name later
+document.getElementById("brand").textContent=BRAND;
+const BASE="https://transcode-mcp.klappy.workers.dev";
+
+/* ===== real measured matrix (bytes) ===== */
+const DATA={
+ coast:{src:651520,url:"https://picsum.photos/id/1015/2400/1600",enc:{400:"912×608",800:"1808×1216",1280:"2880×1920"},
+  b:{400:{low:{webp:37934,jpeg:24940},medium:{webp:67884,jpeg:54769},high:{webp:109714,jpeg:103058}},
+     800:{low:{webp:137666,jpeg:131955},medium:{webp:242484,jpeg:252436},high:{webp:393734,jpeg:440752}},
+     1280:{low:{webp:237490,jpeg:222589},medium:{webp:411886,jpeg:481820},high:{webp:649868,jpeg:686871}}},title:"The crowds gathered on the hillside"},
+ city:{src:503712,url:"https://picsum.photos/id/1057/2400/1600",enc:{400:"912×608",800:"1808×1216",1280:"2880×1920"},
+  b:{400:{low:{webp:25480,jpeg:18812},medium:{webp:49962,jpeg:42030},high:{webp:88584,jpeg:83779}},
+     800:{low:{webp:89046,jpeg:100856},medium:{webp:169144,jpeg:197224},high:{webp:302872,jpeg:346615}},
+     1280:{low:{webp:148036,jpeg:168693},medium:{webp:276990,jpeg:369605},high:{webp:468254,jpeg:530741}}},title:"He went up the mountain"},
+ portrait:{src:216384,url:"https://picsum.photos/id/64/2000/2000",enc:{400:"608×608",800:"1200×1200",1280:"1920×1920"},
+  b:{400:{low:{webp:8950,jpeg:8593},medium:{webp:15508,jpeg:17397},high:{webp:26962,jpeg:32688}},
+     800:{low:{webp:24644,jpeg:35322},medium:{webp:41360,jpeg:64768},high:{webp:72342,jpeg:114221}},
+     1280:{low:{webp:47554,jpeg:73279},medium:{webp:75376,jpeg:133572},high:{webp:132622,jpeg:235189}}},title:"And he opened his mouth and taught them"},
+};
+const IDS=Object.keys(DATA);
+const AUDIO={proxy:412000};
+let sample="coast", size=800, q="medium", f="webp", bps=187500;
+
+const kb=b=>b>=1048576?(b/1048576).toFixed(2)+" MB":(b/1024).toFixed(0)+" KB";
+const $=s=>document.querySelector(s);
+const lerp=(a,b,t)=>a+(b-a)*t;
+const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
+const seg=(p,a,b)=>clamp((p-a)/(b-a));
+const bytes=(id,s,qq,ff)=>DATA[id].b[s][qq][ff];
+const url=(id,s,qq,ff)=>`${BASE}/image/s=${s},q=${qq},f=${ff}/${DATA[id].url}`;
+
+/* ===== build dynamic bits ===== */
+const cs=$("#cSample");
+const LABELS={coast:"Coast",city:"City",portrait:"Portrait"};
+IDS.forEach((id,i)=>{const b=document.createElement("button");b.dataset.s=id;b.textContent=LABELS[id]||id;
+  b.title=DATA[id].title;b.setAttribute("aria-pressed",id===sample);
+  b.onclick=()=>{sample=id;[...cs.children].forEach(c=>c.setAttribute("aria-pressed",c.dataset.s===id));sync();};cs.appendChild(b);});
+function bindSeg(el,attr,cb){el.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||!b.dataset[attr])return;
+  [...b.parentElement.children].forEach(x=>{if(x.dataset&&x.dataset[attr]!=null)x.setAttribute("aria-pressed",x===b);});cb(b.dataset[attr]);sync();});}
+bindSeg($("#dock"),"size",v=>size=+v);
+bindSeg($("#dock"),"q",v=>q=v);
+bindSeg($("#dock"),"f",v=>f=v);
+bindSeg($("#netSeg"),"bps",v=>bps=+v);
+
+/* app feed cards (the three samples) */
+const feed=$("#feed");
+IDS.forEach(id=>{const c=document.createElement("div");c.className="card";
+  c.innerHTML=`<div class="ph"><img loading="lazy"></div><div class="cp"><span class="t">${DATA[id].title}</span><span class="wt"></span></div>`;
+  feed.appendChild(c);DATA[id]._img=c.querySelector("img");DATA[id]._wt=c.querySelector(".wt");});
+
+/* ===== sync (controls -> visuals + numbers) ===== */
+function sync(){
+  // showroom: phone=S, tablet=M, laptop=L at current q/f
+  $("#iPhone").src=url(sample,400,q,f);  $("#wPhone").textContent=kb(bytes(sample,400,q,f));
+  $("#iTablet").src=url(sample,800,q,f); $("#wTablet").textContent=kb(bytes(sample,800,q,f));
+  $("#iLaptop").src=url(sample,1280,q,f);$("#wLaptop").textContent=kb(bytes(sample,1280,q,f));
+  // in-context feed at chosen size/q/f
+  let total=AUDIO.proxy;
+  IDS.forEach(id=>{DATA[id]._img.src=url(id,size,q,f);const bb=bytes(id,size,q,f);total+=bb;DATA[id]._wt.textContent=kb(bb);});
+  // race uses selected sample at chosen settings (proxy) vs source (raw)
+  const u=url(sample,size,q,f);
+  $("#urlmini").textContent=u.replace(BASE+"/","…/");
+  $("#urlmini").dataset.u=u;
+  $("#urlBig").innerHTML=`${BASE}/image/<span class="v">s=${size},q=${q},f=${f}</span>/${DATA[sample].url}`;
+  resetRace();
+}
+
+/* ===== scroll engine ===== */
+const film=$("#film"), phone=$("#phone"), phone2=$("#phone2"),
+      tablet=$("#tablet"), laptop=$("#laptop"),
+      photo=$("#photo"), appLayer=$("#appLayer"), raceWin=$("#raceWin"),
+      stage=document.querySelector(".stage");
+
+function place(el,x,cy,scale){el.style.transform=`translate(-50%,-50%) translate(${x}px,${cy}px) scale(${scale})`;}
+
+// approx unscaled device screen heights (px) for rail alignment
+const PH=380, TH=338, LH=234;
+const HEAD={S:$("#hS"),E:$("#hE"),D:$("#hD")};
+
+function render(p){
+  const H=innerHeight;
+  const railTop=H*0.40, heroY=H*0.575;
+
+  // ----- headlines: sequenced so two are never strong at once -----
+  HEAD.S.style.opacity = clamp(1 - seg(p,0.13,0.19));
+  HEAD.S.style.transform=`translateY(${-seg(p,0.13,0.19)*24}px)`;
+  HEAD.E.style.opacity = clamp(seg(p,0.30,0.36)) * clamp(1 - seg(p,0.52,0.58));
+  HEAD.E.style.transform=`translateY(${(1-clamp(seg(p,0.30,0.36)))*16}px)`;
+  HEAD.D.style.opacity = clamp(seg(p,0.68,0.74));
+  HEAD.D.style.transform=`translateY(${(1-clamp(seg(p,0.68,0.74)))*16}px)`;
+
+  // ----- phase progresses -----
+  const zoom  = seg(p,0.18,0.32);   // showroom -> hero
+  const auxOut= seg(p,0.16,0.26);   // tablet/laptop leave
+  const split = seg(p,0.58,0.72);   // hero -> two race phones
+  const raceOn= seg(p,0.62,0.72);   // race chrome in
+
+  // ----- hero phone path -----
+  const phoneShowY = railTop + (PH*0.72)/2;
+  let cy=lerp(phoneShowY, heroY, zoom), sc=lerp(0.72, 1.12, zoom), x=0;
+  if(split>0){ x=lerp(0,-186,split); sc=lerp(1.12,0.72,split); cy=heroY; }
+  place(phone, x, cy, sc);
+
+  // ----- showroom aux devices (top-rail aligned) -----
+  tablet.style.opacity=clamp(1-auxOut); laptop.style.opacity=clamp(1-auxOut);
+  place(tablet, lerp(-302,-540,auxOut), railTop+(TH*0.78)/2, lerp(0.78,0.66,auxOut));
+  place(laptop, lerp(322,560,auxOut),  railTop+(LH*0.82)/2, lerp(0.82,0.66,auxOut));
+  const auxLock=auxOut>0.4?"none":"auto"; tablet.style.pointerEvents=auxLock; laptop.style.pointerEvents=auxLock;
+
+  // ----- phone label: showroom only -----
+  $("#phoneLabel").style.opacity = clamp(1 - seg(p,0.15,0.23));
+
+  // ----- content layers (one dominant at a time) -----
+  appLayer.style.opacity = clamp(seg(p,0.30,0.37)) * clamp(1 - seg(p,0.56,0.63));
+  photo.style.opacity    = clamp(1 - seg(p,0.26,0.34));
+  raceWin.style.opacity  = raceOn;
+
+  // ----- second phone + race chrome -----
+  phone2.style.opacity = raceOn;
+  place(phone2, lerp(0,186,split), heroY, lerp(1.12,0.72,split));
+  $("#tagWin").style.opacity=raceOn; $("#timeWin").style.opacity=raceOn;
+  phone.classList.toggle("lane-win", raceOn>0.5);
+
+  // ----- verdict centered between phones at hero height -----
+  const vd=$("#verdict"); vd.style.top=heroY+"px";
+  vd.style.opacity = raceState.done ? clamp(seg(p,0.80,0.86)) : 0;
+
+  // ----- dock / hint -----
+  $("#dock").classList.toggle("show", p>0.215 && p<0.985);
+  $("#netSeg").style.display = p>0.60 ? "inline-flex":"none";
+  $("#hint").style.opacity = p>0.04?0:1;
+  stage.style.opacity = p>0.9 ? clamp(1 - seg(p,0.965,1)) : "";
+
+  // ----- race auto-run / reset -----
+  if(seg(p,0.74,1)>0.10 && !raceState.started) startRace();
+  if(p<0.70 && raceState.started) resetRace();
+}
+
+let ticking=false;
+function onScroll(){ if(ticking)return; ticking=true; requestAnimationFrame(()=>{ 
+  const rect=film.getBoundingClientRect(); const total=film.offsetHeight-innerHeight;
+  render(clamp(total>0 ? (-rect.top)/total : 0)); ticking=false; }); }
+addEventListener("scroll",onScroll,{passive:true}); addEventListener("resize",onScroll);
+
+/* click a showroom device -> scroll into in-context */
+[tablet,laptop,phone].forEach(d=>d.addEventListener("click",()=>{
+  if($("#dock").classList.contains("show") && d===phone) return; // ignore once past showroom
+  const total=film.offsetHeight-innerHeight; const targetP=0.42;
+  scrollTo({top: film.offsetTop + targetP*total, behavior:"smooth"});
+}));
+
+/* ===== race ===== */
+const raceState={started:false,done:false};
+const LAT=0.25, COMPRESS=0.42;
+function lane(winSide, realT, animMs, imgUrl){
+  const sk=winSide?$("#skW"):$("#skR"), pic=winSide?$("#picW"):$("#picR"),
+        fb=winSide?$("#fbW"):$("#fbR"), ti=winSide?$("#tiW"):$("#tiR"),
+        im=winSide?$("#imW"):$("#imR");
+  return new Promise(res=>{
+    sk.classList.add("on"); pic.classList.remove("in");
+    const probe=new Image();let ok=false;probe.onload=()=>{ok=true;};probe.src=imgUrl;im.src=imgUrl;
+    fb.style.transition="none";fb.style.height="0";fb.style.opacity="1";
+    requestAnimationFrame(()=>{fb.style.transition=`height ${animMs}ms linear`;fb.style.height="100%";});
+    const t0=performance.now();
+    (function tick(t){const k=clamp((t-t0)/animMs);ti.innerHTML=(realT*k).toFixed(1)+"<small>s</small>";
+      if(k<1)requestAnimationFrame(tick);
+      else{ti.innerHTML=realT.toFixed(1)+"<small>s</small>";sk.classList.remove("on");
+        if(ok)pic.classList.add("in");else probe.onload=()=>pic.classList.add("in");
+        fb.style.transition="opacity .5s";fb.style.opacity="0";res(realT);}})(t0);
+  });
+}
+function resetRace(){
+  raceState.started=false;raceState.done=false;
+  for(const s of ["W","R"]){const sk=$("#sk"+s),pic=$("#pic"+s),fb=$("#fb"+s),ti=$("#ti"+s);
+    if(sk)sk.classList.remove("on");if(pic)pic.classList.remove("in");
+    if(fb){fb.style.transition="none";fb.style.height="0";}if(ti)ti.innerHTML="—<small>s</small>";}
+  const rawB=DATA[sample].src, winB=bytes(sample,size,q,f);
+  $("#byR").textContent=kb(rawB)+" · raw"; $("#byW").textContent=kb(winB)+" · "+f;
+}
+async function startRace(){
+  raceState.started=true;raceState.done=false;
+  const rawB=DATA[sample].src, winB=bytes(sample,size,q,f);
+  const rawT=LAT+rawB*8/bps, winT=LAT+winB*8/bps;
+  const rawMs=clamp(rawT*1000*COMPRESS,1600,6000);     // bound the slow lane's wall time
+  const factor=rawMs/rawT;                              // shared ms-per-real-second
+  const [tr,tw]=await Promise.all([
+    lane(false, rawT, rawMs, DATA[sample].url),
+    lane(true,  winT, Math.max(450, winT*factor), url(sample,size,q,f))
+  ]);
+  raceState.done=true;
+  const m=tr/tw;
+  $("#vbig").innerHTML = m>=1.1 ? `${m.toFixed(1)}×<br><em>faster</em>` : `same size —<br><em>go smaller</em>`;
+  onScroll();
+}
+
+/* copy */
+$("#urlmini").onclick=async()=>{try{await navigator.clipboard.writeText($("#urlmini").dataset.u);}catch(e){}
+  const o=$("#urlmini").textContent;$("#urlmini").textContent="copied ✓";setTimeout(()=>$("#urlmini").textContent=o,1200);};
+$("#copyBig").onclick=async()=>{try{await navigator.clipboard.writeText($("#urlBig").textContent);}catch(e){}
+  const b=$("#copyBig");b.textContent="Copied";b.classList.add("done");setTimeout(()=>{b.textContent="Copy";b.classList.remove("done");},1400);};
+
+/* init */
+sync(); onScroll();
+requestAnimationFrame(()=>document.body.classList.add("ready"));
+</script>

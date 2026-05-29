@@ -1,0 +1,302 @@
+<!-- Agent-native media proxy — case study: offline storage headroom for Bible-translation last mile -->
+<!-- Story: every MB not spent on resources is a MB left to RECORD the oral draft. -->
+<!-- Image figures are live-measured from the proxy. Audio figures are clearly-flagged estimates. -->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Leave room for the work — offline storage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;900&family=Instrument+Serif:ital@0;1&family=Spline+Sans+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#050608; --ink:#f3f6fb; --dim:#8b94a6; --faint:#525c6e; --line:#1a2030; --panel:#0a0d14;
+    --acc:#6ea8ff; --acc2:#9be7ff; --rec:#36e3a0; --res:#6ea8ff; --sys:#39424f; --over:#ff5d6c;
+    --ui:'Schibsted Grotesk',sans-serif; --serif:'Instrument Serif',serif; --mono:'Spline Sans Mono',monospace;
+  }
+  *{box-sizing:border-box} html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--ui);-webkit-font-smoothing:antialiased;line-height:1.5;min-height:100vh}
+  .amb{position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(1000px 600px at 80% -10%,rgba(54,227,160,.12),transparent 60%),
+               radial-gradient(900px 520px at 8% 110%,rgba(110,168,255,.10),transparent 55%)}
+  .wrap{position:relative;z-index:1;max-width:1140px;margin:0 auto;padding:34px 26px 70px}
+
+  .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:30px}
+  .brand{font-weight:900;font-size:16px;display:flex;align-items:center;gap:9px}
+  .brand .mk{width:22px;height:22px;border-radius:7px;background:conic-gradient(from 200deg,var(--acc),var(--acc2),var(--rec),var(--acc));box-shadow:0 0 16px rgba(110,168,255,.5)}
+  .brand em{font-style:normal;color:var(--acc)}
+  .top .tag{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+
+  .kick{font-size:12px;letter-spacing:.26em;text-transform:uppercase;color:var(--rec);margin:0 0 12px}
+  h1{font-weight:900;font-size:clamp(30px,5vw,52px);line-height:1.03;letter-spacing:-.025em;margin:0;max-width:16ch}
+  h1 em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--rec)}
+  .lede{color:var(--dim);font-size:16px;max-width:62ch;margin:18px 0 0}
+  .lede b{color:var(--ink);font-weight:500}
+
+  .grid{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:30px;margin-top:34px;align-items:start}
+  @media(max-width:840px){.grid{grid-template-columns:1fr}}
+
+  /* phone storage panel */
+  .phone{justify-self:center;width:300px;border:10px solid #14171f;border-radius:40px;background:#06070b;
+    box-shadow:0 50px 110px -50px #000, inset 0 0 0 1px rgba(255,255,255,.05);overflow:hidden;position:relative}
+  .phone .notch{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:96px;height:22px;background:#14171f;border-radius:0 0 13px 13px;z-index:3}
+  .scr{padding:40px 18px 30px;min-height:560px;display:flex;flex-direction:column;justify-content:center}
+  .scr .lbl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  .scr h2{margin:2px 0 0;font-family:var(--serif);font-size:22px;font-weight:400}
+  .scr .free{font-family:var(--mono);font-size:12px;color:var(--dim);margin-top:3px}
+
+  .bar{margin:20px 0 12px;height:30px;border-radius:9px;overflow:hidden;display:flex;background:#0e131c;border:1px solid var(--line);position:relative}
+  .seg{height:100%;transition:width .6s cubic-bezier(.4,0,.2,1)}
+  .seg.res{background:linear-gradient(180deg,#7fb4ff,var(--res))}
+  .seg.rec{background:linear-gradient(180deg,#5cf0bd,var(--rec))}
+  .bar.over .seg.res{background:linear-gradient(180deg,#ff8088,var(--over))}
+  .legend{display:flex;gap:16px;font-size:12px;color:var(--dim);flex-wrap:wrap}
+  .legend span{display:flex;align-items:center;gap:7px}
+  .legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+  .legend .ires{background:var(--res)} .legend .irec{background:var(--rec)}
+
+  .stat{margin-top:24px;padding-top:22px;border-top:1px solid var(--line)}
+  .stat .big{font-weight:900;font-size:46px;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums;color:var(--rec)}
+  .stat .big.zero{color:var(--over)}
+  .stat .big small{display:block;margin-top:5px;font-family:var(--ui);font-size:.36em;font-weight:700;color:var(--dim);letter-spacing:0}
+  .stat .cap{font-size:13px;color:var(--dim);margin-top:5px}
+  .stat .delta{font-family:var(--mono);font-size:12px;color:var(--rec);margin-top:9px}
+  .stat .bundle{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:4px}
+
+  /* right column */
+  .toggle{display:inline-flex;border:1px solid var(--line);border-radius:13px;overflow:hidden;background:var(--panel);margin-bottom:22px}
+  .toggle button{appearance:none;border:0;background:transparent;color:var(--dim);font-family:var(--ui);font-weight:700;font-size:14px;padding:13px 22px;cursor:pointer;transition:.18s;display:flex;align-items:center;gap:9px}
+  .toggle button+button{border-left:1px solid var(--line)}
+  .toggle button .d{width:9px;height:9px;border-radius:50%;background:currentColor;opacity:.55}
+  .toggle button[aria-pressed=true][data-mode=raw]{background:var(--over);color:#2a0d10}
+  .toggle button[aria-pressed=true][data-mode=opt]{background:var(--rec);color:#03261a}
+
+  .controls{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px}
+  .ctl{border:1px solid var(--line);border-radius:11px;background:var(--panel);overflow:hidden;display:inline-flex}
+  .ctl>span{font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);display:flex;align-items:center;padding:0 11px;border-right:1px solid var(--line)}
+  .ctl button{appearance:none;border:0;background:transparent;color:var(--dim);font-family:var(--ui);font-size:12.5px;font-weight:500;padding:9px 13px;cursor:pointer;transition:.15s}
+  .ctl button+button{border-left:1px solid var(--line)}
+  .ctl button[aria-pressed=true]{background:var(--acc);color:#04101f;font-weight:700}
+
+  .break{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel);margin-bottom:22px}
+  .break .h{display:grid;grid-template-columns:1.4fr 1fr 1fr;padding:11px 16px;border-bottom:1px solid var(--line);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  .break .h .r{text-align:right}
+  .break .row{display:grid;grid-template-columns:1.4fr 1fr 1fr;padding:13px 16px;align-items:center;font-size:14px}
+  .break .row+.row{border-top:1px solid var(--line)}
+  .break .row .name{display:flex;align-items:center;gap:8px}
+  .break .row .name .badge{font-family:var(--mono);font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:5px;border:1px solid var(--line)}
+  .badge.live{color:var(--rec);border-color:rgba(54,227,160,.4)} .badge.est{color:#ffcaa6;border-color:rgba(255,202,166,.4)}
+  .break .row .v{font-family:var(--mono);font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
+  .break .row .v.raw{color:var(--over)} .break .row .v.opt{color:var(--rec)}
+  .break .row.tot{background:#0c1119;font-weight:700} .break .row.tot .v{font-size:14px}
+
+  .thumbs{display:flex;gap:10px;margin-bottom:18px}
+  .thumb{flex:1;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:#0c1119}
+  .thumb img{width:100%;aspect-ratio:3/2;object-fit:cover;display:block}
+  .thumb .m{padding:7px 9px;font-family:var(--mono);font-size:10px;color:var(--dim);display:flex;justify-content:space-between}
+  .thumb .m b{color:var(--rec);font-weight:600}
+  .grounded{font-size:11px;color:var(--faint);letter-spacing:.02em}
+
+  .note{margin-top:8px;font-size:11.5px;color:var(--faint);line-height:1.55;border-top:1px solid var(--line);padding-top:14px}
+  .note b{color:var(--dim);font-weight:600}
+  /* shared cross-page nav (injected) */
+  .xnav{display:flex;align-items:center;gap:4px}
+  .xnav a{font-family:var(--ui,'Schibsted Grotesk',sans-serif);font-size:12px;font-weight:600;letter-spacing:.02em;
+    color:var(--dim,#8b94a6);text-decoration:none;padding:6px 11px;border-radius:9px;border:1px solid transparent;
+    text-transform:none;transition:.15s;white-space:nowrap}
+  .xnav a:hover{color:var(--ink,var(--text,#f3f6fb));background:rgba(255,255,255,.04)}
+  .xnav a[aria-current="page"]{color:var(--ink,var(--text,#f3f6fb));border-color:var(--line,#1a2030);
+    background:var(--panel,rgba(255,255,255,.05))}
+</style>
+
+<div class="amb"></div>
+<div class="wrap">
+  <div class="top">
+    <div class="brand"><span class="mk"></span><span id="brand">untitled</span> <em>proxy</em></div>
+    <nav class="xnav"><a href="/film">Film</a><a href="/bench">Bench</a><a href="/casestudy" aria-current="page">Case study</a></nav>
+  </div>
+
+  <p class="kick">When the assignment goes offline</p>
+  <h1>Leave room for <em>the work.</em></h1>
+  <p class="lede">A translator gets a pericope assignment and drops off the grid for weeks. They package every reference — images and source audio — onto one cheap phone. But that same phone has to hold their <b>oral drafts and revisions</b>, recorded in the field. Every megabyte spent on resources is a megabyte they can't record into. So the resources have to be small.</p>
+
+  <div class="grid">
+    <!-- phone storage -->
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="scr">
+        <div class="lbl">On-device storage</div>
+        <h2>This assignment</h2>
+        <div class="free" id="freeLine">4.0 GB set aside</div>
+
+        <div class="bar" id="bar">
+          <div class="seg res" id="segRes" style="width:30%"></div>
+          <div class="seg rec" id="segRec" style="width:70%"></div>
+        </div>
+        <div class="legend">
+          <span><i class="ires"></i> Packaged resources</span>
+          <span><i class="irec"></i> Room to record</span>
+        </div>
+
+        <div class="stat">
+          <div class="big" id="hrs">—<small>hrs to record</small></div>
+          <div class="cap" id="hrsCap">oral draft + revision headroom</div>
+          <div class="delta" id="delta"></div>
+          <div class="bundle" id="bundleLine"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- narrative + controls -->
+    <div class="right">
+      <div class="toggle" id="toggle">
+        <button data-mode="raw" aria-pressed="false"><span class="d"></span>Raw resources</button>
+        <button data-mode="opt" aria-pressed="true"><span class="d"></span>Proxy-optimized</button>
+      </div>
+
+      <div class="controls" id="controls">
+        <div class="ctl" data-k="assign">
+          <span>Assignment</span>
+          <button data-assign="40" aria-pressed="false">A portion</button>
+          <button data-assign="120" aria-pressed="true">A Gospel</button>
+          <button data-assign="1000" aria-pressed="false">New Testament</button>
+        </div>
+        <div class="ctl" data-k="free">
+          <span>Free space</span>
+          <button data-free="2048" aria-pressed="false">2 GB</button>
+          <button data-free="4096" aria-pressed="true">4 GB</button>
+          <button data-free="8192" aria-pressed="false">8 GB</button>
+        </div>
+        <div class="ctl" data-k="audio">
+          <span>Source audio</span>
+          <button data-audio="1" aria-pressed="true">Include</button>
+          <button data-audio="0" aria-pressed="false">Images only</button>
+        </div>
+        <div class="ctl" data-k="rate">
+          <span>Recording</span>
+          <button data-rate="1" aria-pressed="true">Compressed</button>
+          <button data-rate="5" aria-pressed="false">Hi-fi WAV</button>
+        </div>
+      </div>
+
+      <div class="break">
+        <div class="h"><span>In the bundle</span><span class="r">Raw</span><span class="r">Optimized</span></div>
+        <div class="row">
+          <span class="name">Illustrations <span class="badge live">live</span></span>
+          <span class="v raw" id="imgRaw">—</span><span class="v opt" id="imgOpt">—</span>
+        </div>
+        <div class="row" id="audioRow">
+          <span class="name">Source audio <span class="badge est">est.</span></span>
+          <span class="v raw" id="audRaw">—</span><span class="v opt" id="audOpt">—</span>
+        </div>
+        <div class="row tot">
+          <span class="name">Bundle on disk</span>
+          <span class="v raw" id="totRaw">—</span><span class="v opt" id="totOpt">—</span>
+        </div>
+      </div>
+
+      <p class="grounded" id="grounded">Actual proxy output, sized for a phone screen (s=400, WebP):</p>
+      <div class="thumbs" id="thumbs"></div>
+
+      <div class="note">
+        <b>Illustration figures are measured live</b> from the proxy across three sample images (raw ≈ 447&nbsp;KB → ≈ 43&nbsp;KB each, a 90% cut). <b>Audio figures are estimates</b> — ≈3&nbsp;min of reference audio per pericope, 192&nbsp;kbps source → ~32&nbsp;kbps Opus — pending a real sample to measure. "Room to record" converts free space at the selected recording rate (Compressed ≈ 60&nbsp;MB/hr, Hi-fi WAV ≈ 300&nbsp;MB/hr).
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const BRAND="untitled";                       // single place to set the product name later
+document.getElementById("brand").textContent=BRAND;
+const BASE="https://transcode-mcp.klappy.workers.dev";
+
+/* measured (live) image figures */
+const IMG={rawKB:446.5, optKB:43.4, perPericope:2};
+/* ESTIMATE: reference audio per pericope */
+const AUD={min:3, rawMBmin:1.44, optMBmin:0.24};
+const SAMPLES=[
+  {url:"https://picsum.photos/id/1015/2400/1600", optKB:66, label:"Coast"},
+  {url:"https://picsum.photos/id/1057/2400/1600", optKB:49, label:"City"},
+  {url:"https://picsum.photos/id/64/2000/2000",  optKB:15, label:"Portrait"},
+];
+
+let state={mode:"opt", assign:120, free:4096, audio:1, rate:1};
+
+const $=s=>document.querySelector(s);
+const MB=1024*1024;
+const fmtSize=mb=> mb>=1024 ? (mb/1024).toFixed(mb/1024>=10?0:1)+" GB" : Math.round(mb)+" MB";
+
+function calc(){
+  const n=state.assign, imgs=n*IMG.perPericope;
+  const imgRawMB=imgs*IMG.rawKB*1024/MB, imgOptMB=imgs*IMG.optKB*1024/MB;
+  const audRawMB=state.audio? n*AUD.min*AUD.rawMBmin : 0;
+  const audOptMB=state.audio? n*AUD.min*AUD.optMBmin : 0;
+  const totRaw=imgRawMB+audRawMB, totOpt=imgOptMB+audOptMB;
+  const freeMB=state.free, perHr=state.rate*60;
+  const recRaw=Math.max(0,(freeMB-totRaw))/perHr, recOpt=Math.max(0,(freeMB-totOpt))/perHr;
+  const fitRaw=totRaw<=freeMB, fitOpt=totOpt<=freeMB;
+  return {imgRawMB,imgOptMB,audRawMB,audOptMB,totRaw,totOpt,freeMB,recRaw,recOpt,fitRaw,fitOpt};
+}
+
+function render(){
+  const c=calc(), bundle = state.mode==="raw"?c.totRaw:c.totOpt;
+  const fits = state.mode==="raw"?c.fitRaw:c.fitOpt;
+  const rec  = state.mode==="raw"?c.recRaw:c.recOpt;
+
+  // bar
+  const resPct = Math.min(100, bundle/c.freeMB*100);
+  $("#segRes").style.width = resPct+"%";
+  $("#segRec").style.width = Math.max(0,100-resPct)+"%";
+  $("#bar").classList.toggle("over", !fits);
+  $("#freeLine").textContent = (c.freeMB/1024).toFixed(c.freeMB/1024>=10?0:1)+" GB set aside";
+
+  // headline stat
+  const big=$("#hrs");
+  if(!fits){
+    big.classList.add("zero");
+    big.innerHTML = "Won't fit<small>"+fmtSize(bundle-c.freeMB)+" over</small>";
+    $("#hrsCap").textContent = "the raw bundle is bigger than the space you have";
+  } else {
+    big.classList.remove("zero");
+    const h = rec>=10?Math.round(rec):rec.toFixed(1);
+    big.innerHTML = h+"<small>hrs to record</small>";
+    $("#hrsCap").textContent = "oral draft + revision headroom";
+  }
+
+  // delta (vs the other mode)
+  const dHrs = c.recOpt - c.recRaw;
+  if(state.mode==="opt" && (c.recOpt>c.recRaw)){
+    const txt = c.fitRaw ? "+"+(dHrs>=10?Math.round(dHrs):dHrs.toFixed(1))+" hrs vs raw"
+                         : "raw wouldn't even fit — this does";
+    $("#delta").textContent = txt;
+  } else if(state.mode==="raw" && !c.fitRaw){
+    $("#delta").textContent = "switch to optimized to fit + record";
+  } else { $("#delta").textContent=""; }
+
+  $("#bundleLine").textContent = "bundle: "+fmtSize(c.totRaw)+" raw → "+fmtSize(c.totOpt)+" optimized";
+
+  // breakdown
+  $("#imgRaw").textContent=fmtSize(c.imgRawMB); $("#imgOpt").textContent=fmtSize(c.imgOptMB);
+  $("#audioRow").style.display = state.audio? "grid":"none";
+  $("#audRaw").textContent=fmtSize(c.audRawMB); $("#audOpt").textContent=fmtSize(c.audOptMB);
+  $("#totRaw").textContent=fmtSize(c.totRaw);   $("#totOpt").textContent=fmtSize(c.totOpt);
+}
+
+/* controls */
+$("#toggle").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  state.mode=b.dataset.mode;[...b.parentElement.children].forEach(x=>x.setAttribute("aria-pressed",x===b));render();});
+$("#controls").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  const k=b.parentElement.dataset.k;
+  if(k==="assign")state.assign=+b.dataset.assign;
+  if(k==="free")state.free=+b.dataset.free;
+  if(k==="audio")state.audio=+b.dataset.audio;
+  if(k==="rate")state.rate=+b.dataset.rate;
+  [...b.parentElement.querySelectorAll("button")].forEach(x=>x.setAttribute("aria-pressed",x===b));render();});
+
+/* real proxied thumbnails */
+const tw=$("#thumbs");
+SAMPLES.forEach(s=>{const d=document.createElement("div");d.className="thumb";
+  d.innerHTML=`<img loading="lazy" src="${BASE}/image/s=400,q=medium,f=webp/${s.url}" alt=""><div class="m"><span>${s.label}</span><b>${s.optKB} KB</b></div>`;
+  tw.appendChild(d);});
+
+render();
+</script>
