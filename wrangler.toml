@@ -38,3 +38,47 @@ tag = "v1"
 # For local dev with `wrangler dev`
 [dev]
 port = 8787
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Preview / staging environment — a SEPARATE worker, fully isolated from prod.
+#
+#   wrangler deploy --env preview
+#
+# Wrangler appends the env name to the top-level name, so this deploys the
+# worker `transcode-mcp-preview` at transcode-mcp-preview.<subdomain>.workers.dev
+# and NEVER touches production (`transcode-mcp`). That workers.dev URL is our
+# preview URL — Cloudflare does not mint version preview URLs (`wrangler
+# versions upload`) for Workers that implement a Durable Object, so a separate
+# named environment is the only way to get an isolated, clickable preview.
+#
+# Bindings are non-inheritable in Wrangler environments, so every binding is
+# redefined below against its OWN preview resources. Production and preview
+# share NO state — in particular a SEPARATE R2 bucket. The DO is automatically
+# a distinct namespace because the worker name differs.
+#
+# One-time setup before the first preview deploy:
+#   wrangler r2 bucket create transcode-mcp-audio-preview
+#   wrangler deploy --env preview   # full deploy: applies the v1 DO migration
+#                                   # to the preview DO and builds its container
+# After that, re-run `wrangler deploy --env preview` per branch as needed.
+[env.preview]
+
+[env.preview.images]
+binding = "IMAGES"
+
+[[env.preview.r2_buckets]]
+binding = "AUDIO_BUCKET"
+bucket_name = "transcode-mcp-audio-preview"
+
+[[env.preview.containers]]
+class_name = "AudioContainer"
+image = "./container/Dockerfile"
+max_instances = 5
+
+[[env.preview.durable_objects.bindings]]
+class_name = "AudioContainer"
+name = "AUDIO_CONTAINER"
+
+[[env.preview.migrations]]
+new_sqlite_classes = [ "AudioContainer" ]
+tag = "v1"
