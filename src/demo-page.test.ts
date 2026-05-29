@@ -33,13 +33,24 @@ describe.each(PAGES)("demo page emitted script — %s", (_label, htmlDoc) => {
   });
 
   test("references only DOM ids that exist in the markup", () => {
-    // Every getElementById('x') must have a matching id="x" in the HTML, or
-    // the ref is null and the first .addEventListener on it throws at load.
+    // Every static id reference — getElementById('x'), getElementById("x"),
+    // and the shorthand querySelector('#x') / $("#x") used by the film and
+    // casestudy pages — must have a matching id="x" in the HTML, or the ref
+    // is null and the first .addEventListener on it throws at load.
     const ids = new Set<string>();
     for (const mm of htmlDoc.matchAll(/id="([^"]+)"/g)) ids.add(mm[1]);
     const missing: string[] = [];
-    for (const mm of htmlDoc.matchAll(/getElementById\('([^']+)'\)/g)) {
-      if (!ids.has(mm[1])) missing.push(mm[1]);
+    for (const mm of htmlDoc.matchAll(
+      /getElementById\((['"])([^'"]+)\1\)/g,
+    )) {
+      if (!ids.has(mm[2])) missing.push(mm[2]);
+    }
+    // Only flag plain `#id` selector literals; combinators, classes, and
+    // dynamically-built selectors (`$("#sk"+s)`) cannot be checked statically.
+    for (const mm of htmlDoc.matchAll(
+      /(?:querySelector(?:All)?|\$)\((['"])#([A-Za-z_][\w-]*)\1\)/g,
+    )) {
+      if (!ids.has(mm[2])) missing.push(mm[2]);
     }
     expect(missing).toEqual([]);
   });
