@@ -33,7 +33,7 @@ export interface ToolResponse {
     source_url: string;
     viewport: number | null;
     q: Quality | "default";
-    f: ImageFormat | AudioCodec;
+    f: ImageFormat | AudioCodec | "default";
   };
   guidance: string;
 }
@@ -113,7 +113,7 @@ export function buildToolResponse(args: ToolArgs, origin: string): ToolResponse 
       source_url: args.source_url,
       viewport: args.viewport ?? null,
       q: args.q ?? "default",
-      f: args.f ?? (mediaType === "audio" ? "opus" : "auto"),
+      f: args.f ?? (mediaType === "audio" ? "default" : "auto"),
     },
     guidance,
   };
