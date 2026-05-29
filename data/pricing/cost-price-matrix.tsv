@@ -1,0 +1,10 @@
+medium	operation	unit	our_cost_usd	our_cost_basis	credit_weight	price_usd_at_growth_tier	market_provider	market_rate_usd	markup_x_vs_cost	competitive	source
+image	transform	per_transform	0.0005	media_transformations_$0.50_per_1000_5k_free_unique_billed_once_mo	1	0.005	cloudinary	0.00037_list_bundled_in_$224mo	10	yes_undercuts_3-5x	cloudflare_images
+image	deliver	per_serve	0.00001	$1_per_100k_delivered_no_egress	0.02	0.0001	cloudinary_imgix	per_GB_bandwidth	10	yes_zero_egress	cloudflare_images
+video	transcode_stream	per_min	0.006	stream_store+serve_encoding_bundled_free	3	0.015	aws_mediaconvert	0.015_HD	2.5	yes_matches_HD	cloudflare_stream
+video	transcode_clip	per_min	0.03	media_transformations_$0.0005_per_output_sec_1min_cap	6	0.03	mux	0.0075_encode	1	margin_on_cache_or_fanout_only	cloudflare_media_transformations
+video	deliver	per_min	0.001	stream_$1_per_1000_min_no_egress	0.4	0.002	mux	0.0012_720p_to_0.0048_4k	2	yes_undercuts	cloudflare_stream
+audio	transcode	per_min	0.00005	MEASURED_1.8_cpu_sec_per_min_x_$0.00002_container_native	0.5	0.0025	aws_mediaconvert	0.003_audio_only	50	yes_undercuts	measured_2026-05-28
+audio	transcription_stt	per_min	0.0005	whisper_$0.0005_per_audio_min	1	0.005	deepgram_nova3	0.0052	10	yes_undercuts	cloudflare_workers_ai
+audio	tts	per_min	0.0002	melotts_$0.0002_per_audio_min	0.5	0.0025	deepgram_aura2	0.030_per_1k_chars	12.5	yes	cloudflare_workers_ai
+all	storage	per_GB_mo	0.015	r2_$0.015_per_GB_mo_egress_free	4	0.02	aws_s3	0.023_plus_0.09_per_GB_egress	1.3	yes_zero_egress	cloudflare_r2

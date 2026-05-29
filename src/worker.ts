@@ -19,6 +19,7 @@ import { buildToolResponse } from "./lib/mcp-tool";
 import { DEMO_PAGE_HTML } from "./demo-page";
 import { DEMO_FILM_HTML } from "./demo-film";
 import { DEMO_CASESTUDY_HTML } from "./demo-casestudy";
+import { ADMIN_PAGE_HTML } from "./admin-page";
 
 interface Env {
   IMAGES?: ImagesBinding;
@@ -117,6 +118,14 @@ export default {
     }
     if (url.pathname === "/casestudy" || url.pathname === "/casestudy/") {
       return htmlResponse(DEMO_CASESTUDY_HTML);
+    }
+
+    // Admin dashboard. Worker serves the HTML unconditionally; Cloudflare
+    // Access policy at the edge gates who can reach this route. Pattern per
+    // canon/planning/2026-05-29-media-pricing-model.md §Decision row
+    // "Admin authentication is Cloudflare Access at the edge".
+    if (url.pathname === "/admin" || url.pathname === "/admin/") {
+      return htmlResponse(ADMIN_PAGE_HTML);
     }
 
     // Image proxy

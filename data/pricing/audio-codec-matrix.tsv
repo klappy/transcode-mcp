@@ -1,0 +1,8 @@
+lane	content	source	target_codec	container	bitrate	cpu_sec_per_audio_min	cost_min_container_usd	cost_min_workers_wasm_usd	markup_x_at_0.0025	notes	source
+music	music	stereo_44.1k	aac	mp4_m4a	192k	1.91	0.0000382	0.000115	65	heaviest_encoder_route_long_jobs_to_containers_not_workers	measured_2026-05-28
+music	music	stereo_44.1k	mp3	mp3	192k	0.90	0.0000180	0.000054	139	universal_fallback	measured_2026-05-28
+music	music	stereo_44.1k	opus	ogg	128k	1.08	0.0000217	0.000065	115	music_opus	measured_2026-05-28
+voice	voice	mono_16k	opus	ogg	24k	1.40	0.0000280	0.000084	89	primary_voice_target_pairs_with_whisper_stt	measured_2026-05-28
+voice	voice	mono_16k	mp3	mp3	64k	0.25	0.0000050	0.000015	500	cheapest_overall	measured_2026-05-28
+voice	voice	mono_16k	aac	m4a	64k	0.37	0.0000074	0.000022	338	voice_aac	measured_2026-05-28
+mixed	pipeline	aac_compressed	opus	ogg	96k	1.08	0.0000217	0.000065	115	decode_plus_reencode_decode_adds_negligible	measured_2026-05-28
