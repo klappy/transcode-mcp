@@ -99,6 +99,7 @@ function isBlockedHost(host) {
     if (a === 169 && b === 254) return true; // link-local + cloud metadata
     if (a === 172 && b >= 16 && b <= 31) return true;
     if (a === 192 && b === 168) return true;
+    if (a === 100 && b >= 64 && b <= 127) return true; // RFC 6598 CGNAT shared address space
     if (a >= 224) return true; // multicast / reserved
   }
   return false;
@@ -180,14 +181,10 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  const urlError = validateSourceUrl(source_url);
-  if (urlError) {
-    res.writeHead(400, { "Content-Type": "text/plain" }).end(urlError);
-    return;
-  }
-
   // Follow redirects ourselves so each hop is SSRF-validated; ffmpeg only
   // ever sees the terminal URL (and is told not to follow further redirects).
+  // resolveAllowedUrl validates the initial URL as its first hop, so no
+  // separate validateSourceUrl call is needed here.
   const resolved = await resolveAllowedUrl(source_url);
   if (resolved.error) {
     res.writeHead(400, { "Content-Type": "text/plain" }).end(resolved.error);
