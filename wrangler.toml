@@ -44,9 +44,9 @@ port = 8787
 #
 #   wrangler deploy --env preview
 #
-# Wrangler appends the env name to the top-level name, so this deploys the
-# worker `transcode-mcp-preview` at transcode-mcp-preview.<subdomain>.workers.dev
-# and NEVER touches production (`transcode-mcp`). That workers.dev URL is our
+# This deploys a SEPARATE worker `transcode-mcp-preview` (name set explicitly
+# below) at transcode-mcp-preview.<subdomain>.workers.dev, and NEVER touches
+# production (`transcode-mcp`). That workers.dev URL is our
 # preview URL — Cloudflare does not mint version preview URLs (`wrangler
 # versions upload`) for Workers that implement a Durable Object, so a separate
 # named environment is the only way to get an isolated, clickable preview.
@@ -62,6 +62,15 @@ port = 8787
 #                                   # to the preview DO and builds its container
 # After that, re-run `wrangler deploy --env preview` per branch as needed.
 [env.preview]
+# Explicit name: wrangler's container config does NOT derive the worker name
+# from the env auto-append, so the env must declare its own name — otherwise:
+# "Must have either a top level name and containers.class_name ... or
+# containers.name". This is the same string wrangler would have auto-appended.
+name = "transcode-mcp-preview"
+
+# vars is non-inheritable; mirror the (empty) top-level set so wrangler does not
+# warn that vars is missing on the env. No preview-specific vars today.
+[env.preview.vars]
 
 [env.preview.images]
 binding = "IMAGES"
