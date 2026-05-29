@@ -302,6 +302,32 @@
   .baseline-tile.error .baseline-image { background: #2a1416; color: var(--warn); font-size: 12px; padding: 16px; text-align: center; }
   .baseline-tile.loading .baseline-image::before { content: "loading…"; color: var(--text-dim); font-size: 12px; }
   @media (max-width: 720px) { .baseline-tile { grid-template-columns: 1fr; } }
+  @media (max-width: 600px) {
+    body { padding: 18px 14px 60px; }
+    h1 { font-size: 26px; line-height: 1.1; }
+    h1 small { display: block; font-size: 13px; margin-top: 4px; }
+    p.lead { font-size: 14px; }
+    .controls { padding: 14px; gap: 12px; }
+    .control-group { min-width: 100%; }
+    .control-group.compact { min-width: 0; flex: 1; }
+    .dropdown-popover { min-width: min(86vw, 320px); max-width: min(86vw, 360px); }
+    .quality-row { flex-wrap: wrap; }
+    .table-wrap { font-size: 11px; }
+    .results-table th, .results-table td { padding: 7px 9px; }
+    .results-table .preview-cell img { width: 48px; height: 36px; }
+    .baseline-tile .baseline-info { padding: 16px; }
+    .baseline-tile .baseline-meta { font-size: 10.5px; }
+    .compare-modal-backdrop { padding: 8px; }
+    .compare-modal-shell { width: 100vw; max-height: calc(100vh - 16px); }
+    .compare-modal-body { padding: 12px; gap: 12px; }
+    .cmp-viewport { width: min(85vw, 360px); height: min(420px, 55vh); }
+    .compare-bar { left: 8px; right: 8px; transform: none; max-width: none;
+      flex-wrap: wrap; justify-content: center; gap: 10px; padding: 10px 12px; }
+  }
+  @media (max-width: 380px) {
+    .results-table .preview-cell { display: none; }
+    .grid { grid-template-columns: 1fr; }
+  }
 
   /* Per-tile compare checkbox */
   .tile-compare-check {
@@ -395,14 +421,37 @@
   .legend .target::before { color: var(--accent); }
   .legend .source::before { color: var(--accent-2); }
   .legend .equal::before { color: var(--warn); }
-  /* shared cross-page nav (injected) */
-  .xnav{display:flex;align-items:center;gap:4px}
+  /* shared cross-page nav */
+  .xnav{display:flex;align-items:center;gap:4px;position:relative}
   .xnav a{font-family:var(--ui,'Schibsted Grotesk',sans-serif);font-size:12px;font-weight:600;letter-spacing:.02em;
-    color:var(--text-dim,#8b94a6);text-decoration:none;padding:6px 11px;border-radius:9px;border:1px solid transparent;
+    color:var(--dim,#8b94a6);text-decoration:none;padding:6px 11px;border-radius:9px;border:1px solid transparent;
     text-transform:none;transition:.15s;white-space:nowrap}
-  .xnav a:hover{color:var(--text,#f3f6fb);background:rgba(255,255,255,.04)}
-  .xnav a[aria-current="page"]{color:var(--text,#f3f6fb);border-color:var(--border,#1a2030);
+  .xnav a:hover{color:var(--ink,var(--text,#f3f6fb));background:rgba(255,255,255,.04)}
+  .xnav a[aria-current="page"]{color:var(--ink,var(--text,#f3f6fb));border-color:var(--line,#1a2030);
     background:var(--panel,rgba(255,255,255,.05))}
+  /* hamburger toggle: hidden above the breakpoint */
+  .xnav-toggle{display:none;appearance:none;background:transparent;border:1px solid var(--line,#1a2030);
+    color:var(--ink,var(--text,#f3f6fb));border-radius:9px;padding:7px 10px;cursor:pointer;align-items:center;
+    gap:6px;font-family:var(--ui,'Schibsted Grotesk',sans-serif)}
+  .xnav-toggle:hover{background:rgba(255,255,255,.04)}
+  .xnav-toggle .bars{display:inline-block;width:16px;height:12px;position:relative}
+  .xnav-toggle .bars::before,.xnav-toggle .bars::after,.xnav-toggle .bars span{
+    content:"";position:absolute;left:0;right:0;height:2px;background:currentColor;border-radius:1px;transition:.2s}
+  .xnav-toggle .bars::before{top:0}.xnav-toggle .bars span{top:5px;display:block}.xnav-toggle .bars::after{bottom:0}
+  .xnav-toggle[aria-expanded="true"] .bars::before{transform:translateY(5px) rotate(45deg)}
+  .xnav-toggle[aria-expanded="true"] .bars span{opacity:0}
+  .xnav-toggle[aria-expanded="true"] .bars::after{transform:translateY(-5px) rotate(-45deg)}
+  /* under 520px: collapse the link row into a popover off the toggle */
+  @media (max-width: 520px) {
+    .xnav-toggle{display:inline-flex}
+    .xnav-links{position:absolute;top:calc(100% + 8px);right:0;min-width:170px;
+      background:var(--panel,#0a0d14);border:1px solid var(--line,#1a2030);border-radius:12px;
+      padding:6px;display:none;flex-direction:column;gap:2px;
+      box-shadow:0 18px 40px rgba(0,0,0,.5);z-index:100}
+    .xnav[data-open="true"] .xnav-links{display:flex}
+    .xnav-links a{padding:9px 12px;border-radius:8px}
+  }
+
   /* shared nav bar wrapper for the bench (standalone page) */
   .xbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 22px;
     padding:11px 16px;border:1px solid var(--border);border-radius:12px;background:var(--panel)}
@@ -415,7 +464,7 @@
 
 <div class="xbar">
   <div class="brand"><span class="mk"></span><span>untitled</span> <em>proxy</em></div>
-  <nav class="xnav"><a href="/film">Film</a><a href="/bench" aria-current="page">Bench</a><a href="/casestudy">Case study</a></nav>
+  <nav class="xnav" data-open="false"><button class="xnav-toggle" aria-label="Menu" aria-expanded="false" aria-controls="xnav-links" type="button"><span class="bars"><span></span></span></button><div class="xnav-links" id="xnav-links"><a href="/film">Film</a><a href="/bench" aria-current="page">Bench</a><a href="/casestudy">Case study</a></div></nav>
 </div>
 
 <h1>The measurement bench <small>— half-class overshoot, live</small></h1>
@@ -1892,6 +1941,38 @@ updateTargetSummary();
 updateRenderControlsVisibility();
 loadExplorer();
 writeUrlState();
+
+/* shared xnav hamburger */
+(function(){
+  // Wire up the cross-page nav hamburger. Idempotent + safe to inline on any page.
+  var nav = document.querySelector('.xnav');
+  if (!nav) return;
+  var btn = nav.querySelector('.xnav-toggle');
+  if (!btn) return;
+  function set(open){
+    nav.setAttribute('data-open', open ? 'true' : 'false');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  set(false);
+  btn.addEventListener('click', function(e){
+    e.stopPropagation();
+    set(nav.getAttribute('data-open') !== 'true');
+  });
+  // close on link click
+  nav.querySelectorAll('.xnav-links a').forEach(function(a){
+    a.addEventListener('click', function(){ set(false); });
+  });
+  // close on click outside
+  document.addEventListener('click', function(e){
+    if (nav.getAttribute('data-open') === 'true' && !nav.contains(e.target)) set(false);
+  });
+  // close on escape
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && nav.getAttribute('data-open') === 'true') {
+      set(false); btn.focus();
+    }
+  });
+})();
 </script>
 
 </body>
