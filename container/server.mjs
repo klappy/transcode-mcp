@@ -54,15 +54,6 @@ async function ffprobe(path) {
   };
 }
 
-async function sourceByteCount(url) {
-  try {
-    const head = await fetch(url, { method: "HEAD" });
-    return head.headers.get("content-length") ?? "";
-  } catch {
-    return "";
-  }
-}
-
 // Defense-in-depth SSRF guard. The Worker's parseProxyPath already requires a
 // http:// or https:// prefix, but ffmpeg in the container has its own network
 // stack that does not inherit Cloudflare Workers' fetch protections against
@@ -129,6 +120,43 @@ function validateSourceUrl(raw) {
   return null;
 }
 
+// ffmpeg's HTTP protocol follows up to 8 HTTP 3xx redirects by default
+// (libavformat/http.c MAX_REDIRECTS), and only the *initial* URL passes
+// through validateSourceUrl. Without this resolver, an attacker-controlled
+// public host could 302-redirect ffmpeg to http://169.254.169.254/ or another
+// internal address, bypassing the SSRF guard entirely. We follow redirects
+// here (manual mode), re-validate each hop's protocol + host, and hand
+// ffmpeg the already-resolved terminal URL — plus -max_redirects 0 so
+// ffmpeg itself never chases a redirect we didn't sign off on.
+async function resolveAllowedUrl(raw, maxHops = 8) {
+  let current = raw;
+  let contentLength = "";
+  for (let i = 0; i <= maxHops; i++) {
+    const err = validateSourceUrl(current);
+    if (err) return { error: err };
+    let res;
+    try {
+      res = await fetch(current, { method: "HEAD", redirect: "manual" });
+    } catch (e) {
+      return { error: `source_url unreachable: ${e?.message || e}` };
+    }
+    const isRedirect = res.status >= 300 && res.status < 400;
+    const location = res.headers.get("location");
+    if (!isRedirect || !location) {
+      contentLength = res.headers.get("content-length") ?? "";
+      return { url: current, contentLength };
+    }
+    let next;
+    try {
+      next = new URL(location, current).toString();
+    } catch {
+      return { error: "invalid redirect Location" };
+    }
+    current = next;
+  }
+  return { error: "too many redirects" };
+}
+
 const server = http.createServer(async (req, res) => {
   if (req.method !== "POST") {
     res.writeHead(405, { "Content-Type": "text/plain" }).end("POST only");
@@ -158,6 +186,16 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Follow redirects ourselves so each hop is SSRF-validated; ffmpeg only
+  // ever sees the terminal URL (and is told not to follow further redirects).
+  const resolved = await resolveAllowedUrl(source_url);
+  if (resolved.error) {
+    res.writeHead(400, { "Content-Type": "text/plain" }).end(resolved.error);
+    return;
+  }
+  const fetchUrl = resolved.url;
+  const sourceBytes = resolved.contentLength;
+
   const recipe = resolveRecipe(codec, preset, q);
   if (!recipe) {
     // No recipe in this deployment -> let the Worker pass the source through.
@@ -174,18 +212,20 @@ const server = http.createServer(async (req, res) => {
 
     // ffmpeg reads the source URL directly (the container fetches the source,
     // per the reconciled dispatch). Recipe args are DATA between -i and out.
+    // -max_redirects 0 disables ffmpeg's own redirect-following so the
+    // SSRF check in resolveAllowedUrl cannot be bypassed.
     await run("ffmpeg", [
       "-hide_banner",
       "-y",
-      "-i", source_url,
+      "-max_redirects", "0",
+      "-i", fetchUrl,
       ...recipe.args,
       out,
     ]);
 
-    const [bytes, probe, sourceBytes] = await Promise.all([
+    const [bytes, probe] = await Promise.all([
       readFile(out),
       ffprobe(out),
-      sourceByteCount(source_url),
     ]);
 
     res.writeHead(200, {

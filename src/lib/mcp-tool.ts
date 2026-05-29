@@ -8,13 +8,17 @@ import { generateTranscodeUrl } from "./generate-transcode-url";
 export type Quality = "low" | "medium" | "high";
 export type ImageFormat = "auto" | "webp" | "jpeg";
 export type AudioPreset = "voice" | "music";
+export type AudioCodec = "opus" | "aac" | "mp3";
 
 export interface ToolArgs {
   source_url: string;
   media_type?: "image" | "audio";
   viewport?: number;
   q?: Quality;
-  f?: ImageFormat;
+  // f is image format when media_type=image, audio codec when media_type=audio.
+  // The two vocabularies do not overlap so a single arg is unambiguous in
+  // context. See canon/planning/2026-05-29-audio-worker-path.md.
+  f?: ImageFormat | AudioCodec;
   w?: number;
   h?: number;
   preset?: AudioPreset;
@@ -29,7 +33,7 @@ export interface ToolResponse {
     source_url: string;
     viewport: number | null;
     q: Quality | "default";
-    f: ImageFormat;
+    f: ImageFormat | AudioCodec;
   };
   guidance: string;
 }
@@ -63,6 +67,7 @@ export function buildToolResponse(args: ToolArgs, origin: string): ToolResponse 
     const options: Record<string, string> = {};
     if (args.preset !== undefined) options.preset = args.preset;
     if (args.q !== undefined) options.q = args.q;
+    if (args.f !== undefined) options.f = args.f;
     proxyPath = generateTranscodeUrl({
       mediaType: "audio",
       sourceUrl: args.source_url,
