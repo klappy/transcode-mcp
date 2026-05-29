@@ -26,7 +26,7 @@
   /* fixed top brand + scroll hint */
   .topbar{position:fixed;top:0;left:0;right:0;z-index:30;display:flex;justify-content:space-between;align-items:center;
     padding:18px 26px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);
-    background:linear-gradient(180deg,rgba(5,6,8,.85),transparent)}
+    background:linear-gradient(180deg,rgba(5,6,8,.85),transparent);gap:12px}
   .topbar .brand{font-weight:900;letter-spacing:-.01em;font-size:16px;color:var(--ink);text-transform:none;display:flex;align-items:center;gap:9px}
   .topbar .brand .mk{width:22px;height:22px;border-radius:7px;background:conic-gradient(from 200deg,var(--acc),var(--acc2),var(--win),var(--acc));box-shadow:0 0 16px rgba(110,168,255,.5)}
   .topbar .brand em{font-style:normal;color:var(--acc)}
@@ -135,21 +135,81 @@
   .urlrow button{border:0;border-left:1px solid var(--line);background:var(--acc);color:#04101f;font-weight:700;font-family:var(--ui);font-size:12px;letter-spacing:.06em;padding:0 22px;cursor:pointer}
   .urlrow button.done{background:var(--win)}
   .outro .foot{margin-top:26px;color:var(--faint);font-size:11px;letter-spacing:.08em}
-  /* shared cross-page nav (injected) */
-  .xnav{display:flex;align-items:center;gap:4px}
+
+  /* ===== narrow viewport (phones) =====
+     - Shrink the topbar + headline so they don't crowd the device cluster.
+     - Reduce device frame sizes so the trio fits horizontally even at scale 1.
+     - Allow the dock to flex-wrap; everything reads down to ~360px wide.
+     The JS layoutFor() function picks viewport-aware X-offsets and scales to
+     keep the showroom and race within the viewport at these widths. */
+  @media (max-width: 600px) {
+    .topbar { padding: 12px 14px; font-size: 11px; }
+    .topbar .brand { font-size: 14px; }
+    .head { top: 7vh; padding: 0 16px; }
+    .head .kick { font-size: 10px; margin: 0 0 8px; }
+    .head h2 { font-size: clamp(22px, 6.5vw, 32px); max-width: 18ch; }
+    .head p { font-size: 13px; margin-top: 10px; max-width: 32ch; }
+    .phone .scr { width: 148px; border-width: 7px; }
+    .phone .notch { width: 56px; height: 14px; top: 7px; }
+    .tablet .scr { width: 196px; border-width: 8px; }
+    .laptop .scr { width: 256px; border-width: 8px; }
+    .laptop .base { width: 304px; height: 11px; }
+    .lanetime .t { font-size: 22px; }
+    .verdict .big { font-size: clamp(20px, 5vw, 26px); }
+    .dock { left: 8px; right: 8px; bottom: 10px; transform: none; max-width: none;
+      padding: 9px 10px; gap: 8px; border-radius: 14px; }
+    .seg > span { padding: 0 7px; font-size: 8.5px; }
+    .seg button { padding: 7px 9px; font-size: 11.5px; }
+    .urlmini { max-width: 100%; font-size: 10px; padding: 7px 9px; }
+    .outro { padding: 10vh 18px 14vh; }
+    .urlrow code { padding: 11px 12px; font-size: 11px; }
+    .urlrow button { padding: 0 16px; font-size: 11px; }
+  }
+  @media (max-width: 380px) {
+    .phone .scr { width: 132px; border-width: 6px; }
+    .tablet .scr { width: 172px; }
+    .laptop .scr { width: 222px; }
+    .laptop .base { width: 266px; }
+    .seg button { padding: 6px 8px; font-size: 11px; }
+  }
+  /* shared cross-page nav */
+  .xnav{display:flex;align-items:center;gap:4px;position:relative}
   .xnav a{font-family:var(--ui,'Schibsted Grotesk',sans-serif);font-size:12px;font-weight:600;letter-spacing:.02em;
     color:var(--dim,#8b94a6);text-decoration:none;padding:6px 11px;border-radius:9px;border:1px solid transparent;
     text-transform:none;transition:.15s;white-space:nowrap}
   .xnav a:hover{color:var(--ink,var(--text,#f3f6fb));background:rgba(255,255,255,.04)}
   .xnav a[aria-current="page"]{color:var(--ink,var(--text,#f3f6fb));border-color:var(--line,#1a2030);
     background:var(--panel,rgba(255,255,255,.05))}
+  /* hamburger toggle: hidden above the breakpoint */
+  .xnav-toggle{display:none;appearance:none;background:transparent;border:1px solid var(--line,#1a2030);
+    color:var(--ink,var(--text,#f3f6fb));border-radius:9px;padding:7px 10px;cursor:pointer;align-items:center;
+    gap:6px;font-family:var(--ui,'Schibsted Grotesk',sans-serif)}
+  .xnav-toggle:hover{background:rgba(255,255,255,.04)}
+  .xnav-toggle .bars{display:inline-block;width:16px;height:12px;position:relative}
+  .xnav-toggle .bars::before,.xnav-toggle .bars::after,.xnav-toggle .bars span{
+    content:"";position:absolute;left:0;right:0;height:2px;background:currentColor;border-radius:1px;transition:.2s}
+  .xnav-toggle .bars::before{top:0}.xnav-toggle .bars span{top:5px;display:block}.xnav-toggle .bars::after{bottom:0}
+  .xnav-toggle[aria-expanded="true"] .bars::before{transform:translateY(5px) rotate(45deg)}
+  .xnav-toggle[aria-expanded="true"] .bars span{opacity:0}
+  .xnav-toggle[aria-expanded="true"] .bars::after{transform:translateY(-5px) rotate(-45deg)}
+  /* under 520px: collapse the link row into a popover off the toggle */
+  @media (max-width: 520px) {
+    .xnav-toggle{display:inline-flex}
+    .xnav-links{position:absolute;top:calc(100% + 8px);right:0;min-width:170px;
+      background:var(--panel,#0a0d14);border:1px solid var(--line,#1a2030);border-radius:12px;
+      padding:6px;display:none;flex-direction:column;gap:2px;
+      box-shadow:0 18px 40px rgba(0,0,0,.5);z-index:100}
+    .xnav[data-open="true"] .xnav-links{display:flex}
+    .xnav-links a{padding:9px 12px;border-radius:8px}
+  }
+
 </style>
 
 <div class="amb"></div><div class="grain"></div>
 
 <div class="topbar">
   <div class="brand"><span class="mk"></span><span id="brand">untitled</span> <em>proxy</em></div>
-  <nav class="xnav"><a href="/film" aria-current="page">Film</a><a href="/bench">Bench</a><a href="/casestudy">Case study</a></nav>
+  <nav class="xnav" data-open="false"><button class="xnav-toggle" aria-label="Menu" aria-expanded="false" aria-controls="xnav-links" type="button"><span class="bars"><span></span></span></button><div class="xnav-links" id="xnav-links"><a href="/film" aria-current="page">Film</a><a href="/bench">Bench</a><a href="/casestudy">Case study</a></div></nav>
 </div>
 <div class="hint" id="hint"><span>scroll</span><span class="ch"></span></div>
 
@@ -330,8 +390,30 @@ function place(el,x,cy,scale){el.style.transform=`translate(-50%,-50%) translate
 const PH=380, TH=338, LH=234;
 const HEAD={S:$("#hS"),E:$("#hE"),D:$("#hD")};
 
+// Layout offsets derived from viewport so the showroom + race fit any screen.
+// Returns { auxNear, auxFar, racePush, heroSc, auxSc, auxScFar }
+// - auxNear/auxFar: tablet/laptop x at zoom progress 0..1 (laptop mirrors negated)
+// - racePush: |x| of each phone at split=1 (raw goes -racePush, proxy +racePush)
+// - heroSc: hero phone scale during in-context (grows from 0.72 to heroSc)
+// - auxSc/auxScFar: showroom aux device scale at zoom=0 / zoom=1
+function layoutFor(vw){
+  if (vw < 480) {
+    // Phones: trio fits within the viewport without overlap.
+    // Phone scr 148px wide (74px half), aux devices scaled 0.46 of ~196/256px CSS widths
+    // -> tablet half ≈ 45px, laptop half ≈ 60px; at |x|=128, tablet/laptop sit fully inside.
+    return { auxNear: -128, auxFar: -180, racePush: 88,  heroSc: 0.95, auxSc: 0.46, auxScFar: 0.40 };
+  }
+  if (vw < 760) {
+    // Small tablets / large phones in landscape.
+    return { auxNear: -200, auxFar: -340, racePush: 140, heroSc: 1.05, auxSc: 0.72, auxScFar: 0.60 };
+  }
+  // Desktop and up: tighter than the old defaults (less dead space between devices).
+  return { auxNear: -260, auxFar: -470, racePush: 178, heroSc: 1.12, auxSc: 0.78, auxScFar: 0.66 };
+}
+
 function render(p){
-  const H=innerHeight;
+  const H=innerHeight, W=innerWidth;
+  const L=layoutFor(W);
   const railTop=H*0.40, heroY=H*0.575;
 
   // ----- headlines: sequenced so two are never strong at once -----
@@ -349,15 +431,18 @@ function render(p){
   const raceOn= seg(p,0.62,0.72);   // race chrome in
 
   // ----- hero phone path -----
+  // Race binding: the hero phone is the proxy/win lane and moves to the RIGHT
+  // during the split; phone2 is the raw lane and moves to the LEFT. This matches
+  // the headline prose: "Left loads it raw; right loads the proxy URL."
   const phoneShowY = railTop + (PH*0.72)/2;
-  let cy=lerp(phoneShowY, heroY, zoom), sc=lerp(0.72, 1.12, zoom), x=0;
-  if(split>0){ x=lerp(0,-186,split); sc=lerp(1.12,0.72,split); cy=heroY; }
+  let cy=lerp(phoneShowY, heroY, zoom), sc=lerp(0.72, L.heroSc, zoom), x=0;
+  if(split>0){ x=lerp(0,L.racePush,split); sc=lerp(L.heroSc,0.72,split); cy=heroY; }
   place(phone, x, cy, sc);
 
   // ----- showroom aux devices (top-rail aligned) -----
   tablet.style.opacity=clamp(1-auxOut); laptop.style.opacity=clamp(1-auxOut);
-  place(tablet, lerp(-302,-540,auxOut), railTop+(TH*0.78)/2, lerp(0.78,0.66,auxOut));
-  place(laptop, lerp(322,560,auxOut),  railTop+(LH*0.82)/2, lerp(0.82,0.66,auxOut));
+  place(tablet, lerp(L.auxNear, L.auxFar, auxOut),     railTop+(TH*0.78)/2, lerp(L.auxSc, L.auxScFar, auxOut));
+  place(laptop, lerp(-L.auxNear, -L.auxFar, auxOut),   railTop+(LH*0.82)/2, lerp(L.auxSc+0.04, L.auxScFar, auxOut));
   const auxLock=auxOut>0.4?"none":"auto"; tablet.style.pointerEvents=auxLock; laptop.style.pointerEvents=auxLock;
 
   // ----- phone label: showroom only -----
@@ -370,7 +455,7 @@ function render(p){
 
   // ----- second phone + race chrome -----
   phone2.style.opacity = raceOn;
-  place(phone2, lerp(0,186,split), heroY, lerp(1.12,0.72,split));
+  place(phone2, lerp(0,-L.racePush,split), heroY, lerp(L.heroSc,0.72,split));
   $("#tagWin").style.opacity=raceOn; $("#timeWin").style.opacity=raceOn;
   phone.classList.toggle("lane-win", raceOn>0.5);
 
@@ -458,4 +543,36 @@ $("#copyBig").onclick=async()=>{try{await navigator.clipboard.writeText($("#urlB
 /* init */
 sync(); onScroll();
 requestAnimationFrame(()=>document.body.classList.add("ready"));
+
+/* shared xnav hamburger */
+(function(){
+  // Wire up the cross-page nav hamburger. Idempotent + safe to inline on any page.
+  var nav = document.querySelector('.xnav');
+  if (!nav) return;
+  var btn = nav.querySelector('.xnav-toggle');
+  if (!btn) return;
+  function set(open){
+    nav.setAttribute('data-open', open ? 'true' : 'false');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  set(false);
+  btn.addEventListener('click', function(e){
+    e.stopPropagation();
+    set(nav.getAttribute('data-open') !== 'true');
+  });
+  // close on link click
+  nav.querySelectorAll('.xnav-links a').forEach(function(a){
+    a.addEventListener('click', function(){ set(false); });
+  });
+  // close on click outside
+  document.addEventListener('click', function(e){
+    if (nav.getAttribute('data-open') === 'true' && !nav.contains(e.target)) set(false);
+  });
+  // close on escape
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && nav.getAttribute('data-open') === 'true') {
+      set(false); btn.focus();
+    }
+  });
+})();
 </script>

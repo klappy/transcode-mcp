@@ -34,6 +34,22 @@
 
   .grid{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:30px;margin-top:34px;align-items:start}
   @media(max-width:840px){.grid{grid-template-columns:1fr}}
+  @media(max-width:600px){
+    .wrap{padding:24px 16px 60px}
+    .top{flex-wrap:wrap;gap:10px;margin-bottom:22px}
+    .phone{width:min(100%,300px)}
+    h1{font-size:clamp(28px,8vw,40px);max-width:20ch}
+    .lede{font-size:15px}
+    .break .h, .break .row{grid-template-columns:1.2fr .9fr .9fr;padding:11px 12px}
+    .break .row .v{font-size:12px}
+    .thumbs{flex-wrap:wrap}
+    .thumb{flex:1 1 calc(50% - 5px)}
+  }
+  @media(max-width:380px){
+    .controls{gap:8px}
+    .toggle button{padding:11px 14px;font-size:13px}
+    .ctl button{padding:8px 10px;font-size:12px}
+  }
 
   /* phone storage panel */
   .phone{justify-self:center;width:300px;border:10px solid #14171f;border-radius:40px;background:#06070b;
@@ -98,21 +114,44 @@
 
   .note{margin-top:8px;font-size:11.5px;color:var(--faint);line-height:1.55;border-top:1px solid var(--line);padding-top:14px}
   .note b{color:var(--dim);font-weight:600}
-  /* shared cross-page nav (injected) */
-  .xnav{display:flex;align-items:center;gap:4px}
+  /* shared cross-page nav */
+  .xnav{display:flex;align-items:center;gap:4px;position:relative}
   .xnav a{font-family:var(--ui,'Schibsted Grotesk',sans-serif);font-size:12px;font-weight:600;letter-spacing:.02em;
     color:var(--dim,#8b94a6);text-decoration:none;padding:6px 11px;border-radius:9px;border:1px solid transparent;
     text-transform:none;transition:.15s;white-space:nowrap}
   .xnav a:hover{color:var(--ink,var(--text,#f3f6fb));background:rgba(255,255,255,.04)}
   .xnav a[aria-current="page"]{color:var(--ink,var(--text,#f3f6fb));border-color:var(--line,#1a2030);
     background:var(--panel,rgba(255,255,255,.05))}
+  /* hamburger toggle: hidden above the breakpoint */
+  .xnav-toggle{display:none;appearance:none;background:transparent;border:1px solid var(--line,#1a2030);
+    color:var(--ink,var(--text,#f3f6fb));border-radius:9px;padding:7px 10px;cursor:pointer;align-items:center;
+    gap:6px;font-family:var(--ui,'Schibsted Grotesk',sans-serif)}
+  .xnav-toggle:hover{background:rgba(255,255,255,.04)}
+  .xnav-toggle .bars{display:inline-block;width:16px;height:12px;position:relative}
+  .xnav-toggle .bars::before,.xnav-toggle .bars::after,.xnav-toggle .bars span{
+    content:"";position:absolute;left:0;right:0;height:2px;background:currentColor;border-radius:1px;transition:.2s}
+  .xnav-toggle .bars::before{top:0}.xnav-toggle .bars span{top:5px;display:block}.xnav-toggle .bars::after{bottom:0}
+  .xnav-toggle[aria-expanded="true"] .bars::before{transform:translateY(5px) rotate(45deg)}
+  .xnav-toggle[aria-expanded="true"] .bars span{opacity:0}
+  .xnav-toggle[aria-expanded="true"] .bars::after{transform:translateY(-5px) rotate(-45deg)}
+  /* under 520px: collapse the link row into a popover off the toggle */
+  @media (max-width: 520px) {
+    .xnav-toggle{display:inline-flex}
+    .xnav-links{position:absolute;top:calc(100% + 8px);right:0;min-width:170px;
+      background:var(--panel,#0a0d14);border:1px solid var(--line,#1a2030);border-radius:12px;
+      padding:6px;display:none;flex-direction:column;gap:2px;
+      box-shadow:0 18px 40px rgba(0,0,0,.5);z-index:100}
+    .xnav[data-open="true"] .xnav-links{display:flex}
+    .xnav-links a{padding:9px 12px;border-radius:8px}
+  }
+
 </style>
 
 <div class="amb"></div>
 <div class="wrap">
   <div class="top">
     <div class="brand"><span class="mk"></span><span id="brand">untitled</span> <em>proxy</em></div>
-    <nav class="xnav"><a href="/film">Film</a><a href="/bench">Bench</a><a href="/casestudy" aria-current="page">Case study</a></nav>
+    <nav class="xnav" data-open="false"><button class="xnav-toggle" aria-label="Menu" aria-expanded="false" aria-controls="xnav-links" type="button"><span class="bars"><span></span></span></button><div class="xnav-links" id="xnav-links"><a href="/film">Film</a><a href="/bench">Bench</a><a href="/casestudy" aria-current="page">Case study</a></div></nav>
   </div>
 
   <p class="kick">When the assignment goes offline</p>
@@ -299,4 +338,36 @@ SAMPLES.forEach(s=>{const d=document.createElement("div");d.className="thumb";
   tw.appendChild(d);});
 
 render();
+
+/* shared xnav hamburger */
+(function(){
+  // Wire up the cross-page nav hamburger. Idempotent + safe to inline on any page.
+  var nav = document.querySelector('.xnav');
+  if (!nav) return;
+  var btn = nav.querySelector('.xnav-toggle');
+  if (!btn) return;
+  function set(open){
+    nav.setAttribute('data-open', open ? 'true' : 'false');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  set(false);
+  btn.addEventListener('click', function(e){
+    e.stopPropagation();
+    set(nav.getAttribute('data-open') !== 'true');
+  });
+  // close on link click
+  nav.querySelectorAll('.xnav-links a').forEach(function(a){
+    a.addEventListener('click', function(){ set(false); });
+  });
+  // close on click outside
+  document.addEventListener('click', function(e){
+    if (nav.getAttribute('data-open') === 'true' && !nav.contains(e.target)) set(false);
+  });
+  // close on escape
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && nav.getAttribute('data-open') === 'true') {
+      set(false); btn.focus();
+    }
+  });
+})();
 </script>
