@@ -49,6 +49,12 @@ export class AudioContainer extends Container<Env> {
   sleepAfter = "10m"; // stop the instance after 10m idle to bound cost
 }
 
+// Size of the AudioContainer pool getRandom selects across. MUST match
+// `max_instances` for the [[containers]] block in wrangler.toml — if this
+// exceeds the cap, getRandom can pick instances that fail to start (forcing
+// the passthrough fallback); if it's smaller, provisioned capacity sits idle.
+const AUDIO_CONTAINER_INSTANCES = 5;
+
 // Cloudflare Images binding type (minimal shape we use)
 interface ImagesBinding {
   info(stream: ReadableStream): Promise<{ width: number; height: number; format: string; fileSize: number }>;
@@ -430,7 +436,7 @@ async function handleAudioProxy(
   // max_instances and force the catch-block passthrough fallback.
   let encoded: Response;
   try {
-    const instance = await getRandom(env.AUDIO_CONTAINER, 5);
+    const instance = await getRandom(env.AUDIO_CONTAINER, AUDIO_CONTAINER_INSTANCES);
     encoded = await instance.fetch(
       new Request("https://audio-container/transcode", {
         method: "POST",

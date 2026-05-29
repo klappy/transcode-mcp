@@ -63,6 +63,55 @@ async function sourceByteCount(url) {
   }
 }
 
+// Defense-in-depth SSRF guard. The Worker's parseProxyPath already requires a
+// http:// or https:// prefix, but ffmpeg in the container has its own network
+// stack that does not inherit Cloudflare Workers' fetch protections against
+// private/link-local addresses. Re-validate here so a crafted source URL like
+// http://169.254.169.254/ (cloud metadata) or http://10.x.x.x/ cannot be
+// proxied through ffmpeg's HTTP client.
+function isBlockedHost(host) {
+  if (!host) return true;
+  // Strip IPv6 brackets if present.
+  let h = host;
+  if (h.startsWith("[") && h.endsWith("]")) h = h.slice(1, -1);
+  const lower = h.toLowerCase();
+  if (lower === "localhost" || lower.endsWith(".localhost")) return true;
+  if (lower === "metadata" || lower === "metadata.google.internal") return true;
+  // IPv6 loopback / link-local / unique-local.
+  if (lower === "::1" || lower === "::") return true;
+  if (lower.startsWith("fe80:") || lower.startsWith("fe80::")) return true;
+  if (/^f[cd][0-9a-f]{2}:/i.test(lower)) return true;
+  // IPv4 dotted-quad checks.
+  const m = lower.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (m) {
+    const [a, b] = [Number(m[1]), Number(m[2])];
+    if (a === 10) return true;
+    if (a === 127) return true;
+    if (a === 0) return true;
+    if (a === 169 && b === 254) return true; // link-local + cloud metadata
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a >= 224) return true; // multicast / reserved
+  }
+  return false;
+}
+
+function validateSourceUrl(raw) {
+  let u;
+  try {
+    u = new URL(raw);
+  } catch {
+    return "invalid source_url";
+  }
+  if (u.protocol !== "http:" && u.protocol !== "https:") {
+    return `unsupported source_url scheme: ${u.protocol}`;
+  }
+  if (isBlockedHost(u.hostname)) {
+    return "source_url host is not allowed";
+  }
+  return null;
+}
+
 const server = http.createServer(async (req, res) => {
   if (req.method !== "POST") {
     res.writeHead(405, { "Content-Type": "text/plain" }).end("POST only");
@@ -83,6 +132,12 @@ const server = http.createServer(async (req, res) => {
   const { source_url, preset, q, codec } = job;
   if (!source_url || !preset || !q || !codec) {
     res.writeHead(400, { "Content-Type": "text/plain" }).end("missing field");
+    return;
+  }
+
+  const urlError = validateSourceUrl(source_url);
+  if (urlError) {
+    res.writeHead(400, { "Content-Type": "text/plain" }).end(urlError);
     return;
   }
 
