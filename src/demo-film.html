@@ -295,10 +295,10 @@
     <button data-f="webp" aria-pressed="true">WebP</button>
     <button data-f="jpeg" aria-pressed="false">JPEG</button></div>
   <div class="seg net" id="netSeg" style="display:none"><span>Net</span>
-    <button data-bps="62500" aria-pressed="false">2G</button>
-    <button data-bps="187500" aria-pressed="true">3G</button>
-    <button data-bps="625000" aria-pressed="false">4G</button>
-    <button data-bps="18750000" aria-pressed="false">5G</button></div>
+    <button data-bps="62500"    data-lat="0.50" aria-pressed="false">2G</button>
+    <button data-bps="187500"   data-lat="0.20" aria-pressed="true">3G</button>
+    <button data-bps="625000"   data-lat="0.06" aria-pressed="false">4G</button>
+    <button data-bps="18750000" data-lat="0.02" aria-pressed="false">5G</button></div>
   <div class="urlmini" id="urlmini" title="click to copy"></div>
 </div>
 
@@ -335,7 +335,7 @@ const DATA={
      1280:{low:{webp:47554,jpeg:73279},medium:{webp:75376,jpeg:133572},high:{webp:132622,jpeg:235189}}},title:"And he opened his mouth and taught them"},
 };
 const IDS=Object.keys(DATA);
-let sample="coast", size=800, q="medium", f="webp", bps=187500;
+let sample="coast", size=800, q="medium", f="webp", bps=187500, lat=0.20;
 
 const kb=b=>b>=1048576?(b/1048576).toFixed(2)+" MB":(b/1024).toFixed(0)+" KB";
 const $=s=>document.querySelector(s);
@@ -356,7 +356,15 @@ function bindSeg(el,attr,cb){el.addEventListener("click",e=>{const b=e.target.cl
 bindSeg($("#dock"),"size",v=>size=+v);
 bindSeg($("#dock"),"q",v=>q=v);
 bindSeg($("#dock"),"f",v=>f=v);
-bindSeg($("#netSeg"),"bps",v=>bps=+v);
+// network selector: update both bandwidth (bps) AND latency (lat) per network.
+// Real-world RTTs scale with the underlying link — 2G ~500ms, 3G ~200ms,
+// 4G ~60ms, 5G ~20ms — so we read both attributes from the active button.
+$("#netSeg").addEventListener("click", e=>{
+  const b=e.target.closest("button"); if(!b||!b.dataset.bps) return;
+  [...b.parentElement.children].forEach(x=>{if(x.dataset&&x.dataset.bps!=null)x.setAttribute("aria-pressed",x===b);});
+  bps=+b.dataset.bps; lat=+b.dataset.lat;
+  sync();
+});
 
 /* app feed cards (the three samples) */
 const feed=$("#feed");
@@ -378,6 +386,8 @@ function sync(){
   $("#urlmini").dataset.u=u;
   $("#urlBig").innerHTML=`${BASE}/image/<span class="v">s=${size},q=${q},f=${f}</span>/${DATA[sample].url}`;
   resetRace();
+  // re-evaluate the scroll position so the race re-fires immediately with new settings
+  onScroll();
 }
 
 /* ===== scroll engine ===== */
@@ -491,9 +501,16 @@ addEventListener("scroll",onScroll,{passive:true}); addEventListener("resize",on
   scrollTo({top: film.offsetTop + targetP*total, behavior:"smooth"});
 }));
 
-/* ===== race ===== */
+/* ===== race =====
+   Real-world timing: latency (one RTT, charged once) + bytes/bandwidth.
+   Animation timing: play at real speed when possible. Floor at 700ms so very
+   fast races don't blink past unreadably; cap at 6s so 2G doesn't take a real
+   minute on screen. The DISPLAYED timer (`tiW`/`tiR`) always shows the real
+   wall-clock seconds — the animation just controls how the meter sweeps. */
 const raceState={started:false,done:false,runId:0};
-const LAT=0.25, COMPRESS=0.42;
+const RACE_FLOOR_MS = 700;   // shortest the slow-lane animation will play
+const RACE_CAP_MS   = 6000;  // longest the slow-lane animation will play
+const WIN_FLOOR_MS  = 300;   // shortest the fast lane will play (still readable)
 function lane(winSide, realT, animMs, imgUrl, runId){
   const sk=winSide?$("#skW"):$("#skR"), pic=winSide?$("#picW"):$("#picR"),
         fb=winSide?$("#fbW"):$("#fbR"), ti=winSide?$("#tiW"):$("#tiR"),
@@ -524,12 +541,19 @@ async function startRace(){
   const myRunId=++raceState.runId;
   raceState.started=true;raceState.done=false;
   const rawB=DATA[sample].src, winB=bytes(sample,size,q,f);
-  const rawT=LAT+rawB*8/bps, winT=LAT+winB*8/bps;
-  const rawMs=clamp(rawT*1000*COMPRESS,1600,6000);     // bound the slow lane's wall time
-  const factor=rawMs/rawT;                              // shared ms-per-real-second
+  // real wall-clock times: one latency hit at request start + bytes / bandwidth
+  const rawT = lat + rawB*8/bps;
+  const winT = lat + winB*8/bps;
+  // animation: play at real speed when possible. Floor short races so they're
+  // legible; cap long ones so the demo doesn't take a real minute. Both lanes
+  // share the same ms-per-real-second factor so the visual race honestly
+  // reflects the ratio between them.
+  const rawMs  = Math.min(RACE_CAP_MS, Math.max(RACE_FLOOR_MS, rawT*1000));
+  const factor = rawMs / rawT;
+  const winMs  = Math.max(WIN_FLOOR_MS, winT*factor);
   const [tr,tw]=await Promise.all([
     lane(false, rawT, rawMs, DATA[sample].url, myRunId),
-    lane(true,  winT, Math.max(450, winT*factor), url(sample,size,q,f), myRunId)
+    lane(true,  winT, winMs, url(sample,size,q,f), myRunId)
   ]);
   if(raceState.runId!==myRunId) return;
   raceState.done=true;
