@@ -335,18 +335,19 @@ document.getElementById("brand").textContent=BRAND;
 const BASE="https://transcode-mcp.klappy.workers.dev";
 
 /* ===== byte matrix (bytes) =====
-   Source images are full-quality Unsplash JPEGs (?q=100), representative of
-   what someone actually drops onto a CDN — 3-5 MB phone/DSLR photos.
+   Source images are real Aquifer resources — landscape (FIAImages a105, MAT 5,
+   Hills on Sea of Galilee), object (FIAImages a54, MAT 26, alabaster jar), and
+   map (FIAMaps c77, LUK 10, Jerusalem to Jericho route — line art PNG).
    The 54 byte values + 9 encode dimensions are a literal, verified against the
    live proxy (HEAD content-length + X-Transcode-Encode-W/H). The proxy COLD-start
    transform cost is NOT baked in here — it is measured live, per session. */
 const DATA={
- coast:{src:3177854,url:"https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=100",enc:{400:"912×608",800:"1808×1216",1280:"2880×1920"},
-  b:{400:{low:{webp:12706,jpeg:10837},medium:{webp:24418,jpeg:24062},high:{webp:46826,jpeg:51142}},800:{low:{webp:40498,jpeg:55104},medium:{webp:80022,jpeg:112633},high:{webp:158048,jpeg:219430}},1280:{low:{webp:87662,jpeg:126825},medium:{webp:172618,jpeg:260883},high:{webp:363866,jpeg:523899}}},title:"The crowds gathered on the hillside"},
- city:{src:5537883,url:"https://images.unsplash.com/photo-1494891848038-7bd202a2afeb?q=100",enc:{400:"608×896",800:"1200×1744",1280:"1920×2800"},
-  b:{400:{low:{webp:7568,jpeg:8502},medium:{webp:11702,jpeg:15469},high:{webp:19112,jpeg:28213}},800:{low:{webp:18608,jpeg:34027},medium:{webp:27454,jpeg:53411},high:{webp:45936,jpeg:96949}},1280:{low:{webp:36066,jpeg:70126},medium:{webp:50816,jpeg:110039},high:{webp:93482,jpeg:231490}}},title:"He went up the mountain"},
- portrait:{src:3380461,url:"https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=100",enc:{400:"608×912",800:"1200×1808",1280:"1920×2880"},
-  b:{400:{low:{webp:7610,jpeg:9627},medium:{webp:11306,jpeg:17871},high:{webp:18974,jpeg:32858}},800:{low:{webp:19006,jpeg:34310},medium:{webp:27284,jpeg:60092},high:{webp:45226,jpeg:110375}},1280:{low:{webp:37294,jpeg:68939},medium:{webp:52904,jpeg:118460},high:{webp:90030,jpeg:238724}}},title:"And he opened his mouth and taught them"},
+ coast:{src:1150582,url:"https://s3.amazonaws.com/cbbt-er.public/media/photos/a105/original.jpg",enc:{400:"1072×603",800:"2144×1206",1280:"3424×1926"},
+  b:{400:{low:{webp:36140,jpeg:21682},medium:{webp:70988,jpeg:53799},high:{webp:120332,jpeg:108551}},800:{low:{webp:130884,jpeg:137971},medium:{webp:238902,jpeg:265481},high:{webp:397266,jpeg:454317}},1280:{low:{webp:260220,jpeg:313305},medium:{webp:447010,jpeg:578363},high:{webp:758588,jpeg:962673}}},title:"The crowds gathered on the hillside"},
+ city:{src:2067953,url:"https://s3.amazonaws.com/cbbt-er.public/media/photos/a54/original.jpg",enc:{400:"608×810",800:"1200×1600",1280:"1920×2560"},
+  b:{400:{low:{webp:34890,jpeg:22180},medium:{webp:61406,jpeg:49874},high:{webp:106304,jpeg:97674}},800:{low:{webp:115932,jpeg:119158},medium:{webp:213046,jpeg:231570},high:{webp:372934,jpeg:406374}},1280:{low:{webp:248952,jpeg:280815},medium:{webp:453234,jpeg:540168},high:{webp:801906,jpeg:936117}}},title:"The alabaster jar of perfume she brought"},
+ portrait:{src:5892853,url:"https://cdn.aquifer.bible/aquifer-content/resources/FIAMaps/c77-jerusalem-to-jericho.png",enc:{400:"800×600",800:"1616×1212",1280:"2576×1932"},
+  b:{400:{low:{webp:12370,jpeg:11806},medium:{webp:20014,jpeg:24560},high:{webp:35742,jpeg:47349}},800:{low:{webp:34252,jpeg:54425},medium:{webp:55836,jpeg:100917},high:{webp:98912,jpeg:176946}},1280:{low:{webp:64350,jpeg:109329},medium:{webp:106662,jpeg:198201},high:{webp:189740,jpeg:355112}}},title:"Jerusalem to Jericho (Good Samaritan route)"},
 };
 const IDS=Object.keys(DATA);
 let sample="coast", size=800, q="medium", f="webp", bps=187500, lat=0.20;
@@ -361,7 +362,7 @@ const url=(id,s,qq,ff)=>`${BASE}/image/s=${s},q=${qq},f=${ff}/${DATA[id].url}`;
 
 /* ===== build dynamic bits ===== */
 const cs=$("#cSample");
-const LABELS={coast:"Coast",city:"City",portrait:"Portrait"};
+const LABELS={coast:"Hills",city:"Jar",portrait:"Map"};
 IDS.forEach((id,i)=>{const b=document.createElement("button");b.dataset.s=id;b.textContent=LABELS[id]||id;
   b.title=DATA[id].title;b.setAttribute("aria-pressed",id===sample);
   b.onclick=()=>{sample=id;[...cs.children].forEach(c=>c.setAttribute("aria-pressed",c.dataset.s===id));sync();};cs.appendChild(b);});
