@@ -432,22 +432,23 @@ async function handleAudioProxy(
   const hit = await env.AUDIO_BUCKET.get(objectKey);
   if (hit) {
     const m = hit.customMetadata ?? {};
-    return new Response(hit.body, {
-      status: 200,
-      headers: audioHeaders({
-        cache: "HIT",
-        encode: resolved.codec,
-        preset: resolved.preset,
-        q: resolved.q,
-        contentType: m.contentType || delivery.contentType,
-        bitrate: m.bitrate,
-        sampleRate: m.sampleRate,
-        channels: m.channels,
-        duration: m.duration,
-        sourceBytes: m.sourceBytes,
-        outputBytes: String(hit.size),
-      }),
+    const headers = audioHeaders({
+      cache: "HIT",
+      encode: resolved.codec,
+      preset: resolved.preset,
+      q: resolved.q,
+      contentType: m.contentType || delivery.contentType,
+      bitrate: m.bitrate,
+      sampleRate: m.sampleRate,
+      channels: m.channels,
+      duration: m.duration,
+      sourceBytes: m.sourceBytes,
+      outputBytes: String(hit.size),
     });
+    // R2 body is a ReadableStream so the runtime can't auto-set Content-Length;
+    // set it explicitly to keep transport headers identical to the MISS path.
+    headers.set("Content-Length", String(hit.size));
+    return new Response(hit.body, { status: 200, headers });
   }
 
   // Miss -> dispatch to the container. Transcoding is stateless (Worker owns
@@ -561,6 +562,10 @@ async function passthroughAudio(
     "X-Transcode-Encode": opts.encode,
     ...(opts.extra ?? {}),
   });
+  // Forward upstream Content-Length so clients (e.g. the audio bench) can size
+  // the body from headers alone instead of draining the stream.
+  const sourceLen = sourceResponse.headers.get("Content-Length");
+  if (sourceLen) headers.set("Content-Length", sourceLen);
   return new Response(sourceResponse.body, { status: 200, headers });
 }
 
