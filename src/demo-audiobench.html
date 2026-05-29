@@ -131,15 +131,17 @@
     running (or locally without Docker), variants return <code>PASS</code> / passthrough and match the
     source size — the tile shows the <code>X-Transcode-Reason</code> so you can see why. Slice&nbsp;1 wires
     <code>voice + opus</code> end-to-end; other combinations pass through by design until later slices.
+    Sample sources are public-domain audiobook narration from
+    <a href="https://librivox.org" target="_blank" rel="noopener">LibriVox</a>, hosted on the Internet Archive.
   </div>
 
   <div class="controls">
     <div class="control-group">
       <label class="cap" for="audio-source">Sample source</label>
       <select id="audio-source">
-        <option value="https://download.samplelib.com/mp3/sample-15s.mp3">sample-15s.mp3 (speech-ish, ~15s)</option>
-        <option value="https://download.samplelib.com/mp3/sample-9s.mp3">sample-9s.mp3</option>
-        <option value="https://download.samplelib.com/mp3/sample-6s.mp3">sample-6s.mp3</option>
+        <option value="https://archive.org/download/stories_001_librivox/telltale_heart_poe_dm_64kb.mp3">The Tell-Tale Heart — Poe (LibriVox, ~18 min, 8.7 MB)</option>
+        <option value="https://archive.org/download/stories_001_librivox/taming_the_bicycle_twain_ep_64kb.mp3">Taming the Bicycle — Twain (LibriVox, ~28 min, 13.5 MB)</option>
+        <option value="https://archive.org/download/stories_001_librivox/pigs_is_pigs_butler_blb_64kb.mp3">Pigs Is Pigs — Butler (LibriVox, ~23 min, 11 MB)</option>
       </select>
     </div>
     <div class="control-group">
@@ -231,21 +233,27 @@
     return (n / (1024 * 1024)).toFixed(2) + ' MB';
   }
 
-  // The proxy answers GET only; read headers off a GET and measure the body
-  // when Content-Length is absent.
+  // The proxy answers GET only. Read the delivered size from a size header
+  // (X-Transcode-Output-Bytes for transcodes, else Content-Length) WITHOUT
+  // downloading the body — sources here are real multi-MB narration, so
+  // pulling every body would move tens of MB per run for no measurement gain.
+  // The <audio> players stream their own bytes lazily (preload="none") only
+  // when the visitor hits play. Fall back to measuring the body only when no
+  // size header is present. The fetch is aborted once headers arrive.
   function fetchOne(url) {
-    return fetch(url, { method: 'GET' }).then(function (res) {
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var opts = ctrl ? { method: 'GET', signal: ctrl.signal } : { method: 'GET' };
+    return fetch(url, opts).then(function (res) {
       var headers = {};
       res.headers.forEach(function (v, k) { headers[k] = v; });
-      var size = parseInt(headers['content-length'] || '0', 10);
-      if (!size) {
-        return res.arrayBuffer().then(function (buf) {
-          return { status: res.status, headers: headers, size: buf.byteLength };
-        });
-      }
-      // Drain the body so the connection is reusable.
-      return res.arrayBuffer().then(function () {
+      var size = parseInt(headers['x-transcode-output-bytes'] || headers['content-length'] || '0', 10);
+      if (size) {
+        if (ctrl) ctrl.abort(); // we have the size from headers; don't pull the body
         return { status: res.status, headers: headers, size: size };
+      }
+      // No size header — measure the body as a last resort.
+      return res.arrayBuffer().then(function (buf) {
+        return { status: res.status, headers: headers, size: buf.byteLength };
       });
     });
   }
