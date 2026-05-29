@@ -28,6 +28,7 @@ import { buildToolResponse } from "./lib/mcp-tool";
 import { DEMO_PAGE_HTML } from "./demo-page";
 import { DEMO_FILM_HTML } from "./demo-film";
 import { DEMO_CASESTUDY_HTML } from "./demo-casestudy";
+import { DEMO_AUDIOBENCH_HTML } from "./demo-audiobench";
 import { ADMIN_PAGE_HTML } from "./admin-page";
 
 interface Env {
@@ -138,6 +139,9 @@ export default {
     }
     if (url.pathname === "/bench" || url.pathname === "/bench/") {
       return htmlResponse(DEMO_PAGE_HTML);
+    }
+    if (url.pathname === "/bench/audio" || url.pathname === "/bench/audio/") {
+      return htmlResponse(DEMO_AUDIOBENCH_HTML);
     }
     if (url.pathname === "/casestudy" || url.pathname === "/casestudy/") {
       return htmlResponse(DEMO_CASESTUDY_HTML);

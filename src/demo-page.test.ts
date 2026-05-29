@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { DEMO_PAGE_HTML } from "./demo-page";
 import { DEMO_FILM_HTML } from "./demo-film";
 import { DEMO_CASESTUDY_HTML } from "./demo-casestudy";
+import { DEMO_AUDIOBENCH_HTML } from "./demo-audiobench";
 
 // Each demo page is a single self-contained HTML document with one inline
 // <script>. TypeScript's typecheck treats the script contents as an opaque
@@ -15,6 +16,7 @@ const PAGES: Array<[string, string]> = [
   ["bench (demo-page.html)", DEMO_PAGE_HTML],
   ["film (demo-film.html)", DEMO_FILM_HTML],
   ["case study (demo-casestudy.html)", DEMO_CASESTUDY_HTML],
+  ["audio bench (demo-audiobench.html)", DEMO_AUDIOBENCH_HTML],
 ];
 
 describe.each(PAGES)("demo page emitted script — %s", (_label, htmlDoc) => {
