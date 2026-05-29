@@ -47,6 +47,7 @@ This index is the human entry point into the canon. Six directories under `canon
 | `2026-05-27-audio-container-recipes.md` | working | planning | Six ffmpeg recipes (three voice, three music), libopus, evidence-pending |
 | `2026-05-27-mcp-integration.md` | working | planning | Official Cloudflare Agents SDK; one tool `generate_transcode_url` |
 | `2026-05-27-success-criteria-and-irreversibility.md` | working | planning | The v1 skeleton's success contract and gate-closure plan |
+| `2026-05-29-media-pricing-model.md` | working | planning | Unified credit unit with per-medium weights; 20–100× target is a processing-line blended outcome; audio transcode cost measured per codec |
 
 ## canon/handoffs/ — Session Journals
 
@@ -63,6 +64,7 @@ This index is the human entry point into the canon. Six directories under `canon
 | `2026-05-26-exploration-session.tsv` | 6/4/5-col mixed (declared in header) | Exploration session decisions, observations, learnings, constraints, handoffs, open items |
 | `2026-05-26-planning-session.tsv` | 6/4/5-col mixed (declared in header) | Planning session: 8 decisions, 3 learnings, 1 constraint, 1 handoff, 5 open items |
 | `2026-05-27-canon-conventions-session.tsv` | 6/4/5-col mixed (declared in header) | Today's canon-conventions decisions and the backfill handoff queue |
+| `2026-05-29-pricing-session.tsv` | 6/4/5-col mixed (declared in header) | Pricing-model session: 6 decisions, 2 observations, 3 learnings, 3 constraints, 3 open items |
 
 ---
 

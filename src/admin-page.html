@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="robots" content="noindex,nofollow" />
+<title>transcode-mcp · admin</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+:root { --bg:#0b0c0e; --panel:#141619; --line:#24272c; --ink:#e8e6df; --dim:#8a8f98; --amber:#e0b341; --teal:#5fb6a3; --rust:#d6694a; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: 'IBM Plex Mono', monospace; }
+body { min-height: 100vh; padding: 20px;
+  background-image: radial-gradient(circle at 18% 0%, rgba(224,179,65,0.06), transparent 42%), radial-gradient(circle at 100% 100%, rgba(95,182,163,0.05), transparent 45%); }
+.head { border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 18px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.title { font-family: 'Instrument Serif', serif; font-size: 38px; line-height: 0.95; }
+.sub { color: var(--dim); font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; }
+.creed { color: var(--amber); font-size: 11px; font-style: italic; font-family: 'Instrument Serif', serif; opacity: 0.85; margin-top: 4px; }
+.meta { font-size: 10px; color: var(--dim); text-align: right; }
+.meta a { color: var(--teal); text-decoration: none; }
+.tabs { display: flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-bottom: 16px; }
+.tab { flex: 1; background: transparent; color: var(--dim); border: none; padding: 12px 8px; font-family: 'IBM Plex Mono'; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
+.tab.on { background: var(--amber); color: #0b0c0e; font-weight: 600; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+.grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media(min-width: 980px) { .grid.split { grid-template-columns: 380px 1fr; } }
+.readout { text-align: center; }
+.bignum { font-size: 78px; line-height: 1; font-weight: 600; letter-spacing: -2px; transition: color .25s ease; }
+.bandtag { display: inline-block; margin-top: 6px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; border: 1px solid currentColor; }
+.other { margin-top: 10px; font-size: 11px; color: var(--dim); }
+.other b { color: var(--ink); font-weight: 600; }
+.toggle { display: flex; margin-top: 14px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.toggle button { flex: 1; background: transparent; color: var(--dim); border: none; padding: 9px 6px; font-family: 'IBM Plex Mono'; font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase; cursor: pointer; }
+.toggle button.on { background: var(--amber); color: #0b0c0e; font-weight: 600; }
+.kpis { display: flex; gap: 8px; margin-top: 16px; border-top: 1px solid var(--line); padding-top: 14px; }
+.kpi { flex: 1; text-align: center; }
+.kpi .v { font-size: 17px; font-weight: 600; }
+.kpi .l { font-size: 9px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+.lever { margin-top: 16px; }
+.lever .lh { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); }
+.lever .lv { font-size: 21px; font-weight: 600; color: var(--amber); }
+.lever .lv.sm { font-size: 13px; }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; border-radius: 2px; background: var(--line); outline: none; margin-top: 11px; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--amber); cursor: pointer; border: 3px solid var(--bg); box-shadow: 0 0 0 1px var(--amber); }
+input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: var(--amber); cursor: pointer; border: 3px solid var(--bg); }
+.rangelabels { display: flex; justify-content: space-between; font-size: 10px; color: var(--dim); margin-top: 4px; }
+.codec { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 14px; }
+.codecrow { display: grid; grid-template-columns: 78px 1fr 38px; align-items: center; gap: 10px; margin-top: 8px; }
+.codecrow label { font-size: 11px; }
+.codecrow .p { font-size: 11px; color: var(--teal); text-align: right; }
+.codecrow input[type=range] { margin-top: 0; }
+.secth { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); margin: 0 0 12px; }
+.oprow { display: grid; grid-template-columns: 1fr auto; gap: 5px 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.oprow:last-child { border-bottom: none; }
+.opname { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; flex-wrap: wrap; }
+.dot { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.tg { font-size: 9px; border-radius: 3px; padding: 1px 4px; }
+.opmeta { font-size: 10px; color: var(--dim); grid-column: 1/2; }
+.opright { text-align: right; grid-row: 1/3; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 3px; }
+.mk { font-size: 20px; font-weight: 600; }
+.badge { font-size: 9px; letter-spacing: 0.3px; text-transform: uppercase; padding: 2px 6px; border-radius: 999px; border: 1px solid; }
+.volrow { display: flex; align-items: center; gap: 10px; margin-top: 6px; grid-column: 1/3; }
+.volrow input[type=range] { margin-top: 0; flex: 1; }
+.volval { font-size: 11px; color: var(--dim); min-width: 84px; text-align: right; }
+.foot { margin-top: 16px; font-size: 10px; color: var(--dim); line-height: 1.6; border-top: 1px solid var(--line); padding-top: 12px; }
+.canon-md { font-family: 'Instrument Serif', serif; font-size: 16px; line-height: 1.55; }
+.canon-md h1, .canon-md h2, .canon-md h3 { font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
+.canon-md h1 { font-size: 26px; margin-top: 0; }
+.canon-md h2 { font-size: 17px; margin-top: 26px; color: var(--amber); }
+.canon-md h3 { font-size: 13px; margin-top: 18px; color: var(--teal); }
+.canon-md blockquote { border-left: 3px solid var(--amber); padding-left: 14px; font-style: italic; margin-left: 0; }
+.canon-md table { width: 100%; border-collapse: collapse; margin: 12px 0; font-family: 'IBM Plex Mono'; font-size: 12px; }
+.canon-md th, .canon-md td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; }
+.canon-md th { color: var(--dim); font-weight: 500; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
+.canon-md code { font-family: 'IBM Plex Mono'; font-size: 12px; background: rgba(255,255,255,0.04); padding: 1px 5px; border-radius: 3px; color: var(--teal); }
+.canon-md hr { border: none; border-top: 1px solid var(--line); margin: 20px 0; }
+.canon-md ul { padding-left: 20px; }
+.canon-md a { color: var(--teal); }
+.data-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.data-table th, .data-table td { border-bottom: 1px solid var(--line); padding: 7px 8px; text-align: left; }
+.data-table th { color: var(--amber); font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
+.data-table tr:hover td { background: rgba(255,255,255,0.02); }
+.loading { padding: 40px; text-align: center; color: var(--dim); font-size: 12px; }
+.error { padding: 20px; background: rgba(214,105,74,0.1); border: 1px solid var(--rust); border-radius: 6px; color: var(--rust); font-size: 12px; }
+.svgbar text { fill: var(--dim); font-family: 'IBM Plex Mono'; font-size: 10px; }
+</style>
+</head>
+<body>
+<div id="root"><div class="loading">loading admin…</div></div>
+
+<script type="module">
+import { h, render } from 'https://esm.sh/preact@10.22.0';
+import { useState, useMemo, useEffect } from 'https://esm.sh/preact@10.22.0/hooks';
+import htm from 'https://esm.sh/htm@3.1.1';
+import { marked } from 'https://esm.sh/marked@12.0.0';
+
+const html = htm.bind(h);
+// Branch-aware raw URL base. Preview deploys live at
+// `<branch-with-slash-as-dash>-transcode-mcp.<sub>.workers.dev`; we invert that
+// to fetch the matching branch from raw.githubusercontent.com. On the production
+// hostname (no branch prefix) we fall back to `main`. A ?ref= query override is
+// honored if present, useful for cross-branch inspection.
+function resolveRawBase() {
+  const params = new URLSearchParams(location.search);
+  const refOverride = params.get('ref');
+  if (refOverride) return 'https://raw.githubusercontent.com/klappy/transcode-mcp/' + refOverride;
+  const m = location.hostname.match(/^(.+)-transcode-mcp\./);
+  // Known branch slugs we deploy. Add new ones here when needed.
+  const slugToBranch = {
+    'feat-pricing-canon-and-admin': 'feat/pricing-canon-and-admin',
+  };
+  const branch = m ? (slugToBranch[m[1]] || m[1]) : 'main';
+  return 'https://raw.githubusercontent.com/klappy/transcode-mcp/' + branch;
+}
+const RAW = resolveRawBase();
+
+const CODEC_COST = { voice: 0.000028, music: 0.000038, mp3: 0.000012 };
+
+const OPS = [
+  { id: 'img_tx',    label: 'Image transform',           medium: 'image', unit: '/transform', ourCost: 0.0005,   weight: 1,    market: 0.005,  marketLabel: 'Cloudinary 3-5x CF',     cacheable: true,  pass: false, defVol: 5000000,  volMax: 12000000 },
+  { id: 'img_del',   label: 'Image deliver',             medium: 'image', unit: '/serve',     ourCost: 0.00001,  weight: 0.02, market: 0.0001, marketLabel: 'CDN per-GB',             cacheable: false, pass: true,  defVol: 40000000, volMax: 100000000 },
+  { id: 'vid_tc',    label: 'Video transcode (Stream)',  medium: 'video', unit: '/min',       ourCost: 0.006,    weight: 3,    market: 0.015,  marketLabel: 'MediaConvert HD',        cacheable: false, pass: false, defVol: 30000,    volMax: 600000 },
+  { id: 'vid_clip',  label: 'Video clip (on-the-fly)',   medium: 'video', unit: '/min',       ourCost: 0.03,     weight: 6,    market: 0.0075, marketLabel: 'Mux encode',             cacheable: true,  pass: false, defVol: 60000,    volMax: 1200000 },
+  { id: 'vid_del',   label: 'Video deliver',             medium: 'video', unit: '/min',       ourCost: 0.001,    weight: 0.4,  market: 0.0012, marketLabel: 'Mux 720p',               cacheable: false, pass: true,  defVol: 800000,   volMax: 3000000 },
+  { id: 'aud_tc',    label: 'Audio transcode',           medium: 'audio', unit: '/min',       ourCost: 0.0000278,weight: 0.5,  market: 0.003,  marketLabel: 'MediaConvert audio',     cacheable: false, pass: false, defVol: 800000,   volMax: 2000000, measured: true, codecDriven: true },
+  { id: 'voice_pipe',label: 'Voice pipeline (Opus+STT)', medium: 'audio', unit: '/min',       ourCost: 0.000528, weight: 1.5,  market: 0.0082, marketLabel: 'transcode+STT combined', cacheable: false, pass: false, defVol: 150000,   volMax: 1000000, measured: true, bundle: true },
+  { id: 'aud_stt',   label: 'Audio transcription',       medium: 'audio', unit: '/min',       ourCost: 0.0005,   weight: 1,    market: 0.0052, marketLabel: 'Deepgram nova-3',        cacheable: false, pass: false, defVol: 350000,   volMax: 1200000 },
+  { id: 'aud_tts',   label: 'Audio TTS',                 medium: 'audio', unit: '/min',       ourCost: 0.0002,   weight: 0.5,  market: 0.003,  marketLabel: 'per audio-min',          cacheable: false, pass: false, defVol: 150000,   volMax: 600000 },
+  { id: 'store',     label: 'Storage',                   medium: 'store', unit: '/GB-mo',     ourCost: 0.015,    weight: 4,    market: 0.023,  marketLabel: 'S3 + egress',            cacheable: false, pass: true,  defVol: 8000,     volMax: 60000 },
+];
+const MEDIUM_COLOR = { image: '#e0b341', audio: '#5fb6a3', video: '#d6694a', store: '#8a8f98' };
+
+const usd = (n) => {
+  if (n === 0) return '$0';
+  if (n >= 1000) return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  if (n >= 1) return '$' + n.toFixed(2);
+  if (n >= 0.001) return '$' + n.toFixed(4);
+  return '$' + n.toExponential(1);
+};
+const compact = (n) => {
+  if (n >= 1e6) return (n / 1e6).toFixed(n % 1e6 === 0 ? 0 : 1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(n % 1e3 === 0 ? 0 : 1) + 'k';
+  return String(n);
+};
+const xfmt = (n) => (!isFinite(n) ? '∞' : n >= 100 ? Math.round(n) + 'x' : n.toFixed(1) + 'x');
+
+function parseTSV(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.length && !l.startsWith('#'));
+  if (lines.length === 0) return { headers: [], rows: [] };
+  const headers = lines[0].split('\t');
+  const rows = lines.slice(1).map(l => l.split('\t'));
+  return { headers, rows };
+}
+
+function useFetch(url) {
+  const [state, setState] = useState({ status: 'loading', text: null, err: null });
+  useEffect(() => {
+    let cancelled = false;
+    fetch(url).then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.text();
+    }).then(text => { if (!cancelled) setState({ status: 'ok', text, err: null }); })
+      .catch(err => { if (!cancelled) setState({ status: 'error', text: null, err: err.message }); });
+    return () => { cancelled = true; };
+  }, [url]);
+  return state;
+}
+
+function Calculator() {
+  const [creditPrice, setCreditPrice] = useState(0.005);
+  const [cacheHit, setCacheHit] = useState(0.75);
+  const [includePass, setIncludePass] = useState(true);
+  const [codecMix, setCodecMix] = useState({ voice: 50, music: 30, mp3: 20 });
+  const [vols, setVols] = useState(Object.fromEntries(OPS.map(o => [o.id, o.defVol])));
+
+  const audTcCost = useMemo(() => {
+    const s = codecMix.voice + codecMix.music + codecMix.mp3 || 1;
+    return (codecMix.voice * CODEC_COST.voice + codecMix.music * CODEC_COST.music + codecMix.mp3 * CODEC_COST.mp3) / s;
+  }, [codecMix]);
+
+  const rows = useMemo(() => OPS.map(o => {
+    const baseCost = o.codecDriven ? audTcCost : o.ourCost;
+    const price = o.weight * creditPrice;
+    const effCost = o.cacheable ? baseCost * (1 - cacheHit) : baseCost;
+    const vol = vols[o.id];
+    return { ...o, ourCost: baseCost, price, effCost, vol, revenue: price * vol, cost: effCost * vol,
+      markup: effCost > 0 ? price / effCost : Infinity, competitive: price <= o.market * 1.0001 };
+  }), [creditPrice, cacheHit, vols, audTcCost]);
+
+  const blend = (incl) => {
+    const r = rows.filter(x => incl || !x.pass);
+    const revenue = r.reduce((s, x) => s + x.revenue, 0);
+    const cost = r.reduce((s, x) => s + x.cost, 0);
+    return { revenue, cost, profit: revenue - cost, markup: cost > 0 ? revenue / cost : Infinity };
+  };
+  const totals = useMemo(() => blend(includePass), [rows, includePass]);
+  const otherMarkup = useMemo(() => blend(!includePass).markup, [rows, includePass]);
+
+  const byMedium = useMemo(() => {
+    const m = {};
+    rows.filter(x => includePass || !x.pass).forEach(r => {
+      m[r.medium] = m[r.medium] || { medium: r.medium, profit: 0 };
+      m[r.medium].profit += r.revenue - r.cost;
+    });
+    return Object.values(m);
+  }, [rows, includePass]);
+
+  const inBand = totals.markup >= 20 && totals.markup <= 100;
+  const bandColor = inBand ? '#5fb6a3' : totals.markup < 20 ? '#d6694a' : '#e0b341';
+  const setMix = (k, v) => setCodecMix(m => ({ ...m, [k]: parseInt(v) }));
+  const mixSum = codecMix.voice + codecMix.music + codecMix.mp3 || 1;
+  const pct = (k) => Math.round((codecMix[k] / mixSum) * 100);
+  const maxProfit = Math.max(1, ...byMedium.map(d => d.profit));
+  const barW = 60, barGap = 16, chartH = 110;
+  const chartW = byMedium.length * (barW + barGap) + barGap;
+
+  return html`
+    <div class="grid split">
+      <div class="card">
+        <div class="readout">
+          <div style=${{ fontSize: 11, color: 'var(--dim)', letterSpacing: 2, textTransform: 'uppercase' }}>Blended markup</div>
+          <div class="bignum" style=${{ color: bandColor }}>${xfmt(totals.markup)}</div>
+          <div class="bandtag" style=${{ color: bandColor }}>${inBand ? 'in 20-100x target band' : totals.markup < 20 ? 'below target band' : 'above 100x — uncompetitive risk'}</div>
+          <div class="other">${includePass ? 'processing-only' : 'all-in'}: <b>${xfmt(otherMarkup)}</b></div>
+        </div>
+        <div class="toggle">
+          <button class=${includePass ? 'on' : ''} onClick=${() => setIncludePass(true)}>All-in (incl. delivery + storage)</button>
+          <button class=${!includePass ? 'on' : ''} onClick=${() => setIncludePass(false)}>Processing only</button>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><div class="v">${usd(totals.revenue)}</div><div class="l">Revenue / mo</div></div>
+          <div class="kpi"><div class="v" style=${{ color: 'var(--dim)' }}>${usd(totals.cost)}</div><div class="l">CF cost / mo</div></div>
+          <div class="kpi"><div class="v" style=${{ color: 'var(--amber)' }}>${usd(totals.profit)}</div><div class="l">Margin / mo</div></div>
+        </div>
+        <div class="lever">
+          <div class="lh"><span>Credit price</span><span class="lv">$${creditPrice.toFixed(4)}</span></div>
+          <input type="range" min="0.001" max="0.015" step="0.0005" value=${creditPrice} onInput=${(e) => setCreditPrice(parseFloat(e.target.value))} />
+          <div class="rangelabels"><span>$0.001 enterprise</span><span>$0.015 payg</span></div>
+        </div>
+        <div class="lever">
+          <div class="lh"><span>Cache-hit rate</span><span class="lv">${Math.round(cacheHit * 100)}%</span></div>
+          <input type="range" min="0" max="0.95" step="0.05" value=${cacheHit} onInput=${(e) => setCacheHit(parseFloat(e.target.value))} />
+          <div class="rangelabels"><span>0% all cold</span><span>95% high fanout</span></div>
+        </div>
+        <div class="codec">
+          <div class="lh" style=${{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>Audio codec mix</span><span class="lv sm" style=${{ color: 'var(--teal)' }}>${usd(audTcCost)}/min</span>
+          </div>
+          <div class="codecrow"><label>Voice→Opus</label><input type="range" min="0" max="100" value=${codecMix.voice} onInput=${(e) => setMix('voice', e.target.value)} /><span class="p">${pct('voice')}%</span></div>
+          <div class="codecrow"><label>Music→AAC</label><input type="range" min="0" max="100" value=${codecMix.music} onInput=${(e) => setMix('music', e.target.value)} /><span class="p">${pct('music')}%</span></div>
+          <div class="codecrow"><label>MP3 (univ.)</label><input type="range" min="0" max="100" value=${codecMix.mp3} onInput=${(e) => setMix('mp3', e.target.value)} /><span class="p">${pct('mp3')}%</span></div>
+          <div style=${{ fontSize: 10, color: 'var(--dim)', marginTop: 8, lineHeight: 1.5 }}>Drives the Audio-transcode cost only; price stays one flat credit across codecs.</div>
+        </div>
+        <p class="secth" style=${{ marginTop: 18 }}>Margin by medium / mo</p>
+        <svg class="svgbar" viewBox=${'0 0 ' + chartW + ' ' + (chartH + 30)} style=${{ width: '100%', height: chartH + 30 }}>
+          ${byMedium.map((d, i) => {
+            const x = barGap + i * (barW + barGap);
+            const bh = Math.max(2, (d.profit / maxProfit) * chartH);
+            const y = chartH - bh;
+            return html`<g><rect x=${x} y=${y} width=${barW} height=${bh} fill=${MEDIUM_COLOR[d.medium]} rx="3" /><text x=${x + barW/2} y=${chartH + 14} text-anchor="middle">${d.medium}</text><text x=${x + barW/2} y=${chartH + 26} text-anchor="middle" style=${{ fill: 'var(--ink)' }}>${usd(d.profit)}</text></g>`;
+          })}
+        </svg>
+      </div>
+
+      <div class="card">
+        <p class="secth">Per-operation · drag volumes to reshape the blend</p>
+        ${rows.map(r => html`
+          <div class="oprow" style=${{ opacity: includePass || !r.pass ? 1 : 0.4 }}>
+            <div class="opname">
+              <span class="dot" style=${{ background: MEDIUM_COLOR[r.medium] }}></span>
+              ${r.label}
+              ${r.bundle ? html`<span class="tg" style=${{ color: 'var(--teal)', border: '1px solid var(--teal)' }}>BUNDLE</span>` : null}
+              ${r.measured && !r.bundle ? html`<span class="tg" style=${{ color: 'var(--amber)', border: '1px solid var(--amber)' }}>MEASURED</span>` : null}
+              ${r.pass ? html`<span class="tg" style=${{ color: 'var(--dim)', border: '1px solid var(--line)' }}>pass-through</span>` : null}
+            </div>
+            <div class="opright">
+              <span class="mk" style=${{ color: r.markup >= 20 ? '#5fb6a3' : r.markup >= 5 ? '#e0b341' : '#d6694a' }}>${xfmt(r.markup)}</span>
+              <span class="badge" style=${{ color: r.competitive ? '#5fb6a3' : '#d6694a', borderColor: r.competitive ? '#5fb6a3' : '#d6694a' }}>${r.competitive ? '≤ market' : 'over market'}</span>
+            </div>
+            <div class="opmeta">price ${usd(r.price)}${r.unit} · cost ${usd(r.effCost)}${r.unit} · vs ${r.marketLabel} ${usd(r.market)}</div>
+            <div class="volrow">
+              <input type="range" min="0" max=${r.volMax} step=${Math.max(1, Math.round(r.volMax / 200))} value=${r.vol} onInput=${(e) => setVols(v => ({ ...v, [r.id]: parseInt(e.target.value) }))} />
+              <span class="volval">${compact(r.vol)} ${r.unit.replace('/', '')}</span>
+            </div>
+          </div>
+        `)}
+        <div class="foot">
+          Rates verified 2026-05; audio cost measured. <b>20-100x is a processing-line outcome</b> — toggle "Processing only" to read the band; delivery and storage dilute the all-in blend. Push credit price too high and rows flip to "over market." Canon: <a href="/admin?tab=canon" style=${{ color: 'var(--teal)' }}>media-pricing-canon</a>.
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function CanonPanel() {
+  const f = useFetch(RAW + '/canon/planning/2026-05-29-media-pricing-model.md');
+  if (f.status === 'loading') return html`<div class="card loading">fetching canon from github…</div>`;
+  if (f.status === 'error') return html`<div class="card"><div class="error">canon fetch failed: ${f.err}</div></div>`;
+  const body = f.text.replace(/^---[\s\S]*?---\n/, '');
+  const rendered = marked.parse(body);
+  return html`<div class="card"><div class="canon-md" dangerouslySetInnerHTML=${{ __html: rendered }}></div></div>`;
+}
+
+function DataTable({ path }) {
+  const f = useFetch(RAW + path);
+  if (f.status === 'loading') return html`<div class="loading">fetching ${path}…</div>`;
+  if (f.status === 'error') return html`<div class="error">fetch failed: ${f.err}</div>`;
+  const { headers, rows } = parseTSV(f.text);
+  return html`
+    <table class="data-table">
+      <thead><tr>${headers.map(h => html`<th>${h.replace(/_/g, ' ')}</th>`)}</tr></thead>
+      <tbody>
+        ${rows.map(r => html`<tr>${r.map(c => html`<td>${c}</td>`)}</tr>`)}
+      </tbody>
+    </table>
+  `;
+}
+
+function DataPanel() {
+  return html`
+    <div class="grid">
+      <div class="card">
+        <p class="secth">cost-price-matrix.tsv</p>
+        <${DataTable} path="/data/pricing/cost-price-matrix.tsv" />
+      </div>
+      <div class="card">
+        <p class="secth">credit-tiers.tsv</p>
+        <${DataTable} path="/data/pricing/credit-tiers.tsv" />
+      </div>
+    </div>
+  `;
+}
+
+function CodecPanel() {
+  return html`
+    <div class="card">
+      <p class="secth">audio-codec-matrix.tsv · measured 2026-05-28 (ffmpeg native, getrusage)</p>
+      <${DataTable} path="/data/pricing/audio-codec-matrix.tsv" />
+    </div>
+  `;
+}
+
+function App() {
+  const initial = new URLSearchParams(location.search).get('tab') || 'calculator';
+  const [tab, setTab] = useState(initial);
+  useEffect(() => {
+    const url = new URL(location.href);
+    url.searchParams.set('tab', tab);
+    history.replaceState(null, '', url.toString());
+  }, [tab]);
+  const TabBtn = ({ id, label }) => html`
+    <button class=${'tab' + (tab === id ? ' on' : '')} onClick=${() => setTab(id)}>${label}</button>
+  `;
+  return html`
+    <div class="head">
+      <div>
+        <div class="title">Markup Instrument</div>
+        <div class="sub">transcode-mcp · admin · by agents, for agents</div>
+        <div class="creed">Before I claim, I verify. What I have not verified, I will not imply.</div>
+      </div>
+      <div class="meta">
+        <div>repo: <a href="https://github.com/klappy/transcode-mcp" target="_blank">klappy/transcode-mcp</a></div>
+        <div>canon: <a href=${RAW.replace('raw.githubusercontent.com', 'github.com').replace(/\/([^\/]+)$/, '/blob/$1') + '/canon/planning/2026-05-29-media-pricing-model.md'} target="_blank">media-pricing-canon</a></div>
+        <div>gated by Cloudflare Access</div>
+      </div>
+    </div>
+    <div class="tabs">
+      <${TabBtn} id="calculator" label="Calculator" />
+      <${TabBtn} id="canon" label="Canon" />
+      <${TabBtn} id="data" label="Data" />
+      <${TabBtn} id="codec" label="Audio Codecs" />
+    </div>
+    ${tab === 'calculator' ? html`<${Calculator} />` : null}
+    ${tab === 'canon' ? html`<${CanonPanel} />` : null}
+    ${tab === 'data' ? html`<${DataPanel} />` : null}
+    ${tab === 'codec' ? html`<${CodecPanel} />` : null}
+  `;
+}
+
+render(h(App, null), document.getElementById('root'));
+</script>
+</body>
+</html>
