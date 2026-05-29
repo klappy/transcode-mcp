@@ -81,6 +81,23 @@ function isBlockedHost(host) {
   if (lower === "::1" || lower === "::") return true;
   if (lower.startsWith("fe80:") || lower.startsWith("fe80::")) return true;
   if (/^f[cd][0-9a-f]{2}:/i.test(lower)) return true;
+  // IPv4-mapped IPv6 (::ffff:x.x.x.x). The WHATWG URL parser normalizes the
+  // dotted-quad form to two hex groups (e.g. ::ffff:a9fe:a9fe), so we must
+  // recognize both representations and validate the embedded IPv4 address.
+  if (lower.startsWith("::ffff:")) {
+    const tail = lower.slice("::ffff:".length);
+    if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(tail)) {
+      return isBlockedHost(tail);
+    }
+    const hex = tail.match(/^([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+    if (hex) {
+      const high = parseInt(hex[1], 16);
+      const low = parseInt(hex[2], 16);
+      const dotted = `${(high >> 8) & 0xff}.${high & 0xff}.${(low >> 8) & 0xff}.${low & 0xff}`;
+      return isBlockedHost(dotted);
+    }
+    return true;
+  }
   // IPv4 dotted-quad checks.
   const m = lower.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (m) {
