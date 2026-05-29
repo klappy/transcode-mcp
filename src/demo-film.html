@@ -1,7 +1,8 @@
 <!-- Agent-native media proxy — unified scroll film: Showroom -> In-Context -> Race -->
 <!-- Apple-style: scrolling morphs the story forward; scrolling up reverses it. -->
 <!-- Brand is a single variable (BRAND); no legacy product names. -->
-<!-- All imagery + byte numbers are real, measured live from the proxy. -->
+<!-- Imagery + byte numbers are real, verified against the live proxy. The proxy
+     cold-start transform cost is measured live, once per session (measureColdStart). -->
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Agent-native image proxy — demo</title>
@@ -11,7 +12,7 @@
 <style>
   :root{
     --bg:#050608; --ink:#f3f6fb; --dim:#8b94a6; --faint:#525c6e; --line:#1a2030;
-    --acc:#6ea8ff; --acc2:#9be7ff; --win:#36e3a0; --raw:#ff5d6c;
+    --acc:#6ea8ff; --acc2:#9be7ff; --win:#36e3a0; --raw:#ff5d6c; --cold:#f5b748;
     --ui:'Schibsted Grotesk',sans-serif; --serif:'Instrument Serif',serif; --mono:'Spline Sans Mono',monospace;
   }
   *{box-sizing:border-box} html,body{margin:0}
@@ -86,6 +87,7 @@
   .race{position:absolute;inset:0;z-index:4;opacity:0}
   .race .fill{position:absolute;left:0;right:0;bottom:0;height:0;z-index:2;background:linear-gradient(0deg,rgba(54,227,160,.22),transparent);border-top:2px solid var(--win)}
   .phone.lane-raw .race .fill{background:linear-gradient(0deg,rgba(255,93,108,.20),transparent);border-top-color:var(--raw)}
+  .phone.lane-cold .race .fill{background:linear-gradient(0deg,rgba(245,183,72,.20),transparent);border-top-color:var(--cold)}
   .race .skel{position:absolute;inset:0;background:linear-gradient(100deg,#151b26 30%,#2a3340 50%,#151b26 70%);background-size:200% 100%;animation:sh 1.1s linear infinite;opacity:0;transition:opacity .2s;z-index:1}
   .race .skel.on{opacity:1}
   @keyframes sh{to{background-position:-200% 0}}
@@ -93,15 +95,16 @@
   .race .pic.in{opacity:1;transform:none;filter:none;transition:opacity .4s,transform .5s,filter .5s}
   .race .pic img{width:100%;height:100%;object-fit:cover}
   .lanetag{position:absolute;left:50%;top:-34px;transform:translateX(-50%);white-space:nowrap;font-weight:700;font-size:12px;letter-spacing:.04em;z-index:7}
-  .lane-raw .lanetag{color:var(--raw)} .lane-win .lanetag{color:var(--win)}
+  .lane-raw .lanetag{color:var(--raw)} .lane-win .lanetag{color:var(--win)} .lane-cold .lanetag{color:var(--cold)}
   .lanetime{position:absolute;left:50%;top:100%;margin-top:14px;transform:translateX(-50%);white-space:nowrap;text-align:center;z-index:7}
   .lanetime .t{font-weight:900;font-size:30px;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
-  .lane-raw .lanetime .t{color:var(--raw)} .lane-win .lanetime .t{color:var(--win)}
+  .lane-raw .lanetime .t{color:var(--raw)} .lane-win .lanetime .t{color:var(--win)} .lane-cold .lanetime .t{color:var(--cold)}
   .lanetime .t small{font-family:var(--mono);font-size:.4em;color:var(--dim);font-weight:400}
   .lanetime .b{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:4px}
 
   /* verdict (race) */
-  .verdict{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;z-index:8;opacity:0;width:200px;will-change:opacity}
+  .verdict{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;z-index:8;opacity:0;width:240px;will-change:opacity}
+  .verdict .vsub{display:block;font-family:var(--mono);font-size:12px;color:var(--dim);font-weight:600;margin-top:8px;letter-spacing:.01em}
   .verdict .big{font-weight:900;font-size:clamp(23px,2.8vw,32px);color:var(--win);line-height:1.08;text-shadow:0 2px 18px rgba(0,0,0,.7)}
   .verdict .big em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--ink)}
 
@@ -248,7 +251,7 @@
       <!-- persistent hero phone -->
       <div class="device phone" id="phone">
         <div class="dlabel" id="phoneLabel"><div class="c">Phone</div><div class="w" id="wPhone">—</div></div>
-        <div class="lanetag" id="tagWin" style="opacity:0">PROXY</div>
+        <div class="lanetag" id="tagWin" style="opacity:0">CACHED</div>
         <div class="scr">
           <div class="notch"></div>
           <div class="layer photo" id="photo"><img id="iPhone" alt=""></div>
@@ -265,7 +268,7 @@
 
       <!-- second phone (race, raw lane) -->
       <div class="device phone lane-raw" id="phone2" style="opacity:0">
-        <div class="lanetag">RAW SOURCE</div>
+        <div class="lanetag">RAW</div>
         <div class="scr">
           <div class="notch"></div>
           <div class="race" style="opacity:1">
@@ -273,6 +276,18 @@
           </div>
         </div>
         <div class="lanetime"><div class="t" id="tiR">—<small>s</small></div><div class="b" id="byR">—</div></div>
+      </div>
+
+      <!-- third phone (race, cold / first-hit lane) -->
+      <div class="device phone lane-cold" id="phone3" style="opacity:0">
+        <div class="lanetag">1ST HIT</div>
+        <div class="scr">
+          <div class="notch"></div>
+          <div class="race" style="opacity:1">
+            <div class="skel" id="skC"></div><div class="pic" id="picC"><img id="imC"></div><div class="fill" id="fbC"></div>
+          </div>
+        </div>
+        <div class="lanetime"><div class="t" id="tiC">—<small>s</small></div><div class="b" id="byC">—</div></div>
       </div>
     </div>
 
@@ -319,10 +334,12 @@ const BRAND="untitled";                 // <- single place to set the product na
 document.getElementById("brand").textContent=BRAND;
 const BASE="https://transcode-mcp.klappy.workers.dev";
 
-/* ===== real measured matrix (bytes) =====
+/* ===== byte matrix (bytes) =====
    Source images are full-quality Unsplash JPEGs (?q=100), representative of
    what someone actually drops onto a CDN — 3-5 MB phone/DSLR photos.
-   All 54 byte values + 9 encode dimensions are measured live from the proxy. */
+   The 54 byte values + 9 encode dimensions are a literal, verified against the
+   live proxy (HEAD content-length + X-Transcode-Encode-W/H). The proxy COLD-start
+   transform cost is NOT baked in here — it is measured live, per session. */
 const DATA={
  coast:{src:3177854,url:"https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=100",enc:{400:"912×608",800:"1808×1216",1280:"2880×1920"},
   b:{400:{low:{webp:12706,jpeg:10837},medium:{webp:24418,jpeg:24062},high:{webp:46826,jpeg:51142}},800:{low:{webp:40498,jpeg:55104},medium:{webp:80022,jpeg:112633},high:{webp:158048,jpeg:219430}},1280:{low:{webp:87662,jpeg:126825},medium:{webp:172618,jpeg:260883},high:{webp:363866,jpeg:523899}}},title:"The crowds gathered on the hillside"},
@@ -388,7 +405,7 @@ function sync(){
 }
 
 /* ===== scroll engine ===== */
-const film=$("#film"), phone=$("#phone"), phone2=$("#phone2"),
+const film=$("#film"), phone=$("#phone"), phone2=$("#phone2"), phone3=$("#phone3"),
       tablet=$("#tablet"), laptop=$("#laptop"),
       photo=$("#photo"), appLayer=$("#appLayer"), raceWin=$("#raceWin"),
       stage=document.querySelector(".stage");
@@ -400,9 +417,9 @@ const PH=380, TH=338, LH=234;
 const HEAD={S:$("#hS"),E:$("#hE"),D:$("#hD")};
 
 // Layout offsets derived from viewport so the showroom + race fit any screen.
-// Returns { auxNear, auxFar, racePush, heroSc, auxSc, auxScFar }
+// Returns { auxNear, auxFar, lanePush, heroSc, auxSc, auxScFar, raceSc }
 // - auxNear/auxFar: tablet/laptop x at zoom progress 0..1 (laptop mirrors negated)
-// - racePush: |x| of each phone at split=1 (raw goes -racePush, proxy +racePush)
+// - lanePush: |x| of each phone at split=1 (raw goes -lanePush, proxy +lanePush)
 // - heroSc: hero phone scale during in-context (grows from 0.72 to heroSc)
 // - auxSc/auxScFar: showroom aux device scale at zoom=0 / zoom=1
 function layoutFor(vw){
@@ -410,14 +427,14 @@ function layoutFor(vw){
     // Phones: trio fits within the viewport without overlap.
     // Phone scr 148px wide (74px half), aux devices scaled 0.46 of ~196/256px CSS widths
     // -> tablet half ≈ 45px, laptop half ≈ 60px; at |x|=128, tablet/laptop sit fully inside.
-    return { auxNear: -128, auxFar: -180, racePush: 88,  heroSc: 0.95, auxSc: 0.46, auxScFar: 0.40 };
+    return { auxNear: -128, auxFar: -180, heroSc: 0.95, auxSc: 0.46, auxScFar: 0.40, raceSc: 0.50, lanePush: 106 };
   }
   if (vw < 760) {
     // Small tablets / large phones in landscape.
-    return { auxNear: -200, auxFar: -340, racePush: 140, heroSc: 1.05, auxSc: 0.72, auxScFar: 0.60 };
+    return { auxNear: -200, auxFar: -340, heroSc: 1.05, auxSc: 0.72, auxScFar: 0.60, raceSc: 0.60, lanePush: 150 };
   }
   // Desktop and up: tighter than the old defaults (less dead space between devices).
-  return { auxNear: -260, auxFar: -470, racePush: 178, heroSc: 1.12, auxSc: 0.78, auxScFar: 0.66 };
+  return { auxNear: -260, auxFar: -470, heroSc: 1.12, auxSc: 0.78, auxScFar: 0.66, raceSc: 0.66, lanePush: 205 };
 }
 
 function render(p){
@@ -447,7 +464,7 @@ function render(p){
   // the headline prose: "Left loads it raw; right loads the proxy URL."
   const phoneShowY = railTop + (PH*0.72)/2;
   let cy=lerp(phoneShowY, heroY, zoom), sc=lerp(0.72, L.heroSc, zoom), x=0;
-  if(split>0){ x=lerp(0,L.racePush,split); sc=lerp(L.heroSc,0.72,split); cy=heroY; }
+  if(split>0){ x=lerp(0,L.lanePush,split); sc=lerp(L.heroSc,L.raceSc,split); cy=heroY; }
   place(phone, x, cy, sc);
 
   // ----- showroom aux devices (top-rail aligned) -----
@@ -466,12 +483,14 @@ function render(p){
 
   // ----- second phone + race chrome -----
   phone2.style.opacity = raceOn;
-  place(phone2, lerp(0,-L.racePush,split), heroY, lerp(L.heroSc,0.72,split));
+  place(phone2, lerp(0,-L.lanePush,split), heroY, lerp(L.heroSc,L.raceSc,split));
+  phone3.style.opacity = raceOn;
+  place(phone3, 0, heroY, lerp(L.heroSc,L.raceSc,split));
   $("#tagWin").style.opacity=raceOn; $("#timeWin").style.opacity=raceOn;
   phone.classList.toggle("lane-win", raceOn>0.5);
 
-  // ----- verdict centered between phones at hero height -----
-  const vd=$("#verdict"); vd.style.top=heroY+"px";
+  // ----- verdict: below the trio (center lane is now occupied by the cold phone) -----
+  const vd=$("#verdict"); vd.style.top=(heroY + (PH*L.raceSc)/2 + 54)+"px";
   vd.style.opacity = raceState.done ? clamp(seg(p,0.80,0.86)) : 0;
 
   // ----- dock / hint -----
@@ -504,14 +523,37 @@ addEventListener("scroll",onScroll,{passive:true}); addEventListener("resize",on
    fast races don't blink past unreadably; cap at 6s so 2G doesn't take a real
    minute on screen. The DISPLAYED timer (`tiW`/`tiR`) always shows the real
    wall-clock seconds — the animation just controls how the meter sweeps. */
+/* ===== cold-start (proxy transform cost on a cache MISS) =====
+   Measured live, once per session, then cached. We time a HEAD to an
+   already-cached URL (cache HIT) and a HEAD to a per-session-unique URL (forced
+   MISS -> a real transform); the delta isolates the server-side transform cost
+   from network RTT (RTT cancels). Falls back to the measured-probe midpoint if
+   the probe fails. The proxy is same-origin, so these reads need no CORS. */
+let COLD_START = 1.2;            // seconds; live curl probes measured ~1.0-1.4s (single-sample)
+let _coldDone=false,_coldBusy=false;
+async function measureColdStart(){
+  if(_coldDone||_coldBusy) return; _coldBusy=true;
+  try{
+    const warmU=url(sample,800,"medium","webp");
+    const bustU=warmU+(warmU.includes("?")?"&":"?")+"_cb="+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+    const time=async u=>{const s=performance.now();await fetch(u,{method:"HEAD",cache:"no-store"});return(performance.now()-s)/1000;};
+    await fetch(warmU,{method:"HEAD",cache:"no-store"});  // prime cache + warm the connection
+    const warm=await time(warmU);                         // cache HIT
+    const cold=await time(bustU);                         // cache MISS -> real transform
+    const d=cold-warm;
+    if(d>0.05 && d<15) COLD_START=d;                      // sane bound; else keep fallback
+    _coldDone=true;
+  }catch(e){/* network/CORS issue -> keep fallback */}
+  finally{_coldBusy=false;}
+}
 const raceState={started:false,done:false,runId:0};
 const RACE_FLOOR_MS = 700;   // shortest the slow-lane animation will play
 const RACE_CAP_MS   = 6000;  // longest the slow-lane animation will play
 const WIN_FLOOR_MS  = 300;   // shortest the fast lane will play (still readable)
-function lane(winSide, realT, animMs, imgUrl, runId){
-  const sk=winSide?$("#skW"):$("#skR"), pic=winSide?$("#picW"):$("#picR"),
-        fb=winSide?$("#fbW"):$("#fbR"), ti=winSide?$("#tiW"):$("#tiR"),
-        im=winSide?$("#imW"):$("#imR");
+function lane(suf, realT, animMs, imgUrl, runId){
+  const sk=$("#sk"+suf), pic=$("#pic"+suf),
+        fb=$("#fb"+suf), ti=$("#ti"+suf),
+        im=$("#im"+suf);
   return new Promise(res=>{
     sk.classList.add("on"); pic.classList.remove("in");
     const probe=new Image();let ok=false;probe.onload=()=>{ok=true;};probe.src=imgUrl;im.src=imgUrl;
@@ -528,34 +570,43 @@ function lane(winSide, realT, animMs, imgUrl, runId){
 }
 function resetRace(){
   raceState.runId++;raceState.started=false;raceState.done=false;
-  for(const s of ["W","R"]){const sk=$("#sk"+s),pic=$("#pic"+s),fb=$("#fb"+s),ti=$("#ti"+s);
+  for(const s of ["W","R","C"]){const sk=$("#sk"+s),pic=$("#pic"+s),fb=$("#fb"+s),ti=$("#ti"+s);
     if(sk)sk.classList.remove("on");if(pic)pic.classList.remove("in");
     if(fb){fb.style.transition="none";fb.style.height="0";}if(ti)ti.innerHTML="—<small>s</small>";}
   const rawB=DATA[sample].src, winB=bytes(sample,size,q,f);
-  $("#byR").textContent=kb(rawB)+" · raw"; $("#byW").textContent=kb(winB)+" · "+f;
+  $("#byR").textContent=kb(rawB)+" · raw";
+  $("#byC").textContent=kb(winB)+" · "+f;   // same file as warm — only the first-hit TIME differs
+  $("#byW").textContent=kb(winB)+" · "+f;
 }
 async function startRace(){
   const myRunId=++raceState.runId;
   raceState.started=true;raceState.done=false;
+  measureColdStart();            // live cold-start probe, once per session (non-blocking)
   const rawB=DATA[sample].src, winB=bytes(sample,size,q,f);
-  // real wall-clock times: one latency hit at request start + bytes / bandwidth
-  const rawT = lat + rawB*8/bps;
-  const winT = lat + winB*8/bps;
-  // animation: play at real speed when possible. Floor short races so they're
-  // legible; cap long ones so the demo doesn't take a real minute. Both lanes
-  // share the same ms-per-real-second factor so the visual race honestly
-  // reflects the ratio between them.
+  // Real wall-clock times. COLD_START is the proxy's one-time transform cost on a
+  // cache MISS — server-side, so it is ADDED to the cold lane and is NOT scaled by
+  // bandwidth. warm = cache HIT (transform already done). raw = no transform.
+  const rawT  = lat + rawB*8/bps;
+  const warmT = lat + winB*8/bps;
+  const coldT = lat + COLD_START + winB*8/bps;
+  // Animation: raw drives the timescale (slowest, capped); all lanes share the
+  // factor so the visual race honestly reflects the real ratios.
   const rawMs  = Math.min(RACE_CAP_MS, Math.max(RACE_FLOOR_MS, rawT*1000));
   const factor = rawMs / rawT;
-  const winMs  = Math.max(WIN_FLOOR_MS, winT*factor);
-  const [tr,tw]=await Promise.all([
-    lane(false, rawT, rawMs, DATA[sample].url, myRunId),
-    lane(true,  winT, winMs, url(sample,size,q,f), myRunId)
+  const warmMs = Math.max(WIN_FLOOR_MS, warmT*factor);
+  const coldMs = Math.min(RACE_CAP_MS, Math.max(WIN_FLOOR_MS, coldT*factor));
+  const proxyUrl=url(sample,size,q,f);
+  const [tr,tc,tw]=await Promise.all([
+    lane("R", rawT,  rawMs,  DATA[sample].url, myRunId),
+    lane("C", coldT, coldMs, proxyUrl,         myRunId),
+    lane("W", warmT, warmMs, proxyUrl,         myRunId)
   ]);
   if(raceState.runId!==myRunId) return;
   raceState.done=true;
-  const m=tr/tw;
-  $("#vbig").innerHTML = m>=1.1 ? `${m.toFixed(1)}×<br><em>faster</em>` : `same size —<br><em>go smaller</em>`;
+  const mWarm=tr/tw, mCold=tr/tc;
+  const warmTxt = mWarm>=1.1 ? `${mWarm.toFixed(0)}×` : "≈1×";
+  const coldTxt = mCold>=1.1 ? `${mCold.toFixed(1)}× vs raw` : "≈1× vs raw";
+  $("#vbig").innerHTML = `${warmTxt}<br><em>when cached</em><span class="vsub">first hit · ${coldTxt}</span>`;
   onScroll();
 }
 
