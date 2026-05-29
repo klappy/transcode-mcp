@@ -133,18 +133,22 @@
     running (or locally without Docker), variants return <code>PASS</code> / passthrough and match the
     source size — the tile shows the <code>X-Transcode-Reason</code> so you can see why. Slice&nbsp;1 wires
     <code>voice + opus</code> end-to-end; other combinations pass through by design until later slices.
-    Sample sources are public-domain audiobook narration from
-    <a href="https://librivox.org" target="_blank" rel="noopener">LibriVox</a>, hosted on the Internet Archive.
+    Sample sources: the default audio-Bible chapters are the Berean Standard Bible (BSB),
+    narrated by Bob Souer and dedicated to the public domain (CC0), hosted by the publisher at
+    <a href="https://openbible.com/audio/souer/" target="_blank" rel="noopener">openbible.com</a>;
+    the literary readings are public-domain
+    <a href="https://librivox.org" target="_blank" rel="noopener">LibriVox</a> recordings.
   </div>
 
   <div class="controls">
     <div class="control-group">
       <label class="cap" for="audio-source">Sample source</label>
       <select id="audio-source">
-        <option value="https://archive.org/download/15thanniversarycollection_2008_librivox/fifteen_psalmfifteen_kjv_64kb.mp3">Psalm 15 — KJV (LibriVox, ~58 s, 466 KB) — audio Bible</option>
+        <option value="https://openbible.com/audio/souer/BSB_19_Psa_023.mp3">Psalm 23 — BSB (Souer, ~45 s, 1.0 MB) — audio Bible</option>
+        <option value="https://openbible.com/audio/souer/BSB_19_Psa_117.mp3">Psalm 117 — BSB (Souer, ~25 s, 409 KB) — shortest chapter</option>
+        <option value="https://archive.org/download/15thanniversarycollection_2008_librivox/fifteen_psalmfifteen_kjv_64kb.mp3">Psalm 15 — KJV (LibriVox, ~58 s, 466 KB)</option>
         <option value="https://archive.org/download/stories_001_librivox/telltale_heart_poe_dm_64kb.mp3">The Tell-Tale Heart — Poe (LibriVox, ~18 min, 8.7 MB)</option>
         <option value="https://archive.org/download/stories_001_librivox/taming_the_bicycle_twain_ep_64kb.mp3">Taming the Bicycle — Twain (LibriVox, ~28 min, 13.5 MB)</option>
-        <option value="https://archive.org/download/stories_001_librivox/pigs_is_pigs_butler_blb_64kb.mp3">Pigs Is Pigs — Butler (LibriVox, ~23 min, 11 MB)</option>
       </select>
     </div>
     <div class="control-group">
