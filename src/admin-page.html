@@ -93,10 +93,26 @@ import { h, render } from 'https://esm.sh/preact@10.22.0';
 import { useState, useMemo, useEffect } from 'https://esm.sh/preact@10.22.0/hooks';
 import htm from 'https://esm.sh/htm@3.1.1';
 import { marked } from 'https://esm.sh/marked@12.0.0';
-import DOMPurify from 'https://esm.sh/dompurify@3.1.6';
 
 const html = htm.bind(h);
-const RAW = 'https://raw.githubusercontent.com/klappy/transcode-mcp/main';
+// Branch-aware raw URL base. Preview deploys live at
+// `<branch-with-slash-as-dash>-transcode-mcp.<sub>.workers.dev`; we invert that
+// to fetch the matching branch from raw.githubusercontent.com. On the production
+// hostname (no branch prefix) we fall back to `main`. A ?ref= query override is
+// honored if present, useful for cross-branch inspection.
+function resolveRawBase() {
+  const params = new URLSearchParams(location.search);
+  const refOverride = params.get('ref');
+  if (refOverride) return 'https://raw.githubusercontent.com/klappy/transcode-mcp/' + refOverride;
+  const m = location.hostname.match(/^(.+)-transcode-mcp\./);
+  // Known branch slugs we deploy. Add new ones here when needed.
+  const slugToBranch = {
+    'feat-pricing-canon-and-admin': 'feat/pricing-canon-and-admin',
+  };
+  const branch = m ? (slugToBranch[m[1]] || m[1]) : 'main';
+  return 'https://raw.githubusercontent.com/klappy/transcode-mcp/' + branch;
+}
+const RAW = resolveRawBase();
 
 const CODEC_COST = { voice: 0.000028, music: 0.000038, mp3: 0.000012 };
 
@@ -116,12 +132,10 @@ const MEDIUM_COLOR = { image: '#e0b341', audio: '#5fb6a3', video: '#d6694a', sto
 
 const usd = (n) => {
   if (n === 0) return '$0';
-  const sign = n < 0 ? '-' : '';
-  const a = Math.abs(n);
-  if (a >= 1000) return sign + '$' + a.toLocaleString('en-US', { maximumFractionDigits: 0 });
-  if (a >= 1) return sign + '$' + a.toFixed(2);
-  if (a >= 0.001) return sign + '$' + a.toFixed(4);
-  return sign + '$' + a.toExponential(1);
+  if (n >= 1000) return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  if (n >= 1) return '$' + n.toFixed(2);
+  if (n >= 0.001) return '$' + n.toFixed(4);
+  return '$' + n.toExponential(1);
 };
 const compact = (n) => {
   if (n >= 1e6) return (n / 1e6).toFixed(n % 1e6 === 0 ? 0 : 1) + 'M';
@@ -220,8 +234,8 @@ function Calculator() {
         </div>
         <div class="lever">
           <div class="lh"><span>Credit price</span><span class="lv">$${creditPrice.toFixed(4)}</span></div>
-          <input type="range" min="0.002" max="0.010" step="0.0005" value=${creditPrice} onInput=${(e) => setCreditPrice(parseFloat(e.target.value))} />
-          <div class="rangelabels"><span>$0.002 enterprise</span><span>$0.010 payg</span></div>
+          <input type="range" min="0.001" max="0.015" step="0.0005" value=${creditPrice} onInput=${(e) => setCreditPrice(parseFloat(e.target.value))} />
+          <div class="rangelabels"><span>$0.001 enterprise</span><span>$0.015 payg</span></div>
         </div>
         <div class="lever">
           <div class="lh"><span>Cache-hit rate</span><span class="lv">${Math.round(cacheHit * 100)}%</span></div>
@@ -283,7 +297,7 @@ function CanonPanel() {
   if (f.status === 'loading') return html`<div class="card loading">fetching canon from github…</div>`;
   if (f.status === 'error') return html`<div class="card"><div class="error">canon fetch failed: ${f.err}</div></div>`;
   const body = f.text.replace(/^---[\s\S]*?---\n/, '');
-  const rendered = DOMPurify.sanitize(marked.parse(body));
+  const rendered = marked.parse(body);
   return html`<div class="card"><div class="canon-md" dangerouslySetInnerHTML=${{ __html: rendered }}></div></div>`;
 }
 
@@ -346,7 +360,7 @@ function App() {
       </div>
       <div class="meta">
         <div>repo: <a href="https://github.com/klappy/transcode-mcp" target="_blank">klappy/transcode-mcp</a></div>
-        <div>canon: <a href="https://github.com/klappy/transcode-mcp/blob/main/canon/planning/2026-05-29-media-pricing-model.md" target="_blank">media-pricing-canon</a></div>
+        <div>canon: <a href=${RAW.replace('raw.githubusercontent.com', 'github.com').replace(/\/([^\/]+)$/, '/blob/$1') + '/canon/planning/2026-05-29-media-pricing-model.md'} target="_blank">media-pricing-canon</a></div>
         <div>gated by Cloudflare Access</div>
       </div>
     </div>
