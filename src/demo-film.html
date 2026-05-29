@@ -273,7 +273,6 @@ const DATA={
      1280:{low:{webp:47554,jpeg:73279},medium:{webp:75376,jpeg:133572},high:{webp:132622,jpeg:235189}}},title:"And he opened his mouth and taught them"},
 };
 const IDS=Object.keys(DATA);
-const AUDIO={proxy:412000};
 let sample="coast", size=800, q="medium", f="webp", bps=187500;
 
 const kb=b=>b>=1048576?(b/1048576).toFixed(2)+" MB":(b/1024).toFixed(0)+" KB";
@@ -310,8 +309,7 @@ function sync(){
   $("#iTablet").src=url(sample,800,q,f); $("#wTablet").textContent=kb(bytes(sample,800,q,f));
   $("#iLaptop").src=url(sample,1280,q,f);$("#wLaptop").textContent=kb(bytes(sample,1280,q,f));
   // in-context feed at chosen size/q/f
-  let total=AUDIO.proxy;
-  IDS.forEach(id=>{DATA[id]._img.src=url(id,size,q,f);const bb=bytes(id,size,q,f);total+=bb;DATA[id]._wt.textContent=kb(bb);});
+  IDS.forEach(id=>{DATA[id]._img.src=url(id,size,q,f);DATA[id]._wt.textContent=kb(bytes(id,size,q,f));});
   // race uses selected sample at chosen settings (proxy) vs source (raw)
   const u=url(sample,size,q,f);
   $("#urlmini").textContent=u.replace(BASE+"/","…/");
