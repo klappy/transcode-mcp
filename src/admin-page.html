@@ -217,8 +217,8 @@ function Calculator() {
         </div>
         <div class="lever">
           <div class="lh"><span>Credit price</span><span class="lv">$${creditPrice.toFixed(4)}</span></div>
-          <input type="range" min="0.001" max="0.015" step="0.0005" value=${creditPrice} onInput=${(e) => setCreditPrice(parseFloat(e.target.value))} />
-          <div class="rangelabels"><span>$0.001 enterprise</span><span>$0.015 payg</span></div>
+          <input type="range" min="0.002" max="0.010" step="0.0005" value=${creditPrice} onInput=${(e) => setCreditPrice(parseFloat(e.target.value))} />
+          <div class="rangelabels"><span>$0.002 enterprise</span><span>$0.010 payg</span></div>
         </div>
         <div class="lever">
           <div class="lh"><span>Cache-hit rate</span><span class="lv">${Math.round(cacheHit * 100)}%</span></div>
