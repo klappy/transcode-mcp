@@ -78,7 +78,7 @@ AAC bitrates cannot reuse the opus numbers; AAC at 8–16k voice is unacceptable
 
 ## Response Contract — Headers and Fallbacks at Image Parity
 
-Headers on a transcoded response: `X-Transcode-Cache` (HIT/MISS/PASS), `X-Transcode-Encode` (`opus`/`aac`/`mp3`/`passthrough`/`no-binding`), `X-Transcode-Preset`, `X-Transcode-Quality`, `X-Transcode-Bitrate`, `X-Transcode-SampleRate`, `X-Transcode-Channels`, source and output byte counts, a `Content-Type` of `audio/ogg`, `audio/mp4`, or `audio/mpeg` matching the real output, and `Cache-Control: public, max-age=31536000, immutable`. Fallbacks mirror images: no options yields passthrough; missing R2 or container binding yields passthrough with `X-Transcode-Encode: no-binding`; a transcode error yields 502 or 500 with `X-Transcode-Error`. The no-binding fallback is what keeps `wrangler dev` usable without a container.
+Headers on a transcoded response: `X-Transcode-Cache` (HIT/MISS/PASS), `X-Transcode-Encode` (`opus`/`aac`/`mp3`/`passthrough`/`no-binding`), `X-Transcode-Preset`, `X-Transcode-Quality`, `X-Transcode-Bitrate`, `X-Transcode-SampleRate`, `X-Transcode-Channels`, `X-Transcode-Duration` (seconds, forwarded from the container's ffprobe; preserved by transcode, so source and every variant share one length), source and output byte counts, a `Content-Type` of `audio/ogg`, `audio/mp4`, or `audio/mpeg` matching the real output, and `Cache-Control: public, max-age=31536000, immutable`. Fallbacks mirror images: no options yields passthrough; missing R2 or container binding yields passthrough with `X-Transcode-Encode: no-binding`; a transcode error yields 502 or 500 with `X-Transcode-Error`. The no-binding fallback is what keeps `wrangler dev` usable without a container.
 
 ## MCP Surface Changes
 
