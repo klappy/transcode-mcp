@@ -335,9 +335,10 @@
     var meta = '<div class="stat-row"><span>size</span><strong>' + formatBytes(d.size) + '</strong></div>';
     if (!d.isSource) {
       var saveRatio = baselineBytes > 0 ? (1 - d.size / baselineBytes) : 0;
-      var savePct = (saveRatio * 100).toFixed(1) + '%';
+      var savePct = (Math.abs(saveRatio) * 100).toFixed(1) + '%';
       var saveCls = d.transcoded && saveRatio > 0.02 ? 'good' : 'flat';
-      meta += '<div class="stat-row"><span>vs source</span><span class="save ' + saveCls + '">' + (saveRatio > 0 ? '−' + savePct : 'same size') + '</span></div>';
+      var vsTxt = saveRatio > 0.0005 ? '−' + savePct : (saveRatio < -0.0005 ? '+' + savePct : 'same size');
+      meta += '<div class="stat-row"><span>vs source</span><span class="save ' + saveCls + '">' + vsTxt + '</span></div>';
     }
     if (lenTxt) meta += '<div class="stat-row"><span>length</span><strong>' + lenTxt + '</strong></div>';
     // Measured bitrate (live, from the header) — compare against the legend target.
