@@ -24,6 +24,10 @@ export interface ParsedAudioRequest {
   options: {
     preset?: "voice" | "music";
     q?: "low" | "medium" | "high";
+    // Codec axis. Default (applied downstream) is opus — the byte-optimal
+    // voice codec. aac/mp3 cover the older-Safari tail. See
+    // canon/planning/2026-05-29-audio-worker-path.md Decision 3.
+    f?: "opus" | "aac" | "mp3";
   };
   sourceUrl: string;
 }
@@ -158,6 +162,12 @@ function validateAudioOptions(raw: Record<string, string>): ParsedAudioRequest["
       throw new ProxyPathError(`Invalid q=${raw.q}`);
     }
     out.q = raw.q;
+  }
+  if (raw.f !== undefined) {
+    if (raw.f !== "opus" && raw.f !== "aac" && raw.f !== "mp3") {
+      throw new ProxyPathError(`Invalid f=${raw.f}`);
+    }
+    out.f = raw.f;
   }
   return out;
 }

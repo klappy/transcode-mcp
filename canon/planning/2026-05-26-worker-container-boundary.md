@@ -38,9 +38,14 @@ This document is the load-bearing boundary specification for transcode-mcp. It e
    env.IMAGES.info(), computes the half-class encode width, calls
    env.IMAGES.input().transform().output(), writes to Cache API, returns it.
 
-4. **Audio dispatch to Container.** On a cache miss for audio, the Worker
-   fetches the source, writes it to R2 keyed by sha256, dispatches to the
-   Container with the R2 key and options, serves the output.
+4. **Audio dispatch to Container.** The Worker computes a content-addressed
+   R2 key — sha256(source-identity + preset + q + codec) — and does an R2 GET.
+   On a hit it serves the stored output. On a miss it dispatches to the
+   Container with the source URL and resolved options (preset, q, codec),
+   receives encoded bytes plus ffprobe metadata, writes the **output** to R2
+   under that key, and serves it. The Worker does not pre-stage the source in
+   R2 (that would pay for the source bytes twice); the Container fetches the
+   source itself.
 
 5. **Preset data.** A JSON object mapping preset names to quality values per
    media type. The only domain opinion in the Worker, and it is data not code.
@@ -57,8 +62,8 @@ This document is the load-bearing boundary specification for transcode-mcp. It e
    the Container. It does not know codec flags or filter chains.
 
 3. **What audio presets contain.** The Worker knows preset names (voice, music)
-   from the URL vocabulary. It does not know that voice+low means 32kbps mono
-   at 16kHz.
+   from the URL vocabulary. It does not know that voice+low means 8 kbps mono
+   at 8 kHz.
 
 4. **Source media analysis.** The Worker does not probe or analyze source media
    beyond what env.IMAGES.info() returns (dimensions).
@@ -92,4 +97,8 @@ This document is the load-bearing boundary specification for transcode-mcp. It e
 1. ffmpeg and codec libraries
 2. Recipe data files — preset+quality to ffmpeg flags mapping
 3. Content-class detection — voice vs music auto-detect
-4. Output upload to R2
+4. Source fetch and ffprobe measurement — the Container fetches the source URL
+   itself and returns the encoded bytes plus ffprobe metadata in its response.
+   It does **not** touch R2 and holds no cache or credential knowledge; the
+   Worker owns the R2 read/write. (Anti-cache-lying: the Worker, which owns the
+   cache, is the only component that reports cache state to the caller.)

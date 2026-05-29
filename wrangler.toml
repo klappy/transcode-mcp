@@ -12,14 +12,28 @@ compatibility_flags = [ "nodejs_compat" ]
 [images]
 binding = "IMAGES"
 
-# R2 bucket for audio output (lazy writes)
-# [[r2_buckets]]
-# binding = "AUDIO_BUCKET"
-# bucket_name = "transcode-mcp-audio"
+# R2 bucket for transcoded audio output — content-addressed, lazy writes,
+# 90-day lifecycle GC (configured on the bucket). The Worker owns the key and
+# the read/write; the container never touches R2.
+[[r2_buckets]]
+binding = "AUDIO_BUCKET"
+bucket_name = "transcode-mcp-audio"
 
-# Container / Durable Object for heavy audio work (future)
-# [durable_objects]
-# bindings = [{ name = "AUDIO_CONTAINER", class_name = "AudioContainer" }]
+# Audio transcode Container, fronted by the AudioContainer Durable Object.
+# ffmpeg + the recipe table live in container/. The Worker dispatches
+# (source_url, preset, q, codec); the container stays cache/credential-ignorant.
+[[containers]]
+class_name = "AudioContainer"
+image = "./container/Dockerfile"
+max_instances = 5
+
+[[durable_objects.bindings]]
+class_name = "AudioContainer"
+name = "AUDIO_CONTAINER"
+
+[[migrations]]
+new_sqlite_classes = [ "AudioContainer" ]
+tag = "v1"
 
 # For local dev with `wrangler dev`
 [dev]

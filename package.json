@@ -9,6 +9,7 @@
     "smoke-test": "bun run smoke-test.ts"
   },
   "dependencies": {
+    "@cloudflare/containers": "^0.3.5",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "agents": "^0.13.3",
     "zod": "^4.4.3"
