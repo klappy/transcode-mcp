@@ -95,9 +95,11 @@ function createServer(request: Request) {
         .optional()
         .describe("Quality preset: low=20, medium=50, high=80. With the half-class overshoot, even low looks good. Defaults to the proxy default (medium)."),
       f: z
-        .enum(["auto", "webp", "jpeg"])
+        .enum(["auto", "webp", "jpeg", "opus", "aac", "mp3"])
         .optional()
-        .describe("Output format. auto lets the proxy pick; webp is smallest; jpeg is universal."),
+        .describe(
+          "Output format. For images: auto|webp|jpeg (auto lets the proxy pick; webp is smallest; jpeg is universal). For audio: opus|aac|mp3 (codec selector; defaults to opus).",
+        ),
       // Advanced escape hatch — raw pixel control. w wins over viewport.
       w: z.number().int().positive().optional().describe("ADVANCED: raw output width in px. Overrides viewport. Most callers should use viewport."),
       h: z.number().int().positive().optional().describe("ADVANCED: raw output height in px. Rarely needed."),

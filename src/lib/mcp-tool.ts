@@ -112,7 +112,7 @@ export function buildToolResponse(args: ToolArgs, origin: string): ToolResponse 
       source_url: args.source_url,
       viewport: args.viewport ?? null,
       q: args.q ?? "default",
-      f: args.f ?? "auto",
+      f: args.f ?? (mediaType === "audio" ? "opus" : "auto"),
     },
     guidance,
   };
