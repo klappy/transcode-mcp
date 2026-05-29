@@ -513,6 +513,7 @@ async function handleAudioProxy(
       bitrate: meta.bitrate,
       sampleRate: meta.sampleRate,
       channels: meta.channels,
+      duration: meta.duration,
       sourceBytes: meta.sourceBytes,
       outputBytes: String(buf.byteLength),
     }),
