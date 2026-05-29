@@ -417,9 +417,9 @@ const PH=380, TH=338, LH=234;
 const HEAD={S:$("#hS"),E:$("#hE"),D:$("#hD")};
 
 // Layout offsets derived from viewport so the showroom + race fit any screen.
-// Returns { auxNear, auxFar, racePush, heroSc, auxSc, auxScFar }
+// Returns { auxNear, auxFar, lanePush, heroSc, auxSc, auxScFar, raceSc }
 // - auxNear/auxFar: tablet/laptop x at zoom progress 0..1 (laptop mirrors negated)
-// - racePush: |x| of each phone at split=1 (raw goes -racePush, proxy +racePush)
+// - lanePush: |x| of each phone at split=1 (raw goes -lanePush, proxy +lanePush)
 // - heroSc: hero phone scale during in-context (grows from 0.72 to heroSc)
 // - auxSc/auxScFar: showroom aux device scale at zoom=0 / zoom=1
 function layoutFor(vw){
@@ -427,14 +427,14 @@ function layoutFor(vw){
     // Phones: trio fits within the viewport without overlap.
     // Phone scr 148px wide (74px half), aux devices scaled 0.46 of ~196/256px CSS widths
     // -> tablet half ≈ 45px, laptop half ≈ 60px; at |x|=128, tablet/laptop sit fully inside.
-    return { auxNear: -128, auxFar: -180, racePush: 88,  heroSc: 0.95, auxSc: 0.46, auxScFar: 0.40, raceSc: 0.50, lanePush: 106 };
+    return { auxNear: -128, auxFar: -180, heroSc: 0.95, auxSc: 0.46, auxScFar: 0.40, raceSc: 0.50, lanePush: 106 };
   }
   if (vw < 760) {
     // Small tablets / large phones in landscape.
-    return { auxNear: -200, auxFar: -340, racePush: 140, heroSc: 1.05, auxSc: 0.72, auxScFar: 0.60, raceSc: 0.60, lanePush: 150 };
+    return { auxNear: -200, auxFar: -340, heroSc: 1.05, auxSc: 0.72, auxScFar: 0.60, raceSc: 0.60, lanePush: 150 };
   }
   // Desktop and up: tighter than the old defaults (less dead space between devices).
-  return { auxNear: -260, auxFar: -470, racePush: 178, heroSc: 1.12, auxSc: 0.78, auxScFar: 0.66, raceSc: 0.66, lanePush: 205 };
+  return { auxNear: -260, auxFar: -470, heroSc: 1.12, auxSc: 0.78, auxScFar: 0.66, raceSc: 0.66, lanePush: 205 };
 }
 
 function render(p){
@@ -594,7 +594,7 @@ async function startRace(){
   const rawMs  = Math.min(RACE_CAP_MS, Math.max(RACE_FLOOR_MS, rawT*1000));
   const factor = rawMs / rawT;
   const warmMs = Math.max(WIN_FLOOR_MS, warmT*factor);
-  const coldMs = Math.max(WIN_FLOOR_MS, coldT*factor);
+  const coldMs = Math.min(RACE_CAP_MS, Math.max(WIN_FLOOR_MS, coldT*factor));
   const proxyUrl=url(sample,size,q,f);
   const [tr,tc,tw]=await Promise.all([
     lane("R", rawT,  rawMs,  DATA[sample].url, myRunId),
@@ -605,7 +605,8 @@ async function startRace(){
   raceState.done=true;
   const mWarm=tr/tw, mCold=tr/tc;
   const warmTxt = mWarm>=1.1 ? `${mWarm.toFixed(0)}×` : "≈1×";
-  $("#vbig").innerHTML = `${warmTxt}<br><em>when cached</em><span class="vsub">first hit · ${mCold.toFixed(1)}× vs raw</span>`;
+  const coldTxt = mCold>=1.1 ? `${mCold.toFixed(1)}× vs raw` : "≈1× vs raw";
+  $("#vbig").innerHTML = `${warmTxt}<br><em>when cached</em><span class="vsub">first hit · ${coldTxt}</span>`;
   onScroll();
 }
 
