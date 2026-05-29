@@ -49,9 +49,10 @@ const IMAGE_GUIDANCE =
   "tradeoff. You do not specify the encode resolution — the proxy computes it.";
 
 const AUDIO_GUIDANCE =
-  "Use this URL directly as an <audio> src. Audio is currently passthrough " +
-  "(container transcoding is not yet deployed), so preset/q are recorded but " +
-  "not yet applied.";
+  "Use this URL directly as an <audio> src. Voice + opus is transcoded via " +
+  "the container; other preset/codec combinations currently passthrough " +
+  "(safe degradation, never errors) until their recipes ship. Defaults are " +
+  "preset=voice, q=medium, f=opus.";
 
 // Builds the response payload for a generate_transcode_url tool call. Pure
 // function: no network, no math beyond viewport->s mapping (which is the

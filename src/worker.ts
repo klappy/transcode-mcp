@@ -106,6 +106,24 @@ function createServer(request: Request) {
       preset: z.enum(["voice", "music"]).optional().describe("Audio only: encoding preset."),
     },
     (args) => {
+      // Cross-field check the per-field schema can't express: f's vocabulary
+      // depends on media_type. Reject mismatches here with a clear message
+      // rather than letting the proxy 400 on a URL we generated ourselves.
+      const mediaType = args.media_type ?? "image";
+      const IMAGE_F = ["auto", "webp", "jpeg"] as const;
+      const AUDIO_F = ["opus", "aac", "mp3"] as const;
+      const allowed = mediaType === "audio" ? AUDIO_F : IMAGE_F;
+      if (args.f !== undefined && !(allowed as readonly string[]).includes(args.f)) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error: f="${args.f}" is not valid for media_type="${mediaType}". Allowed values: ${allowed.join("|")}.`,
+            },
+          ],
+          isError: true,
+        };
+      }
       const origin = new URL(request.url).origin;
       const response = buildToolResponse(args, origin);
       return {
