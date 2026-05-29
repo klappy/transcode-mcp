@@ -319,20 +319,17 @@ const BRAND="untitled";                 // <- single place to set the product na
 document.getElementById("brand").textContent=BRAND;
 const BASE="https://transcode-mcp.klappy.workers.dev";
 
-/* ===== real measured matrix (bytes) ===== */
+/* ===== real measured matrix (bytes) =====
+   Source images are full-quality Unsplash JPEGs (?q=100), representative of
+   what someone actually drops onto a CDN — 3-5 MB phone/DSLR photos.
+   All 54 byte values + 9 encode dimensions are measured live from the proxy. */
 const DATA={
- coast:{src:651520,url:"https://picsum.photos/id/1015/2400/1600",enc:{400:"912×608",800:"1808×1216",1280:"2880×1920"},
-  b:{400:{low:{webp:37934,jpeg:24940},medium:{webp:67884,jpeg:54769},high:{webp:109714,jpeg:103058}},
-     800:{low:{webp:137666,jpeg:131955},medium:{webp:242484,jpeg:252436},high:{webp:393734,jpeg:440752}},
-     1280:{low:{webp:237490,jpeg:222589},medium:{webp:411886,jpeg:481820},high:{webp:649868,jpeg:686871}}},title:"The crowds gathered on the hillside"},
- city:{src:503712,url:"https://picsum.photos/id/1057/2400/1600",enc:{400:"912×608",800:"1808×1216",1280:"2880×1920"},
-  b:{400:{low:{webp:25480,jpeg:18812},medium:{webp:49962,jpeg:42030},high:{webp:88584,jpeg:83779}},
-     800:{low:{webp:89046,jpeg:100856},medium:{webp:169144,jpeg:197224},high:{webp:302872,jpeg:346615}},
-     1280:{low:{webp:148036,jpeg:168693},medium:{webp:276990,jpeg:369605},high:{webp:468254,jpeg:530741}}},title:"He went up the mountain"},
- portrait:{src:216384,url:"https://picsum.photos/id/64/2000/2000",enc:{400:"608×608",800:"1200×1200",1280:"1920×1920"},
-  b:{400:{low:{webp:8950,jpeg:8593},medium:{webp:15508,jpeg:17397},high:{webp:26962,jpeg:32688}},
-     800:{low:{webp:24644,jpeg:35322},medium:{webp:41360,jpeg:64768},high:{webp:72342,jpeg:114221}},
-     1280:{low:{webp:47554,jpeg:73279},medium:{webp:75376,jpeg:133572},high:{webp:132622,jpeg:235189}}},title:"And he opened his mouth and taught them"},
+ coast:{src:3177854,url:"https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=100",enc:{400:"912×608",800:"1808×1216",1280:"2880×1920"},
+  b:{400:{low:{webp:12706,jpeg:10837},medium:{webp:24418,jpeg:24062},high:{webp:46826,jpeg:51142}},800:{low:{webp:40498,jpeg:55104},medium:{webp:80022,jpeg:112633},high:{webp:158048,jpeg:219430}},1280:{low:{webp:87662,jpeg:126825},medium:{webp:172618,jpeg:260883},high:{webp:363866,jpeg:523899}}},title:"The crowds gathered on the hillside"},
+ city:{src:5537883,url:"https://images.unsplash.com/photo-1494891848038-7bd202a2afeb?q=100",enc:{400:"608×896",800:"1200×1744",1280:"1920×2800"},
+  b:{400:{low:{webp:7568,jpeg:8502},medium:{webp:11702,jpeg:15469},high:{webp:19112,jpeg:28213}},800:{low:{webp:18608,jpeg:34027},medium:{webp:27454,jpeg:53411},high:{webp:45936,jpeg:96949}},1280:{low:{webp:36066,jpeg:70126},medium:{webp:50816,jpeg:110039},high:{webp:93482,jpeg:231490}}},title:"He went up the mountain"},
+ portrait:{src:3380461,url:"https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=100",enc:{400:"608×912",800:"1200×1808",1280:"1920×2880"},
+  b:{400:{low:{webp:7610,jpeg:9627},medium:{webp:11306,jpeg:17871},high:{webp:18974,jpeg:32858}},800:{low:{webp:19006,jpeg:34310},medium:{webp:27284,jpeg:60092},high:{webp:45226,jpeg:110375}},1280:{low:{webp:37294,jpeg:68939},medium:{webp:52904,jpeg:118460},high:{webp:90030,jpeg:238724}}},title:"And he opened his mouth and taught them"},
 };
 const IDS=Object.keys(DATA);
 let sample="coast", size=800, q="medium", f="webp", bps=187500, lat=0.20;

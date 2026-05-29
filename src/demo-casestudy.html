@@ -239,7 +239,7 @@
       <div class="thumbs" id="thumbs"></div>
 
       <div class="note">
-        <b>Illustration figures are measured live</b> from the proxy across three sample images (raw ≈ 447&nbsp;KB → ≈ 43&nbsp;KB each, a 90% cut). <b>Audio figures are estimates</b> — ≈3&nbsp;min of reference audio per pericope, 192&nbsp;kbps source → ~32&nbsp;kbps Opus — pending a real sample to measure. "Room to record" converts free space at the selected recording rate (Compressed ≈ 60&nbsp;MB/hr, Hi-fi WAV ≈ 300&nbsp;MB/hr).
+        <b>Illustration figures are measured live</b> from the proxy across three sample images (raw averages ≈ 3.8&nbsp;MB → ≈ 15&nbsp;KB each at a phone-screen size, a 256× cut). <b>Audio figures are estimates</b> — ≈3&nbsp;min of reference audio per pericope, 192&nbsp;kbps source → ~32&nbsp;kbps Opus — pending a real sample to measure. "Room to record" converts free space at the selected recording rate (Compressed ≈ 60&nbsp;MB/hr, Hi-fi WAV ≈ 300&nbsp;MB/hr).
       </div>
     </div>
   </div>
@@ -250,14 +250,14 @@ const BRAND="untitled";                       // single place to set the product
 document.getElementById("brand").textContent=BRAND;
 const BASE="https://transcode-mcp.klappy.workers.dev";
 
-/* measured (live) image figures */
-const IMG={rawKB:446.5, optKB:43.4, perPericope:2};
+/* measured (live) image figures — averages across the three sample sources */
+const IMG={rawKB:3937.6, optKB:15.4, perPericope:2};
 /* ESTIMATE: reference audio per pericope */
 const AUD={min:3, rawMBmin:1.44, optMBmin:0.24};
 const SAMPLES=[
-  {url:"https://picsum.photos/id/1015/2400/1600", optKB:66, label:"Coast"},
-  {url:"https://picsum.photos/id/1057/2400/1600", optKB:49, label:"City"},
-  {url:"https://picsum.photos/id/64/2000/2000",  optKB:15, label:"Portrait"},
+  {url:"https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=100", optKB:24, label:"Coast"},
+  {url:"https://images.unsplash.com/photo-1494891848038-7bd202a2afeb?q=100", optKB:11, label:"City"},
+  {url:"https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=100", optKB:11, label:"Portrait"},
 ];
 
 let state={mode:"opt", assign:120, free:4096, audio:1, rate:1};
