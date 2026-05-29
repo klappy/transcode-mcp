@@ -17,6 +17,8 @@ import { encodeDimension, QUALITY_MAP, type Quality } from "./lib/encode-dimensi
 import { shortestSideToWidth } from "./lib/generate-transcode-url";
 import { buildToolResponse } from "./lib/mcp-tool";
 import { DEMO_PAGE_HTML } from "./demo-page";
+import { DEMO_FILM_HTML } from "./demo-film";
+import { DEMO_CASESTUDY_HTML } from "./demo-casestudy";
 
 interface Env {
   IMAGES?: ImagesBinding;
@@ -93,15 +95,28 @@ export default {
       return handler(request, env, ctx);
     }
 
-    // Demo page (root + /demo)
-    if (url.pathname === "/" || url.pathname === "/demo" || url.pathname === "/demo/") {
-      return new Response(DEMO_PAGE_HTML, {
+    // Demo pages. Three audience-specific pages, each its own HTML string:
+    //   /         + /film   -> the scroll film (default landing)
+    //   /bench              -> the measurement bench (formerly served at /)
+    //   /casestudy          -> the storage case study
+    // See canon/planning/2026-05-29-demo-spa-routing.md.
+    const htmlResponse = (body: string) =>
+      new Response(body, {
         status: 200,
         headers: {
           "Content-Type": "text/html; charset=utf-8",
           "Cache-Control": "no-cache",
         },
       });
+
+    if (url.pathname === "/" || url.pathname === "/film" || url.pathname === "/film/") {
+      return htmlResponse(DEMO_FILM_HTML);
+    }
+    if (url.pathname === "/bench" || url.pathname === "/bench/") {
+      return htmlResponse(DEMO_PAGE_HTML);
+    }
+    if (url.pathname === "/casestudy" || url.pathname === "/casestudy/") {
+      return htmlResponse(DEMO_CASESTUDY_HTML);
     }
 
     // Image proxy
