@@ -425,6 +425,7 @@ async function handleAudioProxy(
         bitrate: m.bitrate,
         sampleRate: m.sampleRate,
         channels: m.channels,
+        duration: m.duration,
         sourceBytes: m.sourceBytes,
         outputBytes: String(hit.size),
       }),
@@ -475,6 +476,7 @@ async function handleAudioProxy(
     bitrate: encoded.headers.get("X-Audio-Bitrate") ?? "",
     sampleRate: encoded.headers.get("X-Audio-SampleRate") ?? "",
     channels: encoded.headers.get("X-Audio-Channels") ?? "",
+    duration: encoded.headers.get("X-Audio-Duration") ?? "",
     sourceBytes: encoded.headers.get("X-Source-Bytes") ?? "",
   };
 
@@ -491,6 +493,7 @@ async function handleAudioProxy(
         bitrate: meta.bitrate,
         sampleRate: meta.sampleRate,
         channels: meta.channels,
+        duration: meta.duration,
         sourceBytes: meta.sourceBytes,
         preset: resolved.preset,
         q: resolved.q,
@@ -551,6 +554,7 @@ interface AudioHeaderParts {
   bitrate?: string;
   sampleRate?: string;
   channels?: string;
+  duration?: string; // seconds, from the container's ffprobe (length is preserved by transcode)
   sourceBytes?: string;
   outputBytes?: string;
 }
@@ -571,6 +575,7 @@ function audioHeaders(p: AudioHeaderParts): Headers {
   if (p.bitrate) h.set("X-Transcode-Bitrate", p.bitrate);
   if (p.sampleRate) h.set("X-Transcode-SampleRate", p.sampleRate);
   if (p.channels) h.set("X-Transcode-Channels", p.channels);
+  if (p.duration) h.set("X-Transcode-Duration", p.duration);
   if (p.sourceBytes) h.set("X-Transcode-Source-Bytes", p.sourceBytes);
   if (p.outputBytes) h.set("X-Transcode-Output-Bytes", p.outputBytes);
   return h;

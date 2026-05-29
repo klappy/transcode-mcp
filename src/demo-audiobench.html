@@ -90,11 +90,11 @@
   .qmap-note { flex-basis: 100%; font-size: 12px; color: var(--text-dim); line-height: 1.5; }
   .qmap-note em { color: var(--text); font-style: normal; font-weight: 500; }
 
-  .baseline { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; margin-bottom: 18px; display: flex; flex-wrap: wrap; gap: 18px; align-items: center; }
-  .baseline .blabel { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--text-dim); }
-  .baseline .bsize { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--text); }
-  .baseline audio { height: 36px; }
-  .baseline .bmeta { font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
+  .source-info { font-family: var(--mono); font-size: 13px; color: var(--text-dim); background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; margin-bottom: 18px; line-height: 1.6; }
+  .source-info strong { color: var(--text); font-weight: 700; }
+  .source-info .si-dim { color: var(--text-dim); }
+  .card.source-tile { border-color: rgba(54,227,160,.45); }
+  .tile-tag { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--accent-2); border-color: rgba(54,227,160,.4); background: rgba(54,227,160,.08); }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
   .card { background: linear-gradient(180deg, var(--panel), var(--panel-2)); border: 1px solid var(--border); border-radius: 14px; padding: 15px 16px; display: flex; flex-direction: column; gap: 10px; }
@@ -156,11 +156,11 @@
     <div class="control-group">
       <label class="cap" for="audio-source">Sample source</label>
       <select id="audio-source">
-        <option value="https://openbible.com/audio/souer/BSB_19_Psa_023.mp3">Psalm 23 — BSB (Souer, ~45 s, 1.0 MB) — audio Bible</option>
-        <option value="https://openbible.com/audio/souer/BSB_19_Psa_117.mp3">Psalm 117 — BSB (Souer, ~25 s, 409 KB) — shortest chapter</option>
-        <option value="https://archive.org/download/15thanniversarycollection_2008_librivox/fifteen_psalmfifteen_kjv_64kb.mp3">Psalm 15 — KJV (LibriVox, ~58 s, 466 KB)</option>
-        <option value="https://archive.org/download/stories_001_librivox/telltale_heart_poe_dm_64kb.mp3">The Tell-Tale Heart — Poe (LibriVox, ~18 min, 8.7 MB)</option>
-        <option value="https://archive.org/download/stories_001_librivox/taming_the_bicycle_twain_ep_64kb.mp3">Taming the Bicycle — Twain (LibriVox, ~28 min, 13.5 MB)</option>
+        <option value="https://openbible.com/audio/souer/BSB_19_Psa_023.mp3">Psalm 23 — BSB (Souer) · 0:45 · 1.0 MB — audio Bible</option>
+        <option value="https://openbible.com/audio/souer/BSB_19_Psa_117.mp3">Psalm 117 — BSB (Souer) · 0:17 · 409 KB — shortest chapter</option>
+        <option value="https://archive.org/download/15thanniversarycollection_2008_librivox/fifteen_psalmfifteen_kjv_64kb.mp3">Psalm 15 — KJV (LibriVox) · 0:58 · 456 KB</option>
+        <option value="https://archive.org/download/stories_001_librivox/telltale_heart_poe_dm_64kb.mp3">The Tell-Tale Heart — Poe (LibriVox) · 18:09 · 8.3 MB</option>
+        <option value="https://archive.org/download/stories_001_librivox/taming_the_bicycle_twain_ep_64kb.mp3">Taming the Bicycle — Twain (LibriVox) · 28:12 · 12.9 MB</option>
       </select>
     </div>
     <div class="control-group">
@@ -190,10 +190,6 @@
         <label><input type="checkbox" id="q-high" checked> high <span class="qhint">32 kbps</span></label>
       </div>
     </div>
-    <div class="control-group" style="flex:0 0 auto;">
-      <label class="cap">&nbsp;</label>
-      <button id="run-btn" type="button">Run bench</button>
-    </div>
   </div>
 
   <div class="qmap" id="qmap">
@@ -206,7 +202,7 @@
 
   <div class="status" id="status"></div>
 
-  <div class="baseline" id="baseline-wrap" hidden></div>
+  <div id="source-info" class="source-info">Pick a source to run the bench…</div>
   <div class="grid" id="results"></div>
 
 <script>
@@ -217,9 +213,8 @@
   var qLow = document.getElementById('q-low');
   var qMedium = document.getElementById('q-medium');
   var qHigh = document.getElementById('q-high');
-  var runBtn = document.getElementById('run-btn');
   var statusEl = document.getElementById('status');
-  var baselineWrap = document.getElementById('baseline-wrap');
+  var sourceInfo = document.getElementById('source-info');
   var results = document.getElementById('results');
 
   // Mobile nav toggle (class-based so it needs no extra ids).
@@ -258,6 +253,16 @@
     if (n < 1024) return n + ' B';
     if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
     return (n / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  // Length from X-Transcode-Duration (seconds, possibly fractional) -> m:ss.
+  function formatDuration(secStr) {
+    var s = parseFloat(secStr);
+    if (!s || isNaN(s)) return '';
+    var m = Math.floor(s / 60);
+    var r = Math.round(s - m * 60);
+    if (r === 60) { m += 1; r = 0; }
+    return m + ':' + (r < 10 ? '0' + r : r);
   }
 
   // The proxy answers GET only. Read the delivered size from a size header
@@ -300,91 +305,117 @@
     return '<span class="badge ' + cls + '">' + (c || '—') + '</span>';
   }
 
-  function renderBaseline(source) {
-    var path = '/audio/' + source;
-    var fullUrl = window.location.origin + path;
-    baselineWrap.hidden = false;
-    baselineWrap.innerHTML = '<span class="blabel">Baseline (passthrough)</span><span class="bsize">measuring…</span>';
-    return fetchOne(fullUrl).then(function (r) {
-      var ct = (r.headers['content-type'] || 'audio/?');
-      baselineWrap.innerHTML =
-        '<div><span class="blabel">Baseline · original source</span><br><span class="bsize">' + formatBytes(r.size) + '</span></div>' +
-        '<div class="bmeta">' + ct + '<br>' + cacheBadge(r.headers['x-transcode-cache']) + '</div>' +
-        '<audio controls preload="none" src="' + fullUrl + '"></audio>';
-      return r.size;
-    }).catch(function (e) {
-      baselineWrap.innerHTML = '<span class="err">baseline failed: ' + e.message + '</span>';
-      return 0;
-    });
-  }
-
-  function renderVariant(source, preset, q, codec, baselineBytes) {
-    var path = buildAudioPath(source, preset, q, codec);
-    var fullUrl = window.location.origin + path;
-    var card = document.createElement('div');
-    card.className = 'card';
-    card.innerHTML = '<h3>' + preset + ' · ' + q + ' · ' + codec + '</h3><div class="path">' + path + '</div><div class="status">fetching…</div>';
-    results.appendChild(card);
-
+  // One probe = one /audio request. Source and every variant are just URLs;
+  // we collect the response headers into a uniform tile-data object so they can
+  // be sorted and rendered together.
+  function probeTile(job) {
+    var fullUrl = window.location.origin + job.path;
     return fetchOne(fullUrl).then(function (r) {
       var h = r.headers;
       var cache = h['x-transcode-cache'] || '';
-      var reason = h['x-transcode-reason'] || '';
-      var bitrate = h['x-transcode-bitrate'] || '';
-      var ch = h['x-transcode-channels'] || '';
-      var transcoded = cache.toUpperCase() === 'HIT' || cache.toUpperCase() === 'MISS';
-      var saveRatio = baselineBytes > 0 ? (1 - r.size / baselineBytes) : 0;
-      var savePct = (saveRatio * 100).toFixed(1) + '%';
-      var saveCls = transcoded && saveRatio > 0.02 ? 'good' : 'flat';
-
-      var meta = '';
-      meta += '<div class="stat-row"><span>output</span><strong>' + formatBytes(r.size) + '</strong></div>';
-      meta += '<div class="stat-row"><span>vs baseline</span><span class="save ' + saveCls + '">' + (saveRatio > 0 ? '−' + savePct : 'same size') + '</span></div>';
-      // Measured bitrate (live, from the header) — compare against the target in the legend.
-      // Sample rate is intentionally not shown per-tile: Opus reports 48000 (the decode
-      // rate) regardless of the coded 8/16/24 kHz, which would contradict the target legend.
-      if (bitrate) meta += '<div class="stat-row"><span>bitrate · measured</span><strong>' + bitrate + ' bps</strong></div>';
-      if (ch) meta += '<div class="stat-row"><span>channels</span><strong>' + ch + '</strong></div>';
-
-      card.innerHTML =
-        '<h3>' + preset + ' · ' + q + ' · ' + codec + ' ' + cacheBadge(cache) + '</h3>' +
-        '<div class="path">' + path + '</div>' +
-        '<audio controls preload="none" src="' + fullUrl + '"></audio>' +
-        meta +
-        (transcoded ? '' : '<div class="reason">passthrough' + (reason ? ' · ' + reason : '') + '</div>');
+      return {
+        isSource: job.isSource, label: job.label, path: job.path, fullUrl: fullUrl,
+        size: r.size, cache: cache, reason: h['x-transcode-reason'] || '',
+        bitrate: h['x-transcode-bitrate'] || '', channels: h['x-transcode-channels'] || '',
+        duration: h['x-transcode-duration'] || '', contentType: h['content-type'] || '',
+        transcoded: cache.toUpperCase() === 'HIT' || cache.toUpperCase() === 'MISS', error: null
+      };
     }).catch(function (e) {
-      card.innerHTML = '<h3>' + preset + ' · ' + q + ' · ' + codec + '</h3><div class="path">' + path + '</div><div class="err">failed: ' + e.message + '</div>';
+      return { isSource: job.isSource, label: job.label, path: job.path, fullUrl: fullUrl, size: 0, error: e.message };
     });
   }
 
+  function tileHtml(d, baselineBytes, commonDuration) {
+    if (d.error) {
+      return '<div class="card"><h3>' + d.label + '</h3><div class="path">' + d.path + '</div><div class="err">failed: ' + d.error + '</div></div>';
+    }
+    // Duration is preserved by transcode; the passthrough source has no
+    // duration header, so it borrows the length any transcoded tile reported.
+    var lenTxt = formatDuration(d.duration || (d.isSource ? commonDuration : ''));
+    var meta = '<div class="stat-row"><span>size</span><strong>' + formatBytes(d.size) + '</strong></div>';
+    if (!d.isSource) {
+      var saveRatio = baselineBytes > 0 ? (1 - d.size / baselineBytes) : 0;
+      var savePct = (saveRatio * 100).toFixed(1) + '%';
+      var saveCls = d.transcoded && saveRatio > 0.02 ? 'good' : 'flat';
+      meta += '<div class="stat-row"><span>vs source</span><span class="save ' + saveCls + '">' + (saveRatio > 0 ? '−' + savePct : 'same size') + '</span></div>';
+    }
+    if (lenTxt) meta += '<div class="stat-row"><span>length</span><strong>' + lenTxt + '</strong></div>';
+    // Measured bitrate (live, from the header) — compare against the legend target.
+    // Sample rate is intentionally omitted: Opus reports 48000 (decode rate)
+    // regardless of the coded 8/16/24 kHz, which would contradict the target legend.
+    if (!d.isSource && d.bitrate) meta += '<div class="stat-row"><span>bitrate · measured</span><strong>' + d.bitrate + ' bps</strong></div>';
+    if (!d.isSource && d.channels) meta += '<div class="stat-row"><span>channels</span><strong>' + d.channels + '</strong></div>';
+    if (d.isSource && d.contentType) meta += '<div class="stat-row"><span>type</span><strong>' + d.contentType + '</strong></div>';
+
+    var head = d.isSource
+      ? '<h3><span class="tile-tag">source</span> original ' + cacheBadge(d.cache) + '</h3>'
+      : '<h3>' + d.label + ' ' + cacheBadge(d.cache) + '</h3>';
+    return '<div class="card' + (d.isSource ? ' source-tile' : '') + '">' +
+      head +
+      '<div class="path">' + d.path + '</div>' +
+      '<audio controls preload="none" src="' + d.fullUrl + '"></audio>' +
+      meta +
+      (!d.isSource && !d.transcoded ? '<div class="reason">passthrough' + (d.reason ? ' · ' + d.reason : '') + '</div>' : '') +
+      '</div>';
+  }
+
+  var runGen = 0;
   function run() {
     var source = currentSource();
     var preset = presetSelect.value;
     var codec = codecSelect.value;
     var qs = selectedQualities();
-    if (!source) { statusEl.textContent = 'pick or paste a source first'; return; }
-    if (qs.length === 0) { statusEl.textContent = 'select at least one quality level'; return; }
-
+    if (!source) {
+      statusEl.textContent = 'pick or paste a source first';
+      sourceInfo.textContent = 'Pick a source to run the bench…';
+      results.innerHTML = '';
+      return;
+    }
+    var gen = ++runGen;
     results.innerHTML = '';
-    runBtn.disabled = true;
-    statusEl.textContent = 'measuring baseline + ' + qs.length + ' variant(s) through /audio/ …';
+    statusEl.textContent = 'measuring source + ' + qs.length + ' variant(s) in parallel through /audio/ …';
+    sourceInfo.innerHTML = 'Source: <strong>' + source + '</strong> <span class="si-dim">· measuring…</span>';
 
-    renderBaseline(source).then(function (baselineBytes) {
-      var chain = Promise.resolve();
-      qs.forEach(function (q) {
-        chain = chain.then(function () { return renderVariant(source, preset, q, codec, baselineBytes); });
-      });
-      return chain;
-    }).then(function () {
-      runBtn.disabled = false;
+    // Source goes first as a job, then one per selected quality. The proxy is
+    // built for concurrency, so fire them ALL at once — no sequential chain.
+    var jobs = [{ isSource: true, label: 'source', path: '/audio/' + source }];
+    qs.forEach(function (q) {
+      jobs.push({ isSource: false, label: preset + ' · ' + q + ' · ' + codec, path: buildAudioPath(source, preset, q, codec) });
+    });
+
+    Promise.all(jobs.map(probeTile)).then(function (tiles) {
+      if (gen !== runGen) return; // superseded by a newer run
+      var i, src = null;
+      for (i = 0; i < tiles.length; i++) { if (tiles[i].isSource) src = tiles[i]; }
+      var baselineBytes = src && src.size ? src.size : 0;
+      var commonDuration = '';
+      for (i = 0; i < tiles.length; i++) { if (tiles[i].duration) { commonDuration = tiles[i].duration; break; } }
+      // Sort by delivered size, largest first — source on top, then high→low.
+      tiles.sort(function (a, b) { return (b.size || 0) - (a.size || 0); });
+      results.innerHTML = '';
+      tiles.forEach(function (d) { results.insertAdjacentHTML('beforeend', tileHtml(d, baselineBytes, commonDuration)); });
+
+      var lenTxt = formatDuration(commonDuration);
+      var sep = ' <span class="si-dim">·</span> ';
+      sourceInfo.innerHTML = 'Source: <strong>' + source + '</strong>' + sep + formatBytes(baselineBytes) +
+        (lenTxt ? sep + lenTxt : '') + sep + (src ? (src.contentType || 'audio/?') : 'audio/?') +
+        sep + qs.length + ' variant(s), all fetched in parallel';
       statusEl.textContent = 'done — ' + new Date().toLocaleTimeString();
     }).catch(function () {
-      runBtn.disabled = false;
+      if (gen !== runGen) return;
       statusEl.textContent = 'finished with errors (see tiles)';
     });
   }
 
-  runBtn.addEventListener('click', run);
+  function debounce(fn, ms) { var t; return function () { clearTimeout(t); t = setTimeout(fn, ms); }; }
+
+  // No Run button: selecting a source (or changing any option) runs the bench.
+  sourceSelect.addEventListener('change', function () { customUrl.value = ''; run(); });
+  customUrl.addEventListener('input', debounce(run, 600));
+  presetSelect.addEventListener('change', run);
+  codecSelect.addEventListener('change', run);
+  [qLow, qMedium, qHigh].forEach(function (cb) { cb.addEventListener('change', run); });
+
   // Auto-run once on load with the defaults so the bench shows something live.
   run();
 </script>

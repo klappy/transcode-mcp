@@ -59,10 +59,11 @@ describe.each(PAGES)("demo page emitted script — %s", (_label, htmlDoc) => {
 });
 
 describe("shared cross-page nav", () => {
-  test("every page links to all three routes", () => {
+  test("every page links to all four routes (shared nav)", () => {
     for (const [label, htmlDoc] of PAGES) {
       expect(htmlDoc, `${label} -> /film`).toContain('href="/film"');
       expect(htmlDoc, `${label} -> /bench`).toContain('href="/bench"');
+      expect(htmlDoc, `${label} -> /bench/audio`).toContain('href="/bench/audio"');
       expect(htmlDoc, `${label} -> /casestudy`).toContain('href="/casestudy"');
     }
   });
