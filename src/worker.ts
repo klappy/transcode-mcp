@@ -12,7 +12,7 @@
 
 import { createMcpHandler } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { Container, getContainer } from "@cloudflare/containers";
+import { Container, getRandom } from "@cloudflare/containers";
 import { z } from "zod";
 import { parseProxyPath, ProxyPathError } from "./lib/parse-proxy-path";
 import { encodeDimension, QUALITY_MAP, type Quality } from "./lib/encode-dimension";
@@ -419,11 +419,14 @@ async function handleAudioProxy(
     });
   }
 
-  // Miss -> dispatch to the container. getContainer routes by the cache key so
-  // repeat misses for the same output reuse a warm instance.
+  // Miss -> dispatch to the container. Transcoding is stateless (Worker owns
+  // R2 read/write and the cache key), so route across the shared pool with
+  // getRandom rather than pinning each unique output to its own instance —
+  // otherwise a single concurrent burst of distinct keys would saturate
+  // max_instances and force the catch-block passthrough fallback.
   let encoded: Response;
   try {
-    const instance = getContainer(env.AUDIO_CONTAINER, key);
+    const instance = await getRandom(env.AUDIO_CONTAINER, 5);
     encoded = await instance.fetch(
       new Request("https://audio-container/transcode", {
         method: "POST",
