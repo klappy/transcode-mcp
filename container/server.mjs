@@ -70,7 +70,7 @@ function isBlockedHost(host) {
   if (lower === "metadata" || lower === "metadata.google.internal") return true;
   // IPv6 loopback / link-local / unique-local.
   if (lower === "::1" || lower === "::") return true;
-  if (lower.startsWith("fe80:") || lower.startsWith("fe80::")) return true;
+  if (/^fe[89ab][0-9a-f]:/i.test(lower)) return true;
   if (/^f[cd][0-9a-f]{2}:/i.test(lower)) return true;
   // IPv4-mapped IPv6 (::ffff:x.x.x.x). The WHATWG URL parser normalizes the
   // dotted-quad form to two hex groups (e.g. ::ffff:a9fe:a9fe), so we must
