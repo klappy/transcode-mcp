@@ -233,6 +233,18 @@
     return custom ? custom : sourceSelect.value;
   }
 
+  // Escape user/header-controlled strings before they land in innerHTML —
+  // the source URL (custom-paste input) and proxy headers are not trusted
+  // markup, so attribute-break / tag-inject characters must be neutralised.
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function selectedQualities() {
     var qs = [];
     if (qLow.checked) qs.push('low');
@@ -327,7 +339,7 @@
 
   function tileHtml(d, baselineBytes, commonDuration) {
     if (d.error) {
-      return '<div class="card"><h3>' + d.label + '</h3><div class="path">' + d.path + '</div><div class="err">failed: ' + d.error + '</div></div>';
+      return '<div class="card"><h3>' + escapeHtml(d.label) + '</h3><div class="path">' + escapeHtml(d.path) + '</div><div class="err">failed: ' + escapeHtml(d.error) + '</div></div>';
     }
     // Duration is preserved by transcode; the passthrough source has no
     // duration header, so it borrows the length any transcoded tile reported.
@@ -350,13 +362,13 @@
 
     var head = d.isSource
       ? '<h3><span class="tile-tag">source</span> original ' + cacheBadge(d.cache) + '</h3>'
-      : '<h3>' + d.label + ' ' + cacheBadge(d.cache) + '</h3>';
+      : '<h3>' + escapeHtml(d.label) + ' ' + cacheBadge(d.cache) + '</h3>';
     return '<div class="card' + (d.isSource ? ' source-tile' : '') + '">' +
       head +
-      '<div class="path">' + d.path + '</div>' +
-      '<audio controls preload="none" src="' + d.fullUrl + '"></audio>' +
+      '<div class="path">' + escapeHtml(d.path) + '</div>' +
+      '<audio controls preload="none" src="' + escapeHtml(d.fullUrl) + '"></audio>' +
       meta +
-      (!d.isSource && !d.transcoded ? '<div class="reason">passthrough' + (d.reason ? ' · ' + d.reason : '') + '</div>' : '') +
+      (!d.isSource && !d.transcoded ? '<div class="reason">passthrough' + (d.reason ? ' · ' + escapeHtml(d.reason) : '') + '</div>' : '') +
       '</div>';
   }
 
@@ -375,7 +387,7 @@
     var gen = ++runGen;
     results.innerHTML = '';
     statusEl.textContent = 'measuring source + ' + qs.length + ' variant(s) in parallel through /audio/ …';
-    sourceInfo.innerHTML = 'Source: <strong>' + source + '</strong> <span class="si-dim">· measuring…</span>';
+    sourceInfo.innerHTML = 'Source: <strong>' + escapeHtml(source) + '</strong> <span class="si-dim">· measuring…</span>';
 
     // Source goes first as a job, then one per selected quality. The proxy is
     // built for concurrency, so fire them ALL at once — no sequential chain.
@@ -398,8 +410,8 @@
 
       var lenTxt = formatDuration(commonDuration);
       var sep = ' <span class="si-dim">·</span> ';
-      sourceInfo.innerHTML = 'Source: <strong>' + source + '</strong>' + sep + formatBytes(baselineBytes) +
-        (lenTxt ? sep + lenTxt : '') + sep + (src ? (src.contentType || 'audio/?') : 'audio/?') +
+      sourceInfo.innerHTML = 'Source: <strong>' + escapeHtml(source) + '</strong>' + sep + formatBytes(baselineBytes) +
+        (lenTxt ? sep + lenTxt : '') + sep + escapeHtml(src ? (src.contentType || 'audio/?') : 'audio/?') +
         sep + qs.length + ' variant(s), all fetched in parallel';
       statusEl.textContent = 'done — ' + new Date().toLocaleTimeString();
     }).catch(function () {
