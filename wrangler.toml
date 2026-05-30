@@ -12,15 +12,89 @@ compatibility_flags = [ "nodejs_compat" ]
 [images]
 binding = "IMAGES"
 
-# R2 bucket for audio output (lazy writes)
-# [[r2_buckets]]
-# binding = "AUDIO_BUCKET"
-# bucket_name = "transcode-mcp-audio"
+# R2 bucket for transcoded audio output — content-addressed, lazy writes,
+# 90-day lifecycle GC (configured on the bucket). The Worker owns the key and
+# the read/write; the container never touches R2.
+[[r2_buckets]]
+binding = "AUDIO_BUCKET"
+bucket_name = "transcode-mcp-audio"
 
-# Container / Durable Object for heavy audio work (future)
-# [durable_objects]
-# bindings = [{ name = "AUDIO_CONTAINER", class_name = "AudioContainer" }]
+# Audio transcode Container, fronted by the AudioContainer Durable Object.
+# ffmpeg + the recipe table live in container/. The Worker dispatches
+# (source_url, preset, q, codec); the container stays cache/credential-ignorant.
+[[containers]]
+class_name = "AudioContainer"
+image = "./container/Dockerfile"
+max_instances = 5
+
+[[durable_objects.bindings]]
+class_name = "AudioContainer"
+name = "AUDIO_CONTAINER"
+
+[[migrations]]
+new_sqlite_classes = [ "AudioContainer" ]
+tag = "v1"
 
 # For local dev with `wrangler dev`
 [dev]
 port = 8787
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Preview / staging environment — a SEPARATE worker, fully isolated from prod.
+#
+#   wrangler deploy --env preview
+#
+# This deploys a SEPARATE worker `transcode-mcp-preview` (name set explicitly
+# below) at transcode-mcp-preview.<subdomain>.workers.dev, and NEVER touches
+# production (`transcode-mcp`). That workers.dev URL is our
+# preview URL — Cloudflare does not mint version preview URLs (`wrangler
+# versions upload`) for Workers that implement a Durable Object, so a separate
+# named environment is the only way to get an isolated, clickable preview.
+#
+# Bindings are non-inheritable in Wrangler environments, so every binding is
+# redefined below against its OWN preview resources. Production and preview
+# share NO state — in particular a SEPARATE R2 bucket. The container is bound to
+# a DISTINCT Durable Object class (AudioContainerPreview) because Cloudflare keys
+# a container application to the DO class name, not the worker name, so reusing
+# AudioContainer across prod + preview fails with DURABLE_OBJECT_ALREADY_HAS_APPLICATION.
+#
+# One-time setup before the first preview deploy:
+#   wrangler r2 bucket create transcode-mcp-audio-preview
+#   wrangler deploy --env preview   # full deploy: applies the v1 DO migration
+#                                   # to the preview DO and builds its container
+# After that, re-run `wrangler deploy --env preview` per branch as needed.
+[env.preview]
+# Explicit name: wrangler's container config does NOT derive the worker name
+# from the env auto-append, so the env must declare its own name — otherwise:
+# "Must have either a top level name and containers.class_name ... or
+# containers.name". This is the same string wrangler would have auto-appended.
+name = "transcode-mcp-preview"
+
+# vars is non-inheritable; mirror the (empty) top-level set so wrangler does not
+# warn that vars is missing on the env. No preview-specific vars today.
+[env.preview.vars]
+
+[env.preview.images]
+binding = "IMAGES"
+
+[[env.preview.r2_buckets]]
+binding = "AUDIO_BUCKET"
+bucket_name = "transcode-mcp-audio-preview"
+
+# class_name is AudioContainerPreview (a subclass of AudioContainer) so the
+# preview worker's container application is keyed on a DISTINCT Durable Object
+# class from prod's AudioContainer. Sharing the class name fails the deploy with
+# DURABLE_OBJECT_ALREADY_HAS_APPLICATION. The binding NAME stays AUDIO_CONTAINER
+# (worker reads env.AUDIO_CONTAINER) — only the class differs.
+[[env.preview.containers]]
+class_name = "AudioContainerPreview"
+image = "./container/Dockerfile"
+max_instances = 5
+
+[[env.preview.durable_objects.bindings]]
+class_name = "AudioContainerPreview"
+name = "AUDIO_CONTAINER"
+
+[[env.preview.migrations]]
+new_sqlite_classes = [ "AudioContainerPreview" ]
+tag = "v1"

@@ -14,6 +14,7 @@ export interface ImageOptions {
 export interface AudioOptions {
   preset?: string;
   q?: Quality;
+  f?: "opus" | "aac" | "mp3";
 }
 
 export type GenerateTranscodeUrlInput =

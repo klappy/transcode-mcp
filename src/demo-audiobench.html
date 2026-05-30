@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>agent-native audio proxy — measurement bench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;900&family=Instrument+Serif:ital@0;1&family=Spline+Sans+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Same suite palette as the image bench (demo-page.html) so the two
+       benches read as one product. */
+    --bg: #050608;
+    --panel: #0a0d14;
+    --panel-2: #0c1019;
+    --text: #f3f6fb;
+    --text-dim: #8b94a6;
+    --accent: #6ea8ff;       /* primary blue */
+    --accent-2: #36e3a0;     /* win green */
+    --warn: #ffcaa6;         /* honest "passthrough / not transcoded" amber */
+    --border: #1a2030;
+    --mono: 'Spline Sans Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --ui: 'Schibsted Grotesk', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --serif: 'Instrument Serif', Georgia, serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: var(--ui); -webkit-font-smoothing: antialiased; }
+  body {
+    padding: 30px 26px 80px; max-width: 1280px; margin: 0 auto; line-height: 1.55;
+    background-image:
+      radial-gradient(1050px 600px at 82% -10%, rgba(110,168,255,.12), transparent 60%),
+      radial-gradient(880px 520px at 4% 112%, rgba(54,227,160,.07), transparent 55%);
+    background-attachment: fixed;
+  }
+  h1 { margin: 0 0 8px; font-size: clamp(26px, 4vw, 40px); font-weight: 900; letter-spacing: -.025em; line-height: 1.04; }
+  h1 small { color: var(--accent-2); font-weight: 400; font-size: 14px; letter-spacing: .02em; font-family: var(--serif); font-style: italic; }
+  p.lead { color: var(--text-dim); margin: 0 0 18px; font-size: 14.5px; max-width: 86ch; }
+  code { font-family: var(--mono); font-size: .9em; color: var(--accent-2); background: var(--panel); border: 1px solid var(--border); padding: 1px 6px; border-radius: 5px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  [hidden] { display: none !important; }
+
+  /* shared cross-page nav (mirrors demo-page.html) */
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+  .brand { font-family: var(--mono); font-size: 12px; color: var(--text-dim); letter-spacing: .04em; }
+  .brand b { color: var(--text); font-weight: 700; }
+  .xnav { display: flex; align-items: center; gap: 4px; position: relative; }
+  .xnav a { font-family: var(--ui); font-size: 12px; font-weight: 600; letter-spacing: .02em; color: var(--text-dim); padding: 7px 11px; border-radius: 9px; border: 1px solid transparent; }
+  .xnav a:hover { color: var(--text); background: rgba(255,255,255,.04); text-decoration: none; }
+  .xnav a[aria-current="page"] { color: var(--text); border-color: var(--border); background: var(--panel); }
+  .xnav-toggle { display: none; appearance: none; background: transparent; border: 1px solid var(--border); color: var(--text); border-radius: 9px; padding: 8px 10px; cursor: pointer; }
+  .xnav-toggle:hover { background: rgba(255,255,255,.04); }
+  .xnav-toggle .bars { display: inline-block; width: 16px; height: 12px; position: relative; }
+  .xnav-toggle .bars::before, .xnav-toggle .bars::after, .xnav-toggle .bars span { content: ""; position: absolute; left: 0; right: 0; height: 2px; background: var(--text); border-radius: 2px; transition: .2s; }
+  .xnav-toggle .bars::before { top: 0; } .xnav-toggle .bars span { top: 5px; display: block; } .xnav-toggle .bars::after { bottom: 0; }
+  @media (max-width: 640px) {
+    .xnav-toggle { display: inline-flex; }
+    .xnav-links { position: absolute; top: calc(100% + 8px); right: 0; min-width: 180px; flex-direction: column; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 6px; display: none; box-shadow: 0 16px 40px rgba(0,0,0,.5); z-index: 60; }
+    .xnav[data-open="true"] .xnav-links { display: flex; }
+    .xnav-links a { padding: 9px 12px; border-radius: 8px; }
+  }
+  .xnav-links { display: flex; gap: 4px; }
+
+  .note { background: linear-gradient(180deg, var(--panel), var(--panel-2)); border: 1px solid var(--border); border-left: 3px solid var(--warn); border-radius: 12px; padding: 13px 16px; margin-bottom: 22px; font-size: 13px; color: var(--text-dim); }
+  .note strong { color: var(--warn); }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: end; background: linear-gradient(180deg, var(--panel), var(--panel-2)); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin-bottom: 20px; }
+  .control-group { display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 190px; }
+  label.cap { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .12em; }
+  select, input[type="text"] { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 9px 11px; font-size: 14px; font-family: var(--ui); transition: border-color .15s; }
+  select:focus, input[type="text"]:focus { outline: none; border-color: var(--accent); }
+  input[type="text"] { font-family: var(--mono); font-size: 12px; }
+  .qrow { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .qrow label { font-size: 13px; color: var(--text); display: inline-flex; gap: 6px; align-items: center; }
+  button { background: var(--accent); color: #04101f; border: 0; border-radius: 10px; padding: 10px 18px; font-weight: 700; cursor: pointer; font-size: 14px; font-family: var(--ui); transition: .15s; }
+  button:hover { background: #8bb9ff; }
+
+  .status { font-family: var(--mono); font-size: 12px; color: var(--text-dim); margin: 4px 0 18px; min-height: 16px; }
+
+  .qhint { font-family: var(--mono); font-size: 11px; color: var(--accent-2); opacity: .85; }
+  .qmap {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 16px; margin-bottom: 18px; font-size: 13px;
+  }
+  .qmap-title { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--text-dim); }
+  .qmap-item { font-family: var(--mono); color: var(--text); }
+  .qmap-item b { color: var(--accent); font-weight: 700; }
+  .qmap-note { flex-basis: 100%; font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+  .qmap-note em { color: var(--text); font-style: normal; font-weight: 500; }
+
+  .source-info { font-family: var(--mono); font-size: 13px; color: var(--text-dim); background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; margin-bottom: 18px; line-height: 1.6; }
+  .source-info strong { color: var(--text); font-weight: 700; }
+  .source-info .si-dim { color: var(--text-dim); }
+  .card.source-tile { border-color: rgba(54,227,160,.45); }
+  .tile-tag { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--accent-2); border-color: rgba(54,227,160,.4); background: rgba(54,227,160,.08); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .card { background: linear-gradient(180deg, var(--panel), var(--panel-2)); border: 1px solid var(--border); border-radius: 14px; padding: 15px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .card h3 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; }
+  .card .path { font-family: var(--mono); font-size: 11px; color: var(--text-dim); word-break: break-all; }
+  .card audio { width: 100%; height: 38px; }
+  .stat-row { display: flex; justify-content: space-between; font-size: 13px; }
+  .stat-row span { color: var(--text-dim); }
+  .stat-row strong { color: var(--text); font-family: var(--mono); font-weight: 500; }
+  .save { font-family: var(--mono); font-weight: 700; }
+  .save.good { color: var(--accent-2); }
+  .save.flat { color: var(--warn); }
+
+  .badge { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); }
+  .badge.hit { color: var(--accent-2); border-color: rgba(54,227,160,.4); background: rgba(54,227,160,.08); }
+  .badge.miss { color: var(--accent); border-color: rgba(110,168,255,.4); background: rgba(110,168,255,.08); }
+  .badge.pass { color: var(--warn); border-color: rgba(255,202,166,.4); background: rgba(255,202,166,.08); }
+  .reason { font-size: 11px; color: var(--warn); font-family: var(--mono); }
+  .err { color: #ff9b9b; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand"><b>transcode-mcp</b> · audio bench</div>
+    <nav class="xnav" data-open="false">
+      <button class="xnav-toggle" aria-label="Menu" aria-expanded="false" aria-controls="xnav-links" type="button"><span class="bars"><span></span></span></button>
+      <div class="xnav-links" id="xnav-links">
+        <a href="/film">Film</a>
+        <a href="/bench">Image bench</a>
+        <a href="/bench/audio" aria-current="page">Audio bench</a>
+        <a href="/casestudy">Case study</a>
+      </div>
+    </nav>
+  </div>
+
+  <h1>audio measurement bench <small>read the bytes, play the result</small></h1>
+  <p class="lead">
+    Pick a source and fan it across <code>preset</code> × <code>quality</code> × <code>codec</code>.
+    Each tile fetches the real <code>/audio/…</code> proxy URL, reads the live
+    <code>X-Transcode-*</code> response headers, and plays the bytes the proxy actually returned —
+    nothing here is computed client-side. Savings are measured against the passthrough baseline.
+    The default source is an audio-Bible chapter (the primary use case); the longer literary
+    readings show how savings scale on full chapters.
+  </p>
+
+  <div class="note">
+    <strong>Heads up:</strong> audio transcoding runs in a container. On a deploy without the container
+    running (or locally without Docker), variants return <code>PASS</code> / passthrough and match the
+    source size — the tile shows the <code>X-Transcode-Reason</code> so you can see why. Slice&nbsp;1 wires
+    <code>voice + opus</code> end-to-end; other combinations pass through by design until later slices.
+    Sample sources: the default audio-Bible chapters are the Berean Standard Bible (BSB),
+    narrated by Bob Souer and dedicated to the public domain (CC0), hosted by the publisher at
+    <a href="https://openbible.com/audio/souer/" target="_blank" rel="noopener">openbible.com</a>;
+    the literary readings are public-domain
+    <a href="https://librivox.org" target="_blank" rel="noopener">LibriVox</a> recordings.
+  </div>
+
+  <div class="controls">
+    <div class="control-group">
+      <label class="cap" for="audio-source">Sample source</label>
+      <select id="audio-source">
+        <option value="https://openbible.com/audio/souer/BSB_19_Psa_023.mp3">Psalm 23 — BSB (Souer) · 0:45 · 1.0 MB — audio Bible</option>
+        <option value="https://openbible.com/audio/souer/BSB_19_Psa_117.mp3">Psalm 117 — BSB (Souer) · 0:17 · 409 KB — shortest chapter</option>
+        <option value="https://archive.org/download/15thanniversarycollection_2008_librivox/fifteen_psalmfifteen_kjv_64kb.mp3">Psalm 15 — KJV (LibriVox) · 0:58 · 456 KB</option>
+        <option value="https://archive.org/download/stories_001_librivox/telltale_heart_poe_dm_64kb.mp3">The Tell-Tale Heart — Poe (LibriVox) · 18:09 · 8.3 MB</option>
+        <option value="https://archive.org/download/stories_001_librivox/taming_the_bicycle_twain_ep_64kb.mp3">Taming the Bicycle — Twain (LibriVox) · 28:12 · 12.9 MB</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label class="cap" for="audio-custom-url">…or paste any audio URL</label>
+      <input type="text" id="audio-custom-url" placeholder="https://example.com/voice.wav  (a WAV source shows the biggest savings)">
+    </div>
+    <div class="control-group" style="flex:0 0 auto;">
+      <label class="cap" for="audio-preset">Preset</label>
+      <select id="audio-preset">
+        <option value="voice">voice</option>
+        <option value="music">music (passes through in slice 1)</option>
+      </select>
+    </div>
+    <div class="control-group" style="flex:0 0 auto;">
+      <label class="cap" for="audio-codec">Codec</label>
+      <select id="audio-codec">
+        <option value="opus">opus</option>
+        <option value="aac">aac (passes through in slice 1)</option>
+        <option value="mp3">mp3 (passes through in slice 1)</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label class="cap">Quality levels</label>
+      <div class="qrow">
+        <label><input type="checkbox" id="q-low" checked> low <span class="qhint">8 kbps</span></label>
+        <label><input type="checkbox" id="q-medium" checked> medium <span class="qhint">16 kbps</span></label>
+        <label><input type="checkbox" id="q-high" checked> high <span class="qhint">32 kbps</span></label>
+      </div>
+    </div>
+  </div>
+
+  <div class="qmap" id="qmap">
+    <span class="qmap-title">voice · opus targets</span>
+    <span class="qmap-item"><b>low</b> 8 kbps · 8 kHz</span>
+    <span class="qmap-item"><b>medium</b> 16 kbps · 16 kHz</span>
+    <span class="qmap-item"><b>high</b> 32 kbps · 24 kHz</span>
+    <span class="qmap-note">all mono. These are the recipe <em>targets</em> (the q knob, like 20/50/80 for images); each tile shows the actual <em>measured</em> bitrate. Opus always delivers at 48 kHz decode regardless of coded rate. Other preset/codec combinations pass through unchanged in slice 1.</span>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <div id="source-info" class="source-info">Pick a source to run the bench…</div>
+  <div class="grid" id="results"></div>
+
+<script>
+  var sourceSelect = document.getElementById('audio-source');
+  var customUrl = document.getElementById('audio-custom-url');
+  var presetSelect = document.getElementById('audio-preset');
+  var codecSelect = document.getElementById('audio-codec');
+  var qLow = document.getElementById('q-low');
+  var qMedium = document.getElementById('q-medium');
+  var qHigh = document.getElementById('q-high');
+  var statusEl = document.getElementById('status');
+  var sourceInfo = document.getElementById('source-info');
+  var results = document.getElementById('results');
+
+  // Mobile nav toggle (class-based so it needs no extra ids).
+  var nav = document.querySelector('.xnav');
+  var navToggle = document.querySelector('.xnav-toggle');
+  if (nav && navToggle) {
+    navToggle.addEventListener('click', function () {
+      var open = nav.getAttribute('data-open') === 'true';
+      nav.setAttribute('data-open', open ? 'false' : 'true');
+      navToggle.setAttribute('aria-expanded', open ? 'false' : 'true');
+    });
+  }
+
+  function currentSource() {
+    var custom = customUrl.value.trim();
+    return custom ? custom : sourceSelect.value;
+  }
+
+  // Escape user/header-controlled strings before they land in innerHTML —
+  // the source URL (custom-paste input) and proxy headers are not trusted
+  // markup, so attribute-break / tag-inject characters must be neutralised.
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function selectedQualities() {
+    var qs = [];
+    if (qLow.checked) qs.push('low');
+    if (qMedium.checked) qs.push('medium');
+    if (qHigh.checked) qs.push('high');
+    return qs;
+  }
+
+  // Build the proxy path the same way an MCP/external caller would. preset, q
+  // and f are always explicit for audio (there is no neutral default to elide,
+  // and each combination is its own cache key).
+  function buildAudioPath(sourceUrl, preset, q, f) {
+    return '/audio/preset=' + preset + ',q=' + q + ',f=' + f + '/' + sourceUrl;
+  }
+
+  function formatBytes(n) {
+    if (!n) return '—';
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  // Length from X-Transcode-Duration (seconds, possibly fractional) -> m:ss.
+  function formatDuration(secStr) {
+    var s = parseFloat(secStr);
+    if (!s || isNaN(s)) return '';
+    var m = Math.floor(s / 60);
+    var r = Math.round(s - m * 60);
+    if (r === 60) { m += 1; r = 0; }
+    return m + ':' + (r < 10 ? '0' + r : r);
+  }
+
+  // The proxy answers GET only. Read the delivered size from a size header
+  // (X-Transcode-Output-Bytes for transcodes, else Content-Length) WITHOUT
+  // downloading the body — sources here are real multi-MB narration, so
+  // pulling every body would move tens of MB per run for no measurement gain.
+  // The <audio> players stream their own bytes lazily (preload="none") only
+  // when the visitor hits play. Fall back to measuring the body only when no
+  // size header is present. The fetch is aborted once headers arrive.
+  //
+  // cache: 'no-store' is essential: /audio responses are sent
+  // `Cache-Control: immutable` (correct for content-addressed output), so the
+  // browser would otherwise serve a repeat probe straight from its disk cache
+  // and replay a FROZEN X-Transcode-Cache value — making a server-side HIT
+  // still read as the MISS it was on first fetch. no-store forces every probe
+  // to hit the worker so the cache badge reflects real server state.
+  function fetchOne(url) {
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var opts = ctrl
+      ? { method: 'GET', cache: 'no-store', signal: ctrl.signal }
+      : { method: 'GET', cache: 'no-store' };
+    return fetch(url, opts).then(function (res) {
+      var headers = {};
+      res.headers.forEach(function (v, k) { headers[k] = v; });
+      var size = parseInt(headers['x-transcode-output-bytes'] || headers['content-length'] || '0', 10);
+      if (size) {
+        if (ctrl) ctrl.abort(); // we have the size from headers; don't pull the body
+        return { status: res.status, headers: headers, size: size };
+      }
+      // No size header — measure the body as a last resort.
+      return res.arrayBuffer().then(function (buf) {
+        return { status: res.status, headers: headers, size: buf.byteLength };
+      });
+    });
+  }
+
+  function cacheBadge(cache) {
+    var c = (cache || '').toUpperCase();
+    var cls = c === 'HIT' ? 'hit' : c === 'MISS' ? 'miss' : 'pass';
+    return '<span class="badge ' + cls + '">' + (c || '—') + '</span>';
+  }
+
+  // One probe = one /audio request. Source and every variant are just URLs;
+  // we collect the response headers into a uniform tile-data object so they can
+  // be sorted and rendered together.
+  function probeTile(job) {
+    var fullUrl = window.location.origin + job.path;
+    return fetchOne(fullUrl).then(function (r) {
+      var h = r.headers;
+      var cache = h['x-transcode-cache'] || '';
+      return {
+        isSource: job.isSource, label: job.label, path: job.path, fullUrl: fullUrl,
+        size: r.size, cache: cache, reason: h['x-transcode-reason'] || '',
+        bitrate: h['x-transcode-bitrate'] || '', channels: h['x-transcode-channels'] || '',
+        duration: h['x-transcode-duration'] || '', contentType: h['content-type'] || '',
+        transcoded: cache.toUpperCase() === 'HIT' || cache.toUpperCase() === 'MISS', error: null
+      };
+    }).catch(function (e) {
+      return { isSource: job.isSource, label: job.label, path: job.path, fullUrl: fullUrl, size: 0, error: e.message };
+    });
+  }
+
+  function tileHtml(d, baselineBytes, commonDuration) {
+    if (d.error) {
+      return '<div class="card"><h3>' + escapeHtml(d.label) + '</h3><div class="path">' + escapeHtml(d.path) + '</div><div class="err">failed: ' + escapeHtml(d.error) + '</div></div>';
+    }
+    // Duration is preserved by transcode; the passthrough source has no
+    // duration header, so it borrows the length any transcoded tile reported.
+    var lenTxt = formatDuration(d.duration || (d.isSource ? commonDuration : ''));
+    var meta = '<div class="stat-row"><span>size</span><strong>' + formatBytes(d.size) + '</strong></div>';
+    if (!d.isSource) {
+      var saveRatio = baselineBytes > 0 ? (1 - d.size / baselineBytes) : 0;
+      var savePct = (Math.abs(saveRatio) * 100).toFixed(1) + '%';
+      var saveCls = d.transcoded && saveRatio > 0.02 ? 'good' : 'flat';
+      var vsTxt = saveRatio > 0.0005 ? '−' + savePct : (saveRatio < -0.0005 ? '+' + savePct : 'same size');
+      meta += '<div class="stat-row"><span>vs source</span><span class="save ' + saveCls + '">' + vsTxt + '</span></div>';
+    }
+    if (lenTxt) meta += '<div class="stat-row"><span>length</span><strong>' + lenTxt + '</strong></div>';
+    // Measured bitrate (live, from the header) — compare against the legend target.
+    // Sample rate is intentionally omitted: Opus reports 48000 (decode rate)
+    // regardless of the coded 8/16/24 kHz, which would contradict the target legend.
+    if (!d.isSource && d.bitrate) meta += '<div class="stat-row"><span>bitrate · measured</span><strong>' + d.bitrate + ' bps</strong></div>';
+    if (!d.isSource && d.channels) meta += '<div class="stat-row"><span>channels</span><strong>' + d.channels + '</strong></div>';
+    if (d.isSource && d.contentType) meta += '<div class="stat-row"><span>type</span><strong>' + d.contentType + '</strong></div>';
+
+    var head = d.isSource
+      ? '<h3><span class="tile-tag">source</span> original ' + cacheBadge(d.cache) + '</h3>'
+      : '<h3>' + escapeHtml(d.label) + ' ' + cacheBadge(d.cache) + '</h3>';
+    return '<div class="card' + (d.isSource ? ' source-tile' : '') + '">' +
+      head +
+      '<div class="path">' + escapeHtml(d.path) + '</div>' +
+      '<audio controls preload="none" src="' + escapeHtml(d.fullUrl) + '"></audio>' +
+      meta +
+      (!d.isSource && !d.transcoded ? '<div class="reason">passthrough' + (d.reason ? ' · ' + escapeHtml(d.reason) : '') + '</div>' : '') +
+      '</div>';
+  }
+
+  var runGen = 0;
+  function run() {
+    var source = currentSource();
+    var preset = presetSelect.value;
+    var codec = codecSelect.value;
+    var qs = selectedQualities();
+    if (!source) {
+      statusEl.textContent = 'pick or paste a source first';
+      sourceInfo.textContent = 'Pick a source to run the bench…';
+      results.innerHTML = '';
+      return;
+    }
+    var gen = ++runGen;
+    results.innerHTML = '';
+    statusEl.textContent = 'measuring source + ' + qs.length + ' variant(s) in parallel through /audio/ …';
+    sourceInfo.innerHTML = 'Source: <strong>' + escapeHtml(source) + '</strong> <span class="si-dim">· measuring…</span>';
+
+    // Source goes first as a job, then one per selected quality. The proxy is
+    // built for concurrency, so fire them ALL at once — no sequential chain.
+    var jobs = [{ isSource: true, label: 'source', path: '/audio/' + source }];
+    qs.forEach(function (q) {
+      jobs.push({ isSource: false, label: preset + ' · ' + q + ' · ' + codec, path: buildAudioPath(source, preset, q, codec) });
+    });
+
+    Promise.all(jobs.map(probeTile)).then(function (tiles) {
+      if (gen !== runGen) return; // superseded by a newer run
+      var i, src = null;
+      for (i = 0; i < tiles.length; i++) { if (tiles[i].isSource) src = tiles[i]; }
+      var baselineBytes = src && src.size ? src.size : 0;
+      var commonDuration = '';
+      for (i = 0; i < tiles.length; i++) { if (tiles[i].duration) { commonDuration = tiles[i].duration; break; } }
+      // Sort by delivered size, largest first — source on top, then high→low.
+      tiles.sort(function (a, b) { return (b.size || 0) - (a.size || 0); });
+      results.innerHTML = '';
+      tiles.forEach(function (d) { results.insertAdjacentHTML('beforeend', tileHtml(d, baselineBytes, commonDuration)); });
+
+      var lenTxt = formatDuration(commonDuration);
+      var sep = ' <span class="si-dim">·</span> ';
+      sourceInfo.innerHTML = 'Source: <strong>' + escapeHtml(source) + '</strong>' + sep + formatBytes(baselineBytes) +
+        (lenTxt ? sep + lenTxt : '') + sep + escapeHtml(src ? (src.contentType || 'audio/?') : 'audio/?') +
+        sep + qs.length + ' variant(s), all fetched in parallel';
+      statusEl.textContent = 'done — ' + new Date().toLocaleTimeString();
+    }).catch(function () {
+      if (gen !== runGen) return;
+      statusEl.textContent = 'finished with errors (see tiles)';
+    });
+  }
+
+  function debounce(fn, ms) { var t; return function () { clearTimeout(t); t = setTimeout(fn, ms); }; }
+
+  // No Run button: selecting a source (or changing any option) runs the bench.
+  sourceSelect.addEventListener('change', function () { customUrl.value = ''; run(); });
+  customUrl.addEventListener('input', debounce(run, 600));
+  presetSelect.addEventListener('change', run);
+  codecSelect.addEventListener('change', run);
+  [qLow, qMedium, qHigh].forEach(function (cb) { cb.addEventListener('change', run); });
+
+  // Auto-run once on load with the defaults so the bench shows something live.
+  run();
+</script>
+</body>
+</html>
