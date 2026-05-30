@@ -72,22 +72,31 @@ function isBlockedHost(host) {
   if (lower === "::1" || lower === "::") return true;
   if (/^fe[89ab][0-9a-f]:/i.test(lower)) return true;
   if (/^f[cd][0-9a-f]{2}:/i.test(lower)) return true;
-  // IPv4-mapped IPv6 (::ffff:x.x.x.x). The WHATWG URL parser normalizes the
-  // dotted-quad form to two hex groups (e.g. ::ffff:a9fe:a9fe), so we must
-  // recognize both representations and validate the embedded IPv4 address.
-  if (lower.startsWith("::ffff:")) {
-    const tail = lower.slice("::ffff:".length);
-    if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(tail)) {
-      return isBlockedHost(tail);
-    }
+  // IPv4-mapped IPv6 (::ffff:x.x.x.x) and IPv4-compatible IPv6 (::x.x.x.x).
+  // The WHATWG URL parser normalizes the dotted-quad form to two hex groups
+  // (e.g. ::ffff:a9fe:a9fe or ::a9fe:a9fe), so we must recognize both
+  // representations and validate the embedded IPv4 address. IPv4-compatible
+  // addresses are deprecated (RFC 4291) but still parseable, and forms like
+  // ::7f00:1 (127.0.0.1) or ::a9fe:a9fe (169.254.169.254) would otherwise
+  // bypass this guard.
+  const decodeEmbeddedIpv4 = (tail) => {
+    if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(tail)) return tail;
     const hex = tail.match(/^([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
     if (hex) {
       const high = parseInt(hex[1], 16);
       const low = parseInt(hex[2], 16);
-      const dotted = `${(high >> 8) & 0xff}.${high & 0xff}.${(low >> 8) & 0xff}.${low & 0xff}`;
-      return isBlockedHost(dotted);
+      return `${(high >> 8) & 0xff}.${high & 0xff}.${(low >> 8) & 0xff}.${low & 0xff}`;
     }
+    return null;
+  };
+  if (lower.startsWith("::ffff:")) {
+    const dotted = decodeEmbeddedIpv4(lower.slice("::ffff:".length));
+    if (dotted) return isBlockedHost(dotted);
     return true;
+  }
+  if (lower.startsWith("::") && lower !== "::" && lower !== "::1") {
+    const dotted = decodeEmbeddedIpv4(lower.slice(2));
+    if (dotted) return isBlockedHost(dotted);
   }
   // IPv4 dotted-quad checks.
   const m = lower.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
@@ -129,6 +138,12 @@ function validateSourceUrl(raw) {
 // here (manual mode), re-validate each hop's protocol + host, and hand
 // ffmpeg the already-resolved terminal URL — plus -max_redirects 0 so
 // ffmpeg itself never chases a redirect we didn't sign off on.
+//
+// We probe with GET (not HEAD) because ffmpeg fetches with GET, and some
+// servers respond differently to the two methods (e.g. 200 to HEAD but 302
+// to GET). Using GET here keeps the validated redirect chain consistent
+// with what ffmpeg will actually see. The response body is cancelled
+// immediately so we never download the payload twice.
 async function resolveAllowedUrl(raw, maxHops = 8) {
   let current = raw;
   let contentLength = "";
@@ -137,10 +152,11 @@ async function resolveAllowedUrl(raw, maxHops = 8) {
     if (err) return { error: err };
     let res;
     try {
-      res = await fetch(current, { method: "HEAD", redirect: "manual" });
+      res = await fetch(current, { method: "GET", redirect: "manual" });
     } catch (e) {
       return { error: `source_url unreachable: ${e?.message || e}` };
     }
+    try { await res.body?.cancel(); } catch {}
     const isRedirect = res.status >= 300 && res.status < 400;
     const location = res.headers.get("location");
     if (!isRedirect || !location) {
