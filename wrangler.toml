@@ -53,8 +53,10 @@ port = 8787
 #
 # Bindings are non-inheritable in Wrangler environments, so every binding is
 # redefined below against its OWN preview resources. Production and preview
-# share NO state — in particular a SEPARATE R2 bucket. The DO is automatically
-# a distinct namespace because the worker name differs.
+# share NO state — in particular a SEPARATE R2 bucket. The container is bound to
+# a DISTINCT Durable Object class (AudioContainerPreview) because Cloudflare keys
+# a container application to the DO class name, not the worker name, so reusing
+# AudioContainer across prod + preview fails with DURABLE_OBJECT_ALREADY_HAS_APPLICATION.
 #
 # One-time setup before the first preview deploy:
 #   wrangler r2 bucket create transcode-mcp-audio-preview
@@ -79,15 +81,20 @@ binding = "IMAGES"
 binding = "AUDIO_BUCKET"
 bucket_name = "transcode-mcp-audio-preview"
 
+# class_name is AudioContainerPreview (a subclass of AudioContainer) so the
+# preview worker's container application is keyed on a DISTINCT Durable Object
+# class from prod's AudioContainer. Sharing the class name fails the deploy with
+# DURABLE_OBJECT_ALREADY_HAS_APPLICATION. The binding NAME stays AUDIO_CONTAINER
+# (worker reads env.AUDIO_CONTAINER) — only the class differs.
 [[env.preview.containers]]
-class_name = "AudioContainer"
+class_name = "AudioContainerPreview"
 image = "./container/Dockerfile"
 max_instances = 5
 
 [[env.preview.durable_objects.bindings]]
-class_name = "AudioContainer"
+class_name = "AudioContainerPreview"
 name = "AUDIO_CONTAINER"
 
 [[env.preview.migrations]]
-new_sqlite_classes = [ "AudioContainer" ]
+new_sqlite_classes = [ "AudioContainerPreview" ]
 tag = "v1"
