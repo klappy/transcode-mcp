@@ -11,6 +11,7 @@
 import http from "node:http";
 import { spawn } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
+import dnsPromises from "node:dns/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveRecipe } from "./recipes.mjs";
@@ -114,7 +115,16 @@ function isBlockedHost(host) {
   return false;
 }
 
-function validateSourceUrl(raw) {
+// True for raw IPv4 dotted-quad or IPv6 (any form containing a colon). For
+// such literals there is no DNS step to defend against, and isBlockedHost
+// has already inspected them directly.
+function isIpLiteral(host) {
+  if (!host) return false;
+  if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+  return host.includes(":");
+}
+
+async function validateSourceUrl(raw) {
   let u;
   try {
     u = new URL(raw);
@@ -126,6 +136,26 @@ function validateSourceUrl(raw) {
   }
   if (isBlockedHost(u.hostname)) {
     return "source_url host is not allowed";
+  }
+  // Defense against DNS rebinding: a public hostname (e.g. 169.254.169.254
+  // .nip.io, or an attacker-controlled domain) trivially passes the string
+  // checks above but can resolve to a private/link-local/metadata IP. Resolve
+  // the name and re-run isBlockedHost on every address before letting fetch
+  // (and ultimately ffmpeg) connect. Skip the lookup for IP literals since
+  // isBlockedHost has already vetted them.
+  if (!isIpLiteral(u.hostname)) {
+    let addrs;
+    try {
+      addrs = await dnsPromises.lookup(u.hostname, { all: true, verbatim: true });
+    } catch (e) {
+      return `source_url host could not be resolved: ${e?.code || e?.message || e}`;
+    }
+    if (!addrs.length) return "source_url host did not resolve";
+    for (const a of addrs) {
+      if (isBlockedHost(a.address)) {
+        return "source_url host resolves to a blocked address";
+      }
+    }
   }
   return null;
 }
@@ -148,7 +178,7 @@ async function resolveAllowedUrl(raw, maxHops = 8) {
   let current = raw;
   let contentLength = "";
   for (let i = 0; i <= maxHops; i++) {
-    const err = validateSourceUrl(current);
+    const err = await validateSourceUrl(current);
     if (err) return { error: err };
     let res;
     try {
