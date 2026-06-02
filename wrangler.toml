@@ -40,61 +40,66 @@ tag = "v1"
 port = 8787
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Preview / staging environment — a SEPARATE worker, fully isolated from prod.
+# THREE-TIER DEPLOY MODEL — one config, deployed as separate isolated Workers.
+# Nothing below ever touches production (`transcode-mcp`, the top-level config).
 #
-#   wrangler deploy --env preview
+#   prod     : main branch     -> wrangler deploy                 -> transcode-mcp
+#   staging  : staging branch  -> wrangler deploy --env staging   -> transcode-mcp-staging
+#   preview  : every PR branch -> wrangler deploy --env preview --name transcode-mcp-pr-<N>
 #
-# This deploys a SEPARATE worker `transcode-mcp-preview` (name set explicitly
-# below) at transcode-mcp-preview.<subdomain>.workers.dev, and NEVER touches
-# production (`transcode-mcp`). That workers.dev URL is our
-# preview URL — Cloudflare does not mint version preview URLs (`wrangler
-# versions upload`) for Workers that implement a Durable Object, so a separate
-# named environment is the only way to get an isolated, clickable preview.
+# Bindings are NON-inheritable in Wrangler environments, so each tier redeclares
+# what it needs against its OWN resources. Prod and staging share NO state.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── STAGING ──────────────────────────────────────────────────────────────────
+# A full second stack: its OWN container, DO class, and R2 bucket. Distinct DO
+# class (AudioContainerStaging) because a container application is keyed on the
+# DO class name, not the worker name — reusing `AudioContainer` would collide
+# with prod (DURABLE_OBJECT_ALREADY_HAS_APPLICATION). This is the constant
+# staging URL (transcode-mcp-staging.<subdomain>.workers.dev) where live audio
+# transcoding is validated before anything merges toward prod.
 #
-# Bindings are non-inheritable in Wrangler environments, so every binding is
-# redefined below against its OWN preview resources. Production and preview
-# share NO state — in particular a SEPARATE R2 bucket. The container is bound to
-# a DISTINCT Durable Object class (AudioContainerPreview) because Cloudflare keys
-# a container application to the DO class name, not the worker name, so reusing
-# AudioContainer across prod + preview fails with DURABLE_OBJECT_ALREADY_HAS_APPLICATION.
+# One-time: wrangler r2 bucket create transcode-mcp-audio-staging
+[env.staging]
+name = "transcode-mcp-staging"
+
+[env.staging.vars]
+
+[env.staging.images]
+binding = "IMAGES"
+
+[[env.staging.r2_buckets]]
+binding = "AUDIO_BUCKET"
+bucket_name = "transcode-mcp-audio-staging"
+
+[[env.staging.containers]]
+class_name = "AudioContainerStaging"
+image = "./container/Dockerfile"
+max_instances = 5
+
+[[env.staging.durable_objects.bindings]]
+class_name = "AudioContainerStaging"
+name = "AUDIO_CONTAINER"
+
+[[env.staging.migrations]]
+new_sqlite_classes = [ "AudioContainerStaging" ]
+tag = "v1"
+
+# ── BRANCH PREVIEWS ──────────────────────────────────────────────────────────
+# Every PR branch gets its OWN disposable worker. CI overrides the name per
+# branch:  wrangler deploy --env preview --name transcode-mcp-pr-<number>
 #
-# One-time setup before the first preview deploy:
-#   wrangler r2 bucket create transcode-mcp-audio-preview
-#   wrangler deploy --env preview   # full deploy: applies the v1 DO migration
-#                                   # to the preview DO and builds its container
-# After that, re-run `wrangler deploy --env preview` per branch as needed.
+# Deliberately NO container, NO Durable Object, NO migration, NO R2 bucket:
+#   - No container application => no DO-class collision => scales to N branches.
+#   - The worker requires AUDIO_CONTAINER + AUDIO_BUCKET to transcode (worker.ts);
+#     absent here BY DESIGN, so audio falls back to passthrough on previews.
+#   - Everything else a PR needs to validate works: routes, MCP tool, the image
+#     path (IMAGES is an account binding, safe to share), demo pages, headers.
+# Live audio transcoding is validated on staging, not per-branch.
 [env.preview]
-# Explicit name: wrangler's container config does NOT derive the worker name
-# from the env auto-append, so the env must declare its own name — otherwise:
-# "Must have either a top level name and containers.class_name ... or
-# containers.name". This is the same string wrangler would have auto-appended.
 name = "transcode-mcp-preview"
 
-# vars is non-inheritable; mirror the (empty) top-level set so wrangler does not
-# warn that vars is missing on the env. No preview-specific vars today.
 [env.preview.vars]
 
 [env.preview.images]
 binding = "IMAGES"
-
-[[env.preview.r2_buckets]]
-binding = "AUDIO_BUCKET"
-bucket_name = "transcode-mcp-audio-preview"
-
-# class_name is AudioContainerPreview (a subclass of AudioContainer) so the
-# preview worker's container application is keyed on a DISTINCT Durable Object
-# class from prod's AudioContainer. Sharing the class name fails the deploy with
-# DURABLE_OBJECT_ALREADY_HAS_APPLICATION. The binding NAME stays AUDIO_CONTAINER
-# (worker reads env.AUDIO_CONTAINER) — only the class differs.
-[[env.preview.containers]]
-class_name = "AudioContainerPreview"
-image = "./container/Dockerfile"
-max_instances = 5
-
-[[env.preview.durable_objects.bindings]]
-class_name = "AudioContainerPreview"
-name = "AUDIO_CONTAINER"
-
-[[env.preview.migrations]]
-new_sqlite_classes = [ "AudioContainerPreview" ]
-tag = "v1"

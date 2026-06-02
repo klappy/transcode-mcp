@@ -49,14 +49,15 @@ export class AudioContainer extends Container<Env> {
   sleepAfter = "10m"; // stop the instance after 10m idle to bound cost
 }
 
-// Preview/staging alias. Cloudflare keys a "container application" to the
-// Durable Object CLASS NAME, not the worker name — so prod and the preview
-// worker cannot both bind a container to `AudioContainer` (the second deploy
-// fails with DURABLE_OBJECT_ALREADY_HAS_APPLICATION). The preview env
-// (wrangler.toml [env.preview]) binds its container + migration to this
-// distinct class instead. Behavior is identical to AudioContainer; only the
-// class name differs so the platform sees two separate applications.
-export class AudioContainerPreview extends AudioContainer {}
+// Staging's container class. Cloudflare keys a "container application" to the
+// Durable Object CLASS NAME, not the worker name — so prod and staging cannot
+// both bind a container to `AudioContainer` (the second deploy fails with
+// DURABLE_OBJECT_ALREADY_HAS_APPLICATION). Staging (wrangler.toml [env.staging])
+// binds its container + migration to this distinct class instead. Behavior is
+// identical to AudioContainer; only the class name differs so the platform sees
+// two separate applications. Branch previews bind NO container, so they need no
+// class of their own (audio falls back to passthrough on previews).
+export class AudioContainerStaging extends AudioContainer {}
 
 // Size of the AudioContainer pool getRandom selects across. MUST match
 // `max_instances` for the [[containers]] block in wrangler.toml — if this
