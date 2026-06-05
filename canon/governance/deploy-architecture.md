@@ -15,7 +15,17 @@ because the team re-derived all of it the hard way across many failed builds.
    worker name. Two workers cannot both own a container app for the same class
    (`DURABLE_OBJECT_ALREADY_HAS_APPLICATION`). Therefore **every full stack has
    its own DO class.**
-3. **Each tier has its OWN R2 bucket.** Never share a bucket across tiers.
+3. **Each tier has its OWN R2 bucket. Never share a bucket across tiers.** This
+   is WHY there are three workers and not two. The cache key is
+   `sha256(source + preset + q + codec)` with NO recipe/version component, so a
+   build that changes transcode *output* (a codec/bitrate/quality tweak — which
+   this project tunes constantly) writes *different bytes under an existing key*.
+   Anyone sharing that bucket then serves those experimental bytes. Therefore a
+   tier that must stay clean (prod, and staging as the pre-prod gate) cannot
+   share a bucket with anything — and since a connection's non-production
+   (preview) lane shares the env worker's bucket with its live version, prod and
+   staging keep their preview lanes OFF. Only the preview tier shares one bucket
+   among its branch versions (last-build-wins is acceptable there).
 4. **`wrangler versions upload` cannot carry a NEW migration.** Preview/version
    uploads only work when the DO class + migration already exist on the worker.
 5. **Prod and staging are single, stable workers** on their own branch / class /
@@ -55,7 +65,9 @@ For each project: Settings → Build → Branch control.
 - **preview project** → worker `transcode-mcp-preview`; production branch `preview`; deploy
   command `npx wrangler deploy --env preview`; **non-production branch builds ON**;
   non-production branch deploy command `npx wrangler versions upload --env preview`.
-  This one project fans out to every PR preview.
+  Every non-production branch (all PR/feature branches) builds here as a version
+  with its own preview URL — preview is scoped to ALL branches; prod and staging
+  are scoped strictly to their own branch.
 
 ## Stand-up runbook (from zero)
 
