@@ -34,7 +34,7 @@ requirement; this document records what does.
 
 | Tier | Branch | Worker | Container / DO | Bucket |
 |------|--------|--------|----------------|--------|
-| Production | `main` | `transcode-mcp` | `AudioContainer` (own app) | `transcode-mcp-audio` |
+| Production | `production` | `transcode-mcp` | `AudioContainer` (own app) | `transcode-mcp-audio` |
 | Staging | `staging` | `transcode-mcp-staging` | `AudioContainerStaging` (own app) | `transcode-mcp-audio-staging` |
 | Preview | every PR | `transcode-mcp-pr-<N>` | **none** | **none** |
 
@@ -52,11 +52,20 @@ Key decisions:
   MCP tool, the image path (account-level `IMAGES` binding, safe to share), demo
   pages, headers — while **live audio transcoding is validated on staging**, not
   per-branch.
-- **GitHub Actions, not Workers Builds, owns the deploys** (`.github/workflows/
-  deploy.yml`). A push to `main`/`staging` deploys that tier; a PR deploys
-  `transcode-mcp-pr-<N>` via `wrangler deploy --env preview --name <that>`; a
-  closed PR deletes it. Workers Builds is per-project/manual and cannot scale to
-  N branches, which is the whole requirement.
+- **Deploys go through Cloudflare Workers Builds** (the CF dashboard connected to
+  GitHub via githooks) — NOT GitHub Actions. Each tier is its own Workers Builds
+  project, one project per worker:
+    - prod project    → builds the `production` branch → `wrangler deploy`           → `transcode-mcp`
+    - staging project → builds the `staging` branch    → `wrangler deploy --env staging` → `transcode-mcp-staging`
+  The earlier failure (#2 above) was caused by pointing `--env preview` at the
+  *prod-bound* project; the fix is a SEPARATE project bound to each worker, not
+  abandoning Workers Builds.
+- **Per-branch previews are still open.** Workers Builds does non-production
+  branch builds, but giving each branch its OWN uniquely-named worker via a
+  Workers-Builds deploy command (e.g. `--name transcode-mcp-pr-$WORKERS_CI_BRANCH`)
+  is unverified and must be confirmed before relying on it. Do NOT solve this with
+  GitHub Actions. Until verified, previews are deferred; prod + staging are the
+  committed tiers.
 
 ## Verified vs. unverified
 
@@ -75,22 +84,29 @@ Key decisions:
 
 ## Operator actions (cannot be done from the sandbox)
 
-1. Repo secrets: `CLOUDFLARE_API_TOKEN` (Workers Scripts:Edit + R2 for the
-   staging bucket) and `CLOUDFLARE_ACCOUNT_ID`.
-2. One-time: `wrangler r2 bucket create transcode-mcp-audio-staging`; give it the
-   same 90-day lifecycle GC as prod.
-3. Create the `staging` branch.
-4. **Prod deployer cutover:** pick ONE deployer for prod. If keeping Workers
-   Builds for prod, delete the `deploy-production` job; if moving prod to GitHub
-   Actions, disable Workers Builds auto-deploy so `main` doesn't deploy twice.
-5. Repoint CI smoke (`ci.yml`) at the deployed preview URL
-   (`transcode-mcp-pr-<N>.<subdomain>.workers.dev`) instead of the old
-   Workers-Builds slug — a follow-up to this change.
+Deploys are wired in the Cloudflare dashboard (Workers Builds + githooks); none
+of this needs GitHub Actions or repo secrets.
+
+1. Create the `production` and `staging` branches (done from the repo).
+2. One-time: create the `transcode-mcp-audio-staging` R2 bucket (the connected
+   Cloudflare MCP token is read-only, so this is a dashboard / `wrangler r2
+   bucket create` action); give it the same 90-day lifecycle GC as prod.
+3. Create a **staging Workers Builds project**: connect the repo, bind it to a
+   new worker `transcode-mcp-staging`, build branch `staging`, deploy command
+   `npx wrangler deploy --env staging`.
+4. Ensure the **prod Workers Builds project** builds the `production` branch with
+   deploy command `npx wrangler deploy` (plain — top-level config = prod).
+5. Per-branch previews: deferred until the Workers-Builds-native mechanism is
+   verified (see "The model"). Do NOT add a GitHub Actions deploy.
 
 ## Definition of done
 
-- A PR opens → `transcode-mcp-pr-<N>` deploys and its URL is commented on the PR.
-- The PR's worker serves routes/MCP/image path; audio passthroughs.
-- Pushing to `staging` updates `transcode-mcp-staging` with live transcoding.
-- Closing the PR deletes its worker.
+- Pushing to `staging` (via its Workers Builds project) deploys
+  `transcode-mcp-staging` with live transcoding against the staging bucket.
+- Pushing to `production` deploys `transcode-mcp`; prod is only ever deployed
+  from `production`, by the prod Workers Builds project.
+- Staging and prod share no state (separate buckets, separate DO classes).
+- Per-branch previews (deferred): once the Workers-Builds-native per-branch
+  mechanism is verified, each PR branch gets its own container-less worker that
+  serves routes/MCP/image path with audio passthrough.
 - Prod is only ever deployed from `main`, by exactly one deployer.
