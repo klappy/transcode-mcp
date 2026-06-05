@@ -509,27 +509,26 @@ async function handleAudioProxy(
     sourceBytes: encoded.headers.get("X-Source-Bytes") ?? "",
   };
 
-  // Persist to R2 under ctx.waitUntil so the first caller isn't blocked on the
-  // write. Metadata is stored so a later HIT can rebuild the same headers.
-  ctx.waitUntil(
-    env.AUDIO_BUCKET.put(objectKey, buf, {
-      httpMetadata: {
-        contentType: meta.contentType,
-        cacheControl: "public, max-age=31536000, immutable",
-      },
-      customMetadata: {
-        contentType: meta.contentType,
-        bitrate: meta.bitrate,
-        sampleRate: meta.sampleRate,
-        channels: meta.channels,
-        duration: meta.duration,
-        sourceBytes: meta.sourceBytes,
-        preset: resolved.preset,
-        q: resolved.q,
-        codec: resolved.codec,
-      },
-    }),
-  );
+  // Persist to R2 before returning so a follow-up request for the same key
+  // observes a HIT instead of racing into another container dispatch. Metadata
+  // is stored so a later HIT can rebuild the same headers.
+  await env.AUDIO_BUCKET.put(objectKey, buf, {
+    httpMetadata: {
+      contentType: meta.contentType,
+      cacheControl: "public, max-age=31536000, immutable",
+    },
+    customMetadata: {
+      contentType: meta.contentType,
+      bitrate: meta.bitrate,
+      sampleRate: meta.sampleRate,
+      channels: meta.channels,
+      duration: meta.duration,
+      sourceBytes: meta.sourceBytes,
+      preset: resolved.preset,
+      q: resolved.q,
+      codec: resolved.codec,
+    },
+  });
 
   return new Response(buf, {
     status: 200,
