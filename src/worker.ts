@@ -59,15 +59,15 @@ export class AudioContainer extends Container<Env> {
 // class of their own (audio falls back to passthrough on previews).
 export class AudioContainerStaging extends AudioContainer {}
 
-// Dev's container class. Same reasoning as staging — a container application is
-// keyed on the DO class name, so the shared dev worker needs its own class
-// distinct from prod and staging. Dev is the single shared preview backend:
-// every PR branch uploads a VERSION of transcode-mcp-dev (its own preview URL),
-// all sharing this one AudioContainerDev + the dev bucket. Last-build-wins on
+// Preview's container class. Same reasoning as staging — a container application is
+// keyed on the DO class name, so the shared preview worker needs its own class
+// distinct from prod and staging. Preview is the single shared preview backend:
+// every PR branch uploads a VERSION of transcode-mcp-preview (its own preview URL),
+// all sharing this one AudioContainerPreview + the preview bucket. Last-build-wins on
 // the shared DO state; code-only PRs are effectively parallel-safe (each version
 // previews its own code). A PR that changes the DO shape needs a new migration,
 // which `wrangler versions upload` rejects — the one known edge case.
-export class AudioContainerDev extends AudioContainer {}
+export class AudioContainerPreview extends AudioContainer {}
 
 // Size of the AudioContainer pool getRandom selects across. MUST match
 // `max_instances` for the [[containers]] block in wrangler.toml — if this
@@ -216,7 +216,7 @@ export default {
 };
 
 // Image proxy with half-class overshoot via env.IMAGES binding.
-// On a binding miss (local dev or missing config), falls back to passthrough.
+// On a binding miss (local preview or missing config), falls back to passthrough.
 async function handleImageProxy(
   request: Request,
   env: Env,
@@ -274,7 +274,7 @@ async function handleImageProxy(
     });
   }
 
-  // If no IMAGES binding (local dev or unconfigured), fall back to passthrough
+  // If no IMAGES binding (local preview or unconfigured), fall back to passthrough
   if (!env.IMAGES) {
     return new Response(sourceResponse.body, {
       status: 200,
@@ -422,9 +422,9 @@ async function handleAudioProxy(
 
   const resolved = resolveAudioOptions(options);
 
-  // No bindings (local dev / unconfigured) -> passthrough with no-binding,
+  // No bindings (local preview / unconfigured) -> passthrough with no-binding,
   // exactly like the image path falls back without env.IMAGES. This keeps
-  // `wrangler dev` usable without a container.
+  // `wrangler preview` usable without a container.
   if (!env.AUDIO_BUCKET || !env.AUDIO_CONTAINER) {
     return passthroughAudio(sourceUrl, { encode: "no-binding", cache: "MISS" });
   }

@@ -1,4 +1,4 @@
-# GOVERNANCE: Deploy Architecture (prod / staging / dev + per-branch previews)
+# GOVERNANCE: Deploy Architecture (prod / staging / preview + per-branch previews)
 
 Status: CANON — strict. Read this before touching `wrangler.toml` environments,
 Durable Object classes, container config, CI, or any deploy wiring. This exists
@@ -30,17 +30,17 @@ worker). Three DO classes, three buckets — the irreducible per-tier difference
 |------|--------|--------|----------|--------|--------|
 | prod | `production` | `transcode-mcp` | `AudioContainer` | `transcode-mcp-audio` | `wrangler deploy` |
 | staging | `staging` | `transcode-mcp-staging` | `AudioContainerStaging` | `transcode-mcp-audio-staging` | `wrangler deploy --env staging` |
-| dev | `dev` | `transcode-mcp-dev` | `AudioContainerDev` | `transcode-mcp-audio-dev` | `wrangler deploy --env dev` |
-| PR preview | any PR branch | (a VERSION of `transcode-mcp-dev`) | shared `AudioContainerDev` | shared dev bucket | `wrangler versions upload` |
+| preview | `preview` | `transcode-mcp-preview` | `AudioContainerPreview` | `transcode-mcp-audio-preview` | `wrangler deploy --env preview` |
+| PR preview | any PR branch | (a VERSION of `transcode-mcp-preview`) | shared `AudioContainerPreview` | shared preview bucket | `wrangler versions upload` |
 
-- **dev is the single shared preview backend.** Every PR branch is a *version* of
-  the one dev worker, with its own stable alias
-  `<branch>-transcode-mcp-dev.<subdomain>.workers.dev`. All previews share the one
-  dev container/DO/bucket. **Last-build-wins on shared state; each version still
+- **preview is the single shared preview backend.** Every PR branch is a *version* of
+  the one preview worker, with its own stable alias
+  `<branch>-transcode-mcp-preview.<subdomain>.workers.dev`. All previews share the one
+  preview container/DO/bucket. **Last-build-wins on shared state; each version still
   previews its own code.** Code-only PRs are effectively parallel-safe. A PR that
   changes the DO shape (a new migration) is the one case that breaks — see below.
 - Each DO class is a trivial subclass in `src/worker.ts`:
-  `AudioContainer` (prod), `AudioContainerStaging`, `AudioContainerDev`. The
+  `AudioContainer` (prod), `AudioContainerStaging`, `AudioContainerPreview`. The
   binding NAME stays `AUDIO_CONTAINER` in every env; only the class differs.
 
 ## Workers Builds project settings (the three projects)
@@ -52,33 +52,33 @@ For each project: Settings → Build → Branch control.
   branch builds **OFF**.
 - **staging project** → worker `transcode-mcp-staging`; production branch
   `staging`; deploy command `npx wrangler deploy --env staging`; non-prod **OFF**.
-- **dev project** → worker `transcode-mcp-dev`; production branch `dev`; deploy
-  command `npx wrangler deploy --env dev`; **non-production branch builds ON**;
-  non-production branch deploy command `npx wrangler versions upload --env dev`.
+- **preview project** → worker `transcode-mcp-preview`; production branch `preview`; deploy
+  command `npx wrangler deploy --env preview`; **non-production branch builds ON**;
+  non-production branch deploy command `npx wrangler versions upload --env preview`.
   This one project fans out to every PR preview.
 
 ## Stand-up runbook (from zero)
 
-1. Create branches `production`, `staging`, `dev`.
-2. Create R2 buckets `transcode-mcp-audio`, `-staging`, `-dev`; set the same
+1. Create branches `production`, `staging`, `preview`.
+2. Create R2 buckets `transcode-mcp-audio`, `-staging`, `-preview`; set the same
    lifecycle GC (90-day) on each.
 3. First full deploy of each tier (creates each DO class + its `v1` migration and
    builds its container): a push to each tier branch via its Workers Builds
    project, or a manual `wrangler deploy --env <tier>` once.
 4. Wire the three Workers Builds projects per the settings above.
-5. Verify: a PR opens → dev project's non-prod build uploads a version → a
-   `<branch>-transcode-mcp-dev...` URL is commented on the PR; prod/staging
+5. Verify: a PR opens → preview project's non-prod build uploads a version → a
+   `<branch>-transcode-mcp-preview...` URL is commented on the PR; prod/staging
    untouched.
 
 ## Maintenance rules
 
 - **Bindings are non-inheritable in wrangler environments.** Any binding added to
-  prod (top-level) MUST be mirrored into `[env.staging]` and `[env.dev]`.
-- **Adding/changing a DO migration** changes the dev preview story: PR branches
+  prod (top-level) MUST be mirrored into `[env.staging]` and `[env.preview]`.
+- **Adding/changing a DO migration** changes the preview preview story: PR branches
   with a *new* migration cannot `versions upload`. To preview such a branch, push
-  it to the `dev` branch (full deploy) rather than as a PR version, or bump the
-  shared dev migration deliberately. This is the accepted edge case, not a bug.
-- **Never point `--env preview/staging/dev` at the prod project.** Workers Builds
+  it to the `preview` branch (full deploy) rather than as a PR version, or bump the
+  shared preview migration deliberately. This is the accepted edge case, not a bug.
+- **Never point `--env preview/staging/preview` at the prod project.** Workers Builds
   overrides the config worker name to the project's worker; running the wrong env
   command in the prod project retargets prod.
 
@@ -88,7 +88,7 @@ For each project: Settings → Build → Branch control.
   command ran in the prod-bound Workers Builds project → run it in the project
   bound to the right worker.
 - `DURABLE_OBJECT_ALREADY_HAS_APPLICATION` → two workers share a DO class → give
-  each tier its own class (`AudioContainer{,Staging,Dev}`).
+  each tier its own class (`AudioContainer{,Staging,Preview}`).
 - `Cannot create binding for class X ... not configured to implement Durable
   Objects` → the deploy targeted a worker whose live migrations don't define X
   (usually the name-override retargeting prod) → fix the project/worker mapping.
@@ -103,4 +103,4 @@ For each project: Settings → Build → Branch control.
 - A single `[env.preview]` worker — rejected; one worker, PR2 overwrites PR1.
 - Per-branch container/DO — rejected; unbounded classes, collisions, no scale.
 - Cross-script binding a branch worker to staging's container-backed DO —
-  UNVERIFIED; do not rely on it. The shared-dev model avoids needing it.
+  UNVERIFIED; do not rely on it. The shared-preview model avoids needing it.

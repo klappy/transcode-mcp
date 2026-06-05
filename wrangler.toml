@@ -35,8 +35,8 @@ name = "AUDIO_CONTAINER"
 new_sqlite_classes = [ "AudioContainer" ]
 tag = "v1"
 
-# For local dev with `wrangler dev`
-[dev]
+# For local preview with `wrangler preview`
+[preview]
 port = 8787
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -86,37 +86,37 @@ new_sqlite_classes = [ "AudioContainerStaging" ]
 tag = "v1"
 
 # ── DEV (shared preview backend) ─────────────────────────────────────────────
-# ONE shared dev worker. Every PR branch uploads a VERSION of transcode-mcp-dev
+# ONE shared preview worker. Every PR branch uploads a VERSION of transcode-mcp-preview
 # (Workers Builds non-production branch build -> `wrangler versions upload`),
-# getting its own stable preview URL (<branch>-transcode-mcp-dev.<sub>.workers.dev)
-# while sharing this one container/DO/bucket. Distinct DO class AudioContainerDev
+# getting its own stable preview URL (<branch>-transcode-mcp-preview.<sub>.workers.dev)
+# while sharing this one container/DO/bucket. Distinct DO class AudioContainerPreview
 # (container apps are keyed on the DO class). Last-build-wins on shared state;
 # code-only PRs preview their own version safely. A PR that changes the DO shape
 # needs a new migration, which `versions upload` rejects — known edge case,
-# handled when we hit it (deploy that branch to the dev *branch* via full deploy).
+# handled when we hit it (deploy that branch to the preview *branch* via full deploy).
 #
-# One-time: wrangler r2 bucket create transcode-mcp-audio-dev
-[env.dev]
-name = "transcode-mcp-dev"
+# One-time: wrangler r2 bucket create transcode-mcp-audio-preview
+[env.preview]
+name = "transcode-mcp-preview"
 
-[env.dev.vars]
+[env.preview.vars]
 
-[env.dev.images]
+[env.preview.images]
 binding = "IMAGES"
 
-[[env.dev.r2_buckets]]
+[[env.preview.r2_buckets]]
 binding = "AUDIO_BUCKET"
-bucket_name = "transcode-mcp-audio-dev"
+bucket_name = "transcode-mcp-audio-preview"
 
-[[env.dev.containers]]
-class_name = "AudioContainerDev"
+[[env.preview.containers]]
+class_name = "AudioContainerPreview"
 image = "./container/Dockerfile"
 max_instances = 5
 
-[[env.dev.durable_objects.bindings]]
-class_name = "AudioContainerDev"
+[[env.preview.durable_objects.bindings]]
+class_name = "AudioContainerPreview"
 name = "AUDIO_CONTAINER"
 
-[[env.dev.migrations]]
-new_sqlite_classes = [ "AudioContainerDev" ]
+[[env.preview.migrations]]
+new_sqlite_classes = [ "AudioContainerPreview" ]
 tag = "v1"

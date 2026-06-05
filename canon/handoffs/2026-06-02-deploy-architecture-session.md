@@ -1,7 +1,7 @@
 # Handoff — Deploy Architecture Session (2026-05-29 → 2026-06-02)
 
 Owner: Claude (paired with klappy)
-Outcome: locked a three-tier deploy model (prod / staging / dev + per-branch
+Outcome: locked a three-tier deploy model (prod / staging / preview + per-branch
 previews) on Cloudflare Workers Builds. Canon: `canon/governance/deploy-architecture.md`
 (strict how-to), `canon/planning/2026-06-02-three-tier-deploy.md` (decision),
 `canon/encodings/2026-06-02-three-tier-deploy.tsv`.
@@ -38,9 +38,9 @@ so the reasoning isn't lost.
    automatically. There is a SEPARATE non-production-branch deploy command, which
    is where `wrangler versions upload` belongs.
 7. **The migration rule.** `versions upload` cannot carry a NEW migration. So the
-   shared dev worker's DO/migration is created once by a full dev-branch deploy;
+   shared preview worker's DO/migration is created once by a full preview-branch deploy;
    code-only PR versions upload fine; a PR that changes the DO shape is the one
-   edge case (deferred — handle by deploying that branch to the `dev` branch).
+   edge case (deferred — handle by deploying that branch to the `preview` branch).
 
 ## Verified vs. deferred
 
@@ -53,18 +53,18 @@ so the reasoning isn't lost.
 
 ## State at handoff
 
-- `wrangler.toml`: top-level prod + `[env.staging]` + `[env.dev]`, three DO
+- `wrangler.toml`: top-level prod + `[env.staging]` + `[env.preview]`, three DO
   classes, three buckets. `[env.preview]` removed. Parses; 86 tests pass.
 - `src/worker.ts`: exports `AudioContainer`, `AudioContainerStaging`,
-  `AudioContainerDev`.
+  `AudioContainerPreview`.
 - GitHub Actions deploy workflow removed; `ci.yml` (tests/smoke) remains.
-- Branches `production`, `staging` exist; `dev` to be created.
+- Branches `production`, `staging` exist; `preview` to be created.
 
 ## Next actions (operator)
 
-1. Create the `dev` branch; create R2 bucket `transcode-mcp-audio-dev`.
-2. Create the `transcode-mcp-staging` and `transcode-mcp-dev` Workers Builds
-   projects per `canon/governance/deploy-architecture.md`; set the dev project's
-   non-production branch deploy command to `npx wrangler versions upload --env dev`.
-3. First full deploy of staging and dev (creates their DO classes/migrations).
-4. Repoint `ci.yml` smoke at the dev preview URL (currently uses the old slug).
+1. Create the `preview` branch; create R2 bucket `transcode-mcp-audio-preview`.
+2. Create the `transcode-mcp-staging` and `transcode-mcp-preview` Workers Builds
+   projects per `canon/governance/deploy-architecture.md`; set the preview project's
+   non-production branch deploy command to `npx wrangler versions upload --env preview`.
+3. First full deploy of staging and preview (creates their DO classes/migrations).
+4. Repoint `ci.yml` smoke at the preview preview URL (currently uses the old slug).

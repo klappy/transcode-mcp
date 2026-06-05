@@ -1,4 +1,4 @@
-# Three-Tier Deploy: prod / staging / dev + per-branch previews
+# Three-Tier Deploy: prod / staging / preview + per-branch previews
 
 Date: 2026-06-02
 Status: LOCKED
@@ -23,12 +23,12 @@ One `wrangler.toml`, three environments, three Workers Builds projects:
 |------|--------|--------|----------|--------|
 | prod | `production` | `transcode-mcp` | `AudioContainer` | `transcode-mcp-audio` |
 | staging | `staging` | `transcode-mcp-staging` | `AudioContainerStaging` | `transcode-mcp-audio-staging` |
-| dev | `dev` | `transcode-mcp-dev` | `AudioContainerDev` | `transcode-mcp-audio-dev` |
+| preview | `preview` | `transcode-mcp-preview` | `AudioContainerPreview` | `transcode-mcp-audio-preview` |
 
-- **dev is the single shared preview backend.** Each PR branch is a *version* of
-  `transcode-mcp-dev` (Workers Builds non-production branch build →
+- **preview is the single shared preview backend.** Each PR branch is a *version* of
+  `transcode-mcp-preview` (Workers Builds non-production branch build →
   `wrangler versions upload`), with its own stable preview URL, all sharing the
-  one dev container/DO/bucket. Last-build-wins on shared state; each version
+  one preview container/DO/bucket. Last-build-wins on shared state; each version
   previews its own code. Code-only PRs are effectively parallel-safe.
 - Three distinct DO classes because a container application is keyed on the DO
   class name — two workers cannot share a class. Prod and staging are single
@@ -53,16 +53,16 @@ migration.
 
 ## Open / deferred
 
-- A PR that changes the DO shape (new migration) cannot be previewed as a dev
+- A PR that changes the DO shape (new migration) cannot be previewed as a preview
   version (`versions upload` rejects new migrations). Handle by deploying that
-  branch to the `dev` branch (full deploy). Accepted; fix when hit.
+  branch to the `preview` branch (full deploy). Accepted; fix when hit.
 - Cross-script binding a branch worker to a container-backed DO is unverified and
   intentionally unused.
 
 ## Definition of done
 
 - Push `production` → `transcode-mcp`; push `staging` → `transcode-mcp-staging`;
-  push `dev` → `transcode-mcp-dev` (each full stack, own bucket/class).
-- A PR opens → a `<branch>-transcode-mcp-dev...` preview URL is commented; prod
+  push `preview` → `transcode-mcp-preview` (each full stack, own bucket/class).
+- A PR opens → a `<branch>-transcode-mcp-preview...` preview URL is commented; prod
   and staging untouched.
 - Prod deployed only from `production`, only by the prod Workers Builds project.
