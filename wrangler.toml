@@ -85,21 +85,38 @@ name = "AUDIO_CONTAINER"
 new_sqlite_classes = [ "AudioContainerStaging" ]
 tag = "v1"
 
-# ── BRANCH PREVIEWS ──────────────────────────────────────────────────────────
-# Every PR branch gets its OWN disposable worker. CI overrides the name per
-# branch:  wrangler deploy --env preview --name transcode-mcp-pr-<number>
+# ── DEV (shared preview backend) ─────────────────────────────────────────────
+# ONE shared dev worker. Every PR branch uploads a VERSION of transcode-mcp-dev
+# (Workers Builds non-production branch build -> `wrangler versions upload`),
+# getting its own stable preview URL (<branch>-transcode-mcp-dev.<sub>.workers.dev)
+# while sharing this one container/DO/bucket. Distinct DO class AudioContainerDev
+# (container apps are keyed on the DO class). Last-build-wins on shared state;
+# code-only PRs preview their own version safely. A PR that changes the DO shape
+# needs a new migration, which `versions upload` rejects — known edge case,
+# handled when we hit it (deploy that branch to the dev *branch* via full deploy).
 #
-# Deliberately NO container, NO Durable Object, NO migration, NO R2 bucket:
-#   - No container application => no DO-class collision => scales to N branches.
-#   - The worker requires AUDIO_CONTAINER + AUDIO_BUCKET to transcode (worker.ts);
-#     absent here BY DESIGN, so audio falls back to passthrough on previews.
-#   - Everything else a PR needs to validate works: routes, MCP tool, the image
-#     path (IMAGES is an account binding, safe to share), demo pages, headers.
-# Live audio transcoding is validated on staging, not per-branch.
-[env.preview]
-name = "transcode-mcp-preview"
+# One-time: wrangler r2 bucket create transcode-mcp-audio-dev
+[env.dev]
+name = "transcode-mcp-dev"
 
-[env.preview.vars]
+[env.dev.vars]
 
-[env.preview.images]
+[env.dev.images]
 binding = "IMAGES"
+
+[[env.dev.r2_buckets]]
+binding = "AUDIO_BUCKET"
+bucket_name = "transcode-mcp-audio-dev"
+
+[[env.dev.containers]]
+class_name = "AudioContainerDev"
+image = "./container/Dockerfile"
+max_instances = 5
+
+[[env.dev.durable_objects.bindings]]
+class_name = "AudioContainerDev"
+name = "AUDIO_CONTAINER"
+
+[[env.dev.migrations]]
+new_sqlite_classes = [ "AudioContainerDev" ]
+tag = "v1"

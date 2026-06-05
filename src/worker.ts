@@ -59,6 +59,16 @@ export class AudioContainer extends Container<Env> {
 // class of their own (audio falls back to passthrough on previews).
 export class AudioContainerStaging extends AudioContainer {}
 
+// Dev's container class. Same reasoning as staging — a container application is
+// keyed on the DO class name, so the shared dev worker needs its own class
+// distinct from prod and staging. Dev is the single shared preview backend:
+// every PR branch uploads a VERSION of transcode-mcp-dev (its own preview URL),
+// all sharing this one AudioContainerDev + the dev bucket. Last-build-wins on
+// the shared DO state; code-only PRs are effectively parallel-safe (each version
+// previews its own code). A PR that changes the DO shape needs a new migration,
+// which `wrangler versions upload` rejects — the one known edge case.
+export class AudioContainerDev extends AudioContainer {}
+
 // Size of the AudioContainer pool getRandom selects across. MUST match
 // `max_instances` for the [[containers]] block in wrangler.toml — if this
 // exceeds the cap, getRandom can pick instances that fail to start (forcing

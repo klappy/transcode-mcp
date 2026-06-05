@@ -1,112 +1,68 @@
-# Three-Tier Deploy: Production, Staging, and Per-Branch Previews
+# Three-Tier Deploy: prod / staging / dev + per-branch previews
 
 Date: 2026-06-02
-Status: implementing
-Supersedes the deploy-routing parts of `canon/planning/2026-05-29-preview-environment.md`
-(single `[env.preview]` worker). That approach could not satisfy the real
-requirement; this document records what does.
+Status: LOCKED
+Supersedes `canon/planning/2026-05-29-preview-environment.md` (single preview worker).
+Strict how-to: `canon/governance/deploy-architecture.md`. This doc records the
+DECISION and the reasoning; the governance article is the operating manual.
 
-## The requirement (operator, stated plainly)
+## Requirement
 
-- **Production must never be taken down by un-validated code.** A bad PR, or an
-  AI agent testing something radical, must not be able to affect prod.
-- **Every branch gets its own live deployment, automatically.** Not one shared
-  preview, not manual per-branch setup in the Cloudflare dashboard — N branches,
-  N deployments, zero manual config.
-- **A constant staging URL** for stable pre-merge validation, with a dedicated
-  `staging` branch and a `prod` branch, because this project values stability
-  more than most.
+- Production is never endangered by un-validated code.
+- A constant staging URL for stable pre-merge validation (own `staging` branch).
+- Every PR branch gets its own live preview automatically — N branches, no manual
+  per-branch setup.
+- Deploys go through Cloudflare Workers Builds (dashboard + githooks), never
+  GitHub Actions.
 
-## Why the earlier approaches failed
+## Decision
 
-1. A single `[env.preview]` worker (`transcode-mcp-preview`) is one worker — PR #2
-   overwrites PR #1. Does not scale to N.
-2. Cloudflare **Workers Builds** binds a project to ONE worker and overrides the
-   config's worker name on every build. Deploying `--env preview` from the
-   prod-bound project retargeted prod (`Failed to match Worker name ... expected
-   transcode-mcp. Overriding`), then failed binding `AudioContainerPreview` on a
-   worker whose live migrations only knew `AudioContainer`.
-3. A container application is keyed on the **Durable Object class name**, not the
-   worker name. Two workers cannot both own a container app for the same class
-   (`DURABLE_OBJECT_ALREADY_HAS_APPLICATION`).
+One `wrangler.toml`, three environments, three Workers Builds projects:
 
-## The model
+| Tier | Branch | Worker | DO class | Bucket |
+|------|--------|--------|----------|--------|
+| prod | `production` | `transcode-mcp` | `AudioContainer` | `transcode-mcp-audio` |
+| staging | `staging` | `transcode-mcp-staging` | `AudioContainerStaging` | `transcode-mcp-audio-staging` |
+| dev | `dev` | `transcode-mcp-dev` | `AudioContainerDev` | `transcode-mcp-audio-dev` |
 
-| Tier | Branch | Worker | Container / DO | Bucket |
-|------|--------|--------|----------------|--------|
-| Production | `production` | `transcode-mcp` | `AudioContainer` (own app) | `transcode-mcp-audio` |
-| Staging | `staging` | `transcode-mcp-staging` | `AudioContainerStaging` (own app) | `transcode-mcp-audio-staging` |
-| Preview | every PR | `transcode-mcp-pr-<N>` | **none** | **none** |
+- **dev is the single shared preview backend.** Each PR branch is a *version* of
+  `transcode-mcp-dev` (Workers Builds non-production branch build →
+  `wrangler versions upload`), with its own stable preview URL, all sharing the
+  one dev container/DO/bucket. Last-build-wins on shared state; each version
+  previews its own code. Code-only PRs are effectively parallel-safe.
+- Three distinct DO classes because a container application is keyed on the DO
+  class name — two workers cannot share a class. Prod and staging are single
+  stable workers; they never race and never share state.
 
-Key decisions:
+## Why earlier approaches failed (now invariants in governance)
 
-- **Prod and staging are full, independent stacks** with **distinct DO classes**
-  (`AudioContainer` vs `AudioContainerStaging`, both exported from `src/worker.ts`).
-  Distinct classes are required so each gets its own container application. This
-  is the one irreducible difference between the two full stacks.
-- **Branch previews carry NO container, NO Durable Object, NO migration, NO R2
-  bucket.** Consequences: (a) no container application, so no DO-class collision,
-  so previews scale to N automatically; (b) the worker already falls back to
-  audio passthrough when `AUDIO_CONTAINER`/`AUDIO_BUCKET` are absent
-  (`src/worker.ts`), so previews validate everything a PR changes — routes, the
-  MCP tool, the image path (account-level `IMAGES` binding, safe to share), demo
-  pages, headers — while **live audio transcoding is validated on staging**, not
-  per-branch.
-- **Deploys go through Cloudflare Workers Builds** (the CF dashboard connected to
-  GitHub via githooks) — NOT GitHub Actions. Each tier is its own Workers Builds
-  project, one project per worker:
-    - prod project    → builds the `production` branch → `wrangler deploy`           → `transcode-mcp`
-    - staging project → builds the `staging` branch    → `wrangler deploy --env staging` → `transcode-mcp-staging`
-  The earlier failure (#2 above) was caused by pointing `--env preview` at the
-  *prod-bound* project; the fix is a SEPARATE project bound to each worker, not
-  abandoning Workers Builds.
-- **Per-branch previews are still open.** Workers Builds does non-production
-  branch builds, but giving each branch its OWN uniquely-named worker via a
-  Workers-Builds deploy command (e.g. `--name transcode-mcp-pr-$WORKERS_CI_BRANCH`)
-  is unverified and must be confirmed before relying on it. Do NOT solve this with
-  GitHub Actions. Until verified, previews are deferred; prod + staging are the
-  committed tiers.
+1. Single preview worker — one worker, PR2 overwrites PR1.
+2. Workers Builds pins a project to one worker and overrides the config name —
+   running `--env preview` in the prod project retargeted prod.
+3. Container app keyed on DO class — shared class →
+   `DURABLE_OBJECT_ALREADY_HAS_APPLICATION`.
+4. Retry re-runs the original commit — fixes appeared not to take.
+5. GitHub Actions is the wrong surface — deploys are Workers Builds only.
 
-## Verified vs. unverified
+## Verified (CF docs, 2026-06-02)
 
-- **Verified** (Cloudflare docs, 2026-06-02): cross-script Durable Object bindings
-  via `script_name` exist; container application is keyed on DO class; a worker
-  with no DO binding needs no migration.
-- **Unverified, deliberately NOT relied upon:** whether a branch worker can drive
-  staging's *container-backed* DO via a cross-script `script_name` binding to get
-  live transcoding on previews. Found no explicit confirmation. The passthrough
-  model above avoids this dependency entirely. If later verified in isolation,
-  previews can be upgraded to bind staging's DO for live audio — a pure
-  enhancement, not a prerequisite.
-- **To confirm on first run:** that `wrangler deploy --env preview --name X`
-  overrides the env's worker name (the per-branch mechanism). If wrangler rejects
-  the combination, fall back to a templated preview config or `versions`.
+Three wrangler envs in one config; native per-branch preview URLs via
+non-production branch builds; a SEPARATE non-production-branch deploy command
+(where `wrangler versions upload` belongs); `versions upload` cannot carry a NEW
+migration.
 
-## Operator actions (cannot be done from the sandbox)
+## Open / deferred
 
-Deploys are wired in the Cloudflare dashboard (Workers Builds + githooks); none
-of this needs GitHub Actions or repo secrets.
-
-1. Create the `production` and `staging` branches (done from the repo).
-2. One-time: create the `transcode-mcp-audio-staging` R2 bucket (the connected
-   Cloudflare MCP token is read-only, so this is a dashboard / `wrangler r2
-   bucket create` action); give it the same 90-day lifecycle GC as prod.
-3. Create a **staging Workers Builds project**: connect the repo, bind it to a
-   new worker `transcode-mcp-staging`, build branch `staging`, deploy command
-   `npx wrangler deploy --env staging`.
-4. Ensure the **prod Workers Builds project** builds the `production` branch with
-   deploy command `npx wrangler deploy` (plain — top-level config = prod).
-5. Per-branch previews: deferred until the Workers-Builds-native mechanism is
-   verified (see "The model"). Do NOT add a GitHub Actions deploy.
+- A PR that changes the DO shape (new migration) cannot be previewed as a dev
+  version (`versions upload` rejects new migrations). Handle by deploying that
+  branch to the `dev` branch (full deploy). Accepted; fix when hit.
+- Cross-script binding a branch worker to a container-backed DO is unverified and
+  intentionally unused.
 
 ## Definition of done
 
-- Pushing to `staging` (via its Workers Builds project) deploys
-  `transcode-mcp-staging` with live transcoding against the staging bucket.
-- Pushing to `production` deploys `transcode-mcp`; prod is only ever deployed
-  from `production`, by the prod Workers Builds project.
-- Staging and prod share no state (separate buckets, separate DO classes).
-- Per-branch previews (deferred): once the Workers-Builds-native per-branch
-  mechanism is verified, each PR branch gets its own container-less worker that
-  serves routes/MCP/image path with audio passthrough.
-- Prod is only ever deployed from `main`, by exactly one deployer.
+- Push `production` → `transcode-mcp`; push `staging` → `transcode-mcp-staging`;
+  push `dev` → `transcode-mcp-dev` (each full stack, own bucket/class).
+- A PR opens → a `<branch>-transcode-mcp-dev...` preview URL is commented; prod
+  and staging untouched.
+- Prod deployed only from `production`, only by the prod Workers Builds project.
