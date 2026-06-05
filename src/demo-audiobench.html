@@ -325,12 +325,18 @@
     return fetchOne(fullUrl).then(function (r) {
       var h = r.headers;
       var cache = h['x-transcode-cache'] || '';
+      var encode = h['x-transcode-encode'] || '';
+      var cacheUp = cache.toUpperCase();
+      // no-binding is a passthrough fallback that still emits cache MISS; treat
+      // it as not-transcoded so the bench reflects proxy truth, not cache state.
+      var isPassthroughEncode = encode === 'passthrough' || encode === 'no-binding';
       return {
         isSource: job.isSource, label: job.label, path: job.path, fullUrl: fullUrl,
-        size: r.size, cache: cache, reason: h['x-transcode-reason'] || '',
+        size: r.size, cache: cache, encode: encode,
+        reason: h['x-transcode-reason'] || (encode === 'no-binding' ? 'no-binding' : ''),
         bitrate: h['x-transcode-bitrate'] || '', channels: h['x-transcode-channels'] || '',
         duration: h['x-transcode-duration'] || '', contentType: h['content-type'] || '',
-        transcoded: cache.toUpperCase() === 'HIT' || cache.toUpperCase() === 'MISS', error: null
+        transcoded: (cacheUp === 'HIT' || cacheUp === 'MISS') && !isPassthroughEncode, error: null
       };
     }).catch(function (e) {
       return { isSource: job.isSource, label: job.label, path: job.path, fullUrl: fullUrl, size: 0, error: e.message };
