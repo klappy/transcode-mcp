@@ -511,24 +511,31 @@ async function handleAudioProxy(
 
   // Persist to R2 before returning so a follow-up request for the same key
   // observes a HIT instead of racing into another container dispatch. Metadata
-  // is stored so a later HIT can rebuild the same headers.
-  await env.AUDIO_BUCKET.put(objectKey, buf, {
-    httpMetadata: {
-      contentType: meta.contentType,
-      cacheControl: "public, max-age=31536000, immutable",
-    },
-    customMetadata: {
-      contentType: meta.contentType,
-      bitrate: meta.bitrate,
-      sampleRate: meta.sampleRate,
-      channels: meta.channels,
-      duration: meta.duration,
-      sourceBytes: meta.sourceBytes,
-      preset: resolved.preset,
-      q: resolved.q,
-      codec: resolved.codec,
-    },
-  });
+  // is stored so a later HIT can rebuild the same headers. A storage failure
+  // must not turn a successful encode into a worker error -- degrade by
+  // returning the in-memory bytes uncached, consistent with the audio path's
+  // "never error on degrade" contract.
+  try {
+    await env.AUDIO_BUCKET.put(objectKey, buf, {
+      httpMetadata: {
+        contentType: meta.contentType,
+        cacheControl: "public, max-age=31536000, immutable",
+      },
+      customMetadata: {
+        contentType: meta.contentType,
+        bitrate: meta.bitrate,
+        sampleRate: meta.sampleRate,
+        channels: meta.channels,
+        duration: meta.duration,
+        sourceBytes: meta.sourceBytes,
+        preset: resolved.preset,
+        q: resolved.q,
+        codec: resolved.codec,
+      },
+    });
+  } catch {
+    // Swallow R2 write failure; the encoded body is still served below.
+  }
 
   return new Response(buf, {
     status: 200,
