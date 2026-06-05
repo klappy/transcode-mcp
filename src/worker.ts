@@ -485,7 +485,7 @@ async function handleAudioProxy(
     // Container unreachable -> degrade to passthrough rather than erroring.
     return passthroughAudio(sourceUrl, {
       encode: "passthrough",
-      cache: "MISS",
+      cache: "PASS",
       extra: { "X-Transcode-Reason": "container-unreachable" },
     });
   }
@@ -494,7 +494,7 @@ async function handleAudioProxy(
     // Container refused (e.g. 422 no recipe) or errored -> passthrough.
     return passthroughAudio(sourceUrl, {
       encode: "passthrough",
-      cache: "MISS",
+      cache: "PASS",
       extra: { "X-Transcode-Reason": `container-status:${encoded.status}` },
     });
   }
