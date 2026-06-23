@@ -605,6 +605,7 @@ async function handleAudioProxy(
   // must not turn a successful encode into a worker error -- degrade by
   // returning the in-memory bytes uncached, consistent with the audio path's
   // "never error on degrade" contract.
+  let stored = true;
   try {
     await env.AUDIO_BUCKET.put(objectKey, buf, {
       httpMetadata: {
@@ -625,24 +626,29 @@ async function handleAudioProxy(
     });
   } catch {
     // Swallow R2 write failure; the encoded body is still served below.
+    stored = false;
   }
 
-  return withCors(new Response(buf, {
-    status: 200,
-    headers: audioHeaders({
-      cache: "MISS",
-      encode: resolved.codec,
-      preset: resolved.preset,
-      q: resolved.q,
-      contentType: meta.contentType,
-      bitrate: meta.bitrate,
-      sampleRate: meta.sampleRate,
-      channels: meta.channels,
-      duration: meta.duration,
-      sourceBytes: meta.sourceBytes,
-      outputBytes: String(buf.byteLength),
-    }),
-  }));
+  const headers = audioHeaders({
+    cache: "MISS",
+    encode: resolved.codec,
+    preset: resolved.preset,
+    q: resolved.q,
+    contentType: meta.contentType,
+    bitrate: meta.bitrate,
+    sampleRate: meta.sampleRate,
+    channels: meta.channels,
+    duration: meta.duration,
+    sourceBytes: meta.sourceBytes,
+    outputBytes: String(buf.byteLength),
+  });
+  if (!stored) {
+    // R2 has no object, so the content-addressed store can't satisfy a later
+    // HIT. Don't let clients/CDNs treat this body as permanently cacheable.
+    headers.set("Cache-Control", "no-store");
+  }
+
+  return withCors(new Response(buf, { status: 200, headers }));
 }
 
 // Passthrough fallback: fetch the source and hand it back unchanged. Used for
