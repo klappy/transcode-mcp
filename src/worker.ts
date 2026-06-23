@@ -73,6 +73,12 @@ export class AudioContainerStaging extends AudioContainer {}
 // which `wrangler versions upload` rejects — the one known edge case.
 export class AudioContainerPreview extends AudioContainer {}
 
+// Production's container class — the additive primary prod instance
+// (transcode-mcp-production). Distinct DO class for the same account-scoped
+// container-keying reason as staging: a container application is keyed on the
+// DO class name, so each same-account instance needs its own.
+export class AudioContainerProduction extends AudioContainer {}
+
 // Size of the AudioContainer pool getRandom selects across. MUST match
 // `max_instances` for the [[containers]] block in wrangler.toml — if this
 // exceeds the cap, getRandom can pick instances that fail to start (forcing
