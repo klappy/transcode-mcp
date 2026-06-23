@@ -105,3 +105,38 @@ name = "transcode-mcp-preview"
 
 [env.preview.images]
 binding = "IMAGES"
+
+# ── PRODUCTION (the primary instance) ────────────────────────────────────────
+# Additive primary prod stack: its OWN worker (transcode-mcp-production), DO
+# class (AudioContainerProduction), and R2 bucket. Fed by the `production`
+# branch via its own CF project: production branch = `production`, deploy
+# command = `npx wrangler deploy --env production`. Same-account uniqueness is
+# why name/class/bucket all differ from the main-fed and staging tiers; the
+# worker CODE and binding names (AUDIO_CONTAINER, AUDIO_BUCKET) are identical
+# across tiers, so production runs exactly what staging validated.
+#
+# One-time: wrangler r2 bucket create transcode-mcp-audio-production
+[env.production]
+name = "transcode-mcp-production"
+
+[env.production.vars]
+
+[env.production.images]
+binding = "IMAGES"
+
+[[env.production.r2_buckets]]
+binding = "AUDIO_BUCKET"
+bucket_name = "transcode-mcp-audio-production"
+
+[[env.production.containers]]
+class_name = "AudioContainerProduction"
+image = "./container/Dockerfile"
+max_instances = 5
+
+[[env.production.durable_objects.bindings]]
+class_name = "AudioContainerProduction"
+name = "AUDIO_CONTAINER"
+
+[[env.production.migrations]]
+new_sqlite_classes = [ "AudioContainerProduction" ]
+tag = "v1"
