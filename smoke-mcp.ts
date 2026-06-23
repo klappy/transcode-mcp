@@ -220,6 +220,43 @@ async function main() {
   assert(audPayload.embed?.includes("<audio"), "embed is <audio> snippet");
   assert(audPayload.guidance?.includes("passthrough"), "guidance notes passthrough state");
 
+  // 6. live /audio proxy fetch — deploy-gated.
+  //    Mirrors step 3's image parseability check: we fetch the exact /audio
+  //    URL the MCP tool just told a caller to use and assert the worker's
+  //    audio parser accepts it (not 400/404). With an example.com source the
+  //    container's own source fetch fails, so the worker takes its passthrough
+  //    fallback — that's the correct contract (an unimplemented-or-unfetchable
+  //    case passes through, never errors). The FULL transcode assertion
+  //    (X-Transcode-Cache: miss→hit, X-Transcode-Bitrate, real opus bytes)
+  //    requires a deployed worker with the running container AND a genuinely
+  //    fetchable source; that runs in CI/preview, not from a bare example.com
+  //    source. When those headers are present we surface them; we never fail
+  //    the smoke run on their absence.
+  console.log("\n6. live /audio proxy fetch (deploy-gated)");
+  const audioProxyUrl = baseUrl + audPayload.proxy_path!;
+  const audioRes = await fetch(audioProxyUrl, { method: "GET" });
+  assert(
+    audioRes.status !== 400 && audioRes.status !== 404,
+    "constructed /audio URL is parseable by the proxy (got HTTP " + audioRes.status + ")",
+  );
+  const encodeHeader = audioRes.headers.get("x-transcode-encode");
+  const cacheHeader = audioRes.headers.get("x-transcode-cache");
+  if (encodeHeader || cacheHeader) {
+    console.log(
+      "    transcode headers present — cache=" +
+        (cacheHeader ?? "?") +
+        " encode=" +
+        (encodeHeader ?? "?") +
+        " bitrate=" +
+        (audioRes.headers.get("x-transcode-bitrate") ?? "?"),
+    );
+  } else {
+    console.log(
+      "    no X-Transcode-* headers (passthrough or no container) — " +
+        "full transcode proof is CI/preview-only with a fetchable source",
+    );
+  }
+
   console.log("\nAll checks passed.");
 }
 

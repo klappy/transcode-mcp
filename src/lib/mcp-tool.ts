@@ -8,13 +8,17 @@ import { generateTranscodeUrl } from "./generate-transcode-url";
 export type Quality = "low" | "medium" | "high";
 export type ImageFormat = "auto" | "webp" | "jpeg";
 export type AudioPreset = "voice" | "music";
+export type AudioCodec = "opus" | "aac" | "mp3";
 
 export interface ToolArgs {
   source_url: string;
   media_type?: "image" | "audio";
   viewport?: number;
   q?: Quality;
-  f?: ImageFormat;
+  // f is image format when media_type=image, audio codec when media_type=audio.
+  // The two vocabularies do not overlap so a single arg is unambiguous in
+  // context. See canon/planning/2026-05-29-audio-worker-path.md.
+  f?: ImageFormat | AudioCodec;
   w?: number;
   h?: number;
   preset?: AudioPreset;
@@ -29,7 +33,7 @@ export interface ToolResponse {
     source_url: string;
     viewport: number | null;
     q: Quality | "default";
-    f: ImageFormat;
+    f: ImageFormat | AudioCodec | "default";
   };
   guidance: string;
 }
@@ -45,9 +49,10 @@ const IMAGE_GUIDANCE =
   "tradeoff. You do not specify the encode resolution — the proxy computes it.";
 
 const AUDIO_GUIDANCE =
-  "Use this URL directly as an <audio> src. Audio is currently passthrough " +
-  "(container transcoding is not yet deployed), so preset/q are recorded but " +
-  "not yet applied.";
+  "Use this URL directly as an <audio> src. Voice + opus is transcoded via " +
+  "the container; other preset/codec combinations currently passthrough " +
+  "(safe degradation, never errors) until their recipes ship. Defaults are " +
+  "preset=voice, q=medium, f=opus.";
 
 // Builds the response payload for a generate_transcode_url tool call. Pure
 // function: no network, no math beyond viewport->s mapping (which is the
@@ -60,9 +65,15 @@ export function buildToolResponse(args: ToolArgs, origin: string): ToolResponse 
   let guidance: string;
 
   if (mediaType === "audio") {
-    const options: Record<string, string> = {};
-    if (args.preset !== undefined) options.preset = args.preset;
-    if (args.q !== undefined) options.q = args.q;
+    // Emit the canonical defaults (preset=voice, q=medium, f=opus) when the
+    // caller omits them so a minimal tool call still produces an option segment
+    // and hits the worker's transcode path. A bare /audio/{source} URL would be
+    // treated as "no options" and passthrough, contradicting AUDIO_GUIDANCE.
+    const options: Record<string, string> = {
+      preset: args.preset ?? "voice",
+      q: args.q ?? "medium",
+      f: args.f ?? "opus",
+    };
     proxyPath = generateTranscodeUrl({
       mediaType: "audio",
       sourceUrl: args.source_url,
@@ -107,7 +118,7 @@ export function buildToolResponse(args: ToolArgs, origin: string): ToolResponse 
       source_url: args.source_url,
       viewport: args.viewport ?? null,
       q: args.q ?? "default",
-      f: args.f ?? "auto",
+      f: args.f ?? (mediaType === "audio" ? "default" : "auto"),
     },
     guidance,
   };

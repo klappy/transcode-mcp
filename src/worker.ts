@@ -6,23 +6,78 @@
 // Encode arithmetic: canon/planning/2026-05-27-encode-resolution-arithmetic.md
 //
 // The Worker owns: URL parsing, half-class arithmetic, env.IMAGES binding
-// calls, Cache API lookups, R2 dispatch for audio (deferred), demo page.
+// calls, Cache API lookups (images), R2 read/write + container dispatch for
+// audio, demo page.
 // The Worker does NOT own: ffmpeg flags, codec internals, perceptual judgments.
 
+// MCP machinery (agents/mcp + the SDK) is imported lazily inside the /mcp
+// route — those modules pull workerd-only built-ins that a test/build runtime
+// can't resolve. McpServer is a type-only import here (erased at runtime) for
+// the createServer signature. Container is a runtime import (AudioContainer
+// extends it), so it stays eager.
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { Container, getRandom } from "@cloudflare/containers";
 import { z } from "zod";
 import { parseProxyPath, ProxyPathError } from "./lib/parse-proxy-path";
 import { encodeDimension, QUALITY_MAP, type Quality } from "./lib/encode-dimension";
 import { shortestSideToWidth } from "./lib/generate-transcode-url";
+import {
+  resolveAudioOptions,
+  hasAudioOptions,
+  isTranscodable,
+  CODEC_DELIVERY,
+} from "./lib/audio-options";
+import { computeAudioKey } from "./lib/audio-key";
 import { buildToolResponse } from "./lib/mcp-tool";
 import { DEMO_PAGE_HTML } from "./demo-page";
 import { DEMO_FILM_HTML } from "./demo-film";
 import { DEMO_CASESTUDY_HTML } from "./demo-casestudy";
+import { DEMO_AUDIOBENCH_HTML } from "./demo-audiobench";
 import { ADMIN_PAGE_HTML } from "./admin-page";
 
 interface Env {
   IMAGES?: ImagesBinding;
+  // R2 cache for transcoded audio output (content-addressed, lazy writes).
+  AUDIO_BUCKET?: R2Bucket;
+  // Durable Object fronting the ffmpeg transcode Container.
+  AUDIO_CONTAINER?: DurableObjectNamespace<AudioContainer>;
 }
+
+// Durable Object that fronts the audio transcode Container. It owns only
+// lifecycle (port + idle sleep); ffmpeg, the recipe table, and source fetching
+// all live INSIDE the container image (container/). The Worker never sees an
+// ffmpeg flag — that is the worker/container boundary
+// (canon/planning/2026-05-26-worker-container-boundary.md).
+export class AudioContainer extends Container<Env> {
+  defaultPort = 8080; // the container HTTP server listens here
+  sleepAfter = "10m"; // stop the instance after 10m idle to bound cost
+}
+
+// Staging's container class. Cloudflare keys a "container application" to the
+// Durable Object CLASS NAME, not the worker name — so prod and staging cannot
+// both bind a container to `AudioContainer` (the second deploy fails with
+// DURABLE_OBJECT_ALREADY_HAS_APPLICATION). Staging (wrangler.toml [env.staging])
+// binds its container + migration to this distinct class instead. Behavior is
+// identical to AudioContainer; only the class name differs so the platform sees
+// two separate applications. Branch previews bind NO container, so they need no
+// class of their own (audio falls back to passthrough on previews).
+export class AudioContainerStaging extends AudioContainer {}
+
+// Preview's container class. Same reasoning as staging — a container application is
+// keyed on the DO class name, so the shared preview worker needs its own class
+// distinct from prod and staging. Preview is the single shared preview backend:
+// every PR branch uploads a VERSION of transcode-mcp-preview (its own preview URL),
+// all sharing this one AudioContainerPreview + the preview bucket. Last-build-wins on
+// the shared DO state; code-only PRs are effectively parallel-safe (each version
+// previews its own code). A PR that changes the DO shape needs a new migration,
+// which `wrangler versions upload` rejects — the one known edge case.
+export class AudioContainerPreview extends AudioContainer {}
+
+// Size of the AudioContainer pool getRandom selects across. MUST match
+// `max_instances` for the [[containers]] block in wrangler.toml — if this
+// exceeds the cap, getRandom can pick instances that fail to start (forcing
+// the passthrough fallback); if it's smaller, provisioned capacity sits idle.
+const AUDIO_CONTAINER_INSTANCES = 5;
 
 // Cloudflare Images binding type (minimal shape we use)
 interface ImagesBinding {
@@ -60,6 +115,15 @@ const CORS_EXPOSE_HEADERS = [
   "X-Transcode-Encode-W",
   "X-Transcode-Encode-H",
   "X-Transcode-Binding",
+  // Audio path (PR #25): the dashboard reads these to tell the audio
+  // byte-savings story, the audio analog of the image dimension headers.
+  "X-Transcode-Output-Bytes",
+  "X-Transcode-Preset",
+  "X-Transcode-Bitrate",
+  "X-Transcode-SampleRate",
+  "X-Transcode-Channels",
+  "X-Transcode-Duration",
+  "X-Transcode-Encode",
 ].join(", ");
 
 // One DRY helper applied to every served image/audio response — transcode,
@@ -107,15 +171,35 @@ function createServer(request: Request, McpServerCtor: typeof McpServer) {
         .optional()
         .describe("Quality preset: low=20, medium=50, high=80. With the half-class overshoot, even low looks good. Defaults to the proxy default (medium)."),
       f: z
-        .enum(["auto", "webp", "jpeg"])
+        .enum(["auto", "webp", "jpeg", "opus", "aac", "mp3"])
         .optional()
-        .describe("Output format. auto lets the proxy pick; webp is smallest; jpeg is universal."),
+        .describe(
+          "Output format. For images: auto|webp|jpeg (auto lets the proxy pick; webp is smallest; jpeg is universal). For audio: opus|aac|mp3 (codec selector; defaults to opus).",
+        ),
       // Advanced escape hatch — raw pixel control. w wins over viewport.
       w: z.number().int().positive().optional().describe("ADVANCED: raw output width in px. Overrides viewport. Most callers should use viewport."),
       h: z.number().int().positive().optional().describe("ADVANCED: raw output height in px. Rarely needed."),
       preset: z.enum(["voice", "music"]).optional().describe("Audio only: encoding preset."),
     },
     (args) => {
+      // Cross-field check the per-field schema can't express: f's vocabulary
+      // depends on media_type. Reject mismatches here with a clear message
+      // rather than letting the proxy 400 on a URL we generated ourselves.
+      const mediaType = args.media_type ?? "image";
+      const IMAGE_F = ["auto", "webp", "jpeg"] as const;
+      const AUDIO_F = ["opus", "aac", "mp3"] as const;
+      const allowed = mediaType === "audio" ? AUDIO_F : IMAGE_F;
+      if (args.f !== undefined && !(allowed as readonly string[]).includes(args.f)) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error: f="${args.f}" is not valid for media_type="${mediaType}". Allowed values: ${allowed.join("|")}.`,
+            },
+          ],
+          isError: true,
+        };
+      }
       const origin = new URL(request.url).origin;
       const response = buildToolResponse(args, origin);
       return {
@@ -166,6 +250,9 @@ export default {
     if (url.pathname === "/bench" || url.pathname === "/bench/") {
       return htmlResponse(DEMO_PAGE_HTML);
     }
+    if (url.pathname === "/bench/audio" || url.pathname === "/bench/audio/") {
+      return htmlResponse(DEMO_AUDIOBENCH_HTML);
+    }
     if (url.pathname === "/casestudy" || url.pathname === "/casestudy/") {
       return htmlResponse(DEMO_CASESTUDY_HTML);
     }
@@ -183,7 +270,7 @@ export default {
       return handleImageProxy(request, env, ctx);
     }
 
-    // Audio proxy (still passthrough; container path is deferred)
+    // Audio proxy (lazy transcode via Container + R2; passthrough fallback)
     if (url.pathname.startsWith("/audio/")) {
       return handleAudioProxy(request, env, ctx);
     }
@@ -193,7 +280,7 @@ export default {
 };
 
 // Image proxy with half-class overshoot via env.IMAGES binding.
-// On a binding miss (local dev or missing config), falls back to passthrough.
+// On a binding miss (local preview or missing config), falls back to passthrough.
 async function handleImageProxy(
   request: Request,
   env: Env,
@@ -254,7 +341,7 @@ async function handleImageProxy(
     return withCors(new Response(sourceResponse.body, { status: 200, headers }));
   }
 
-  // If no IMAGES binding (local dev or unconfigured), fall back to passthrough
+  // If no IMAGES binding (local preview or unconfigured), fall back to passthrough
   if (!env.IMAGES) {
     const headers = new Headers({
       "Content-Type": sourceResponse.headers.get("Content-Type") || "image/jpeg",
@@ -371,7 +458,20 @@ function pickFormat(
   return "image/jpeg";
 }
 
-// Audio proxy — passthrough until Container is wired up.
+// Audio proxy — lazy transcode via Container + ffmpeg, cached in R2.
+//
+// Parity with the image path in COMPLETENESS and CALLER CONTRACT (lazy
+// transcode, rich X-Transcode-* headers, passthrough fallbacks), NOT in
+// mechanism: audio caches in R2 content-addressed because a container transcode
+// is expensive enough to persist, where the image Cache API would re-run ffmpeg
+// on eviction and pay the CPU twice. See
+// canon/planning/2026-05-29-audio-worker-path.md.
+//
+// Boundary: the Worker owns the URL grammar, the cache key, and the R2
+// read/write. The container takes (source_url, preset, q, codec), fetches the
+// source itself, runs the recipe, and returns encoded bytes + ffprobe metadata.
+// It stays cache- and credential-ignorant. The source is NOT pre-staged through
+// the Worker/R2 (that would pay the source bytes twice).
 async function handleAudioProxy(
   request: Request,
   env: Env,
@@ -388,23 +488,242 @@ async function handleAudioProxy(
     return withCors(new Response("Bad request", { status: 400 }));
   }
 
-  const sourceResponse = await fetch(parsed.sourceUrl);
+  if (parsed.mediaType !== "audio") {
+    return withCors(new Response("Not an audio route", { status: 404 }));
+  }
+
+  const { sourceUrl, options } = parsed;
+
+  // No options at all -> passthrough, mirroring the image "no transform
+  // options given" branch.
+  if (!hasAudioOptions(options)) {
+    return passthroughAudio(sourceUrl, { encode: "passthrough", cache: "PASS" });
+  }
+
+  const resolved = resolveAudioOptions(options);
+
+  // No bindings (local preview / unconfigured) -> passthrough with no-binding,
+  // exactly like the image path falls back without env.IMAGES. This keeps
+  // `wrangler preview` usable without a container.
+  if (!env.AUDIO_BUCKET || !env.AUDIO_CONTAINER) {
+    return passthroughAudio(sourceUrl, { encode: "no-binding", cache: "MISS" });
+  }
+
+  // Codec/preset not wired in this deployment slice -> passthrough, never
+  // error. Slice 1 ships voice + opus; everything else degrades gracefully.
+  if (!isTranscodable(resolved)) {
+    return passthroughAudio(sourceUrl, {
+      encode: "passthrough",
+      cache: "PASS",
+      extra: {
+        "X-Transcode-Reason": `not-implemented:${resolved.codec}+${resolved.preset}`,
+        "X-Transcode-Preset": resolved.preset,
+        "X-Transcode-Quality": resolved.q,
+      },
+    });
+  }
+
+  const delivery = CODEC_DELIVERY[resolved.codec];
+  const key = await computeAudioKey(sourceUrl, resolved);
+  const objectKey = `${key}.${delivery.ext}`;
+
+  // R2 cache lookup (content-addressed). Hit -> stream stored bytes, rebuild
+  // descriptive headers from the metadata captured at transcode time.
+  const hit = await env.AUDIO_BUCKET.get(objectKey);
+  if (hit) {
+    const m = hit.customMetadata ?? {};
+    const headers = audioHeaders({
+      cache: "HIT",
+      encode: resolved.codec,
+      preset: resolved.preset,
+      q: resolved.q,
+      contentType: m.contentType || delivery.contentType,
+      bitrate: m.bitrate,
+      sampleRate: m.sampleRate,
+      channels: m.channels,
+      duration: m.duration,
+      sourceBytes: m.sourceBytes,
+      outputBytes: String(hit.size),
+    });
+    // R2 body is a ReadableStream so the runtime can't auto-set Content-Length;
+    // set it explicitly to keep transport headers identical to the MISS path.
+    headers.set("Content-Length", String(hit.size));
+    return withCors(new Response(hit.body, { status: 200, headers }));
+  }
+
+  // Miss -> dispatch to the container. Transcoding is stateless (Worker owns
+  // R2 read/write and the cache key), so route across the shared pool with
+  // getRandom rather than pinning each unique output to its own instance —
+  // otherwise a single concurrent burst of distinct keys would saturate
+  // max_instances and force the catch-block passthrough fallback.
+  let encoded: Response;
+  try {
+    const instance = await getRandom(env.AUDIO_CONTAINER, AUDIO_CONTAINER_INSTANCES);
+    encoded = await instance.fetch(
+      new Request("https://audio-container/transcode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source_url: sourceUrl,
+          preset: resolved.preset,
+          q: resolved.q,
+          codec: resolved.codec,
+        }),
+      }),
+    );
+  } catch {
+    // Container unreachable -> degrade to passthrough rather than erroring.
+    return passthroughAudio(sourceUrl, {
+      encode: "passthrough",
+      cache: "PASS",
+      extra: { "X-Transcode-Reason": "container-unreachable" },
+    });
+  }
+
+  if (!encoded.ok || !encoded.body) {
+    // Container refused (e.g. 422 no recipe) or errored -> passthrough.
+    return passthroughAudio(sourceUrl, {
+      encode: "passthrough",
+      cache: "PASS",
+      extra: { "X-Transcode-Reason": `container-status:${encoded.status}` },
+    });
+  }
+
+  const buf = await encoded.arrayBuffer();
+  const meta = {
+    contentType: encoded.headers.get("Content-Type") || delivery.contentType,
+    bitrate: encoded.headers.get("X-Audio-Bitrate") ?? "",
+    sampleRate: encoded.headers.get("X-Audio-SampleRate") ?? "",
+    channels: encoded.headers.get("X-Audio-Channels") ?? "",
+    duration: encoded.headers.get("X-Audio-Duration") ?? "",
+    sourceBytes: encoded.headers.get("X-Source-Bytes") ?? "",
+  };
+
+  // Persist to R2 before returning so a follow-up request for the same key
+  // observes a HIT instead of racing into another container dispatch. Metadata
+  // is stored so a later HIT can rebuild the same headers. A storage failure
+  // must not turn a successful encode into a worker error -- degrade by
+  // returning the in-memory bytes uncached, consistent with the audio path's
+  // "never error on degrade" contract.
+  let stored = true;
+  try {
+    await env.AUDIO_BUCKET.put(objectKey, buf, {
+      httpMetadata: {
+        contentType: meta.contentType,
+        cacheControl: "public, max-age=31536000, immutable",
+      },
+      customMetadata: {
+        contentType: meta.contentType,
+        bitrate: meta.bitrate,
+        sampleRate: meta.sampleRate,
+        channels: meta.channels,
+        duration: meta.duration,
+        sourceBytes: meta.sourceBytes,
+        preset: resolved.preset,
+        q: resolved.q,
+        codec: resolved.codec,
+      },
+    });
+  } catch {
+    // Swallow R2 write failure; the encoded body is still served below.
+    stored = false;
+  }
+
+  const headers = audioHeaders({
+    cache: "MISS",
+    encode: resolved.codec,
+    preset: resolved.preset,
+    q: resolved.q,
+    contentType: meta.contentType,
+    bitrate: meta.bitrate,
+    sampleRate: meta.sampleRate,
+    channels: meta.channels,
+    duration: meta.duration,
+    sourceBytes: meta.sourceBytes,
+    outputBytes: String(buf.byteLength),
+  });
+  if (!stored) {
+    // R2 has no object, so the content-addressed store can't satisfy a later
+    // HIT. Don't let clients/CDNs treat this body as permanently cacheable.
+    headers.set("Cache-Control", "no-store");
+  }
+
+  return withCors(new Response(buf, { status: 200, headers }));
+}
+
+// Passthrough fallback: fetch the source and hand it back unchanged. Used for
+// the no-options, no-binding, not-implemented, and container-failure branches
+// so audio NEVER errors on a path images would have degraded gracefully on.
+async function passthroughAudio(
+  sourceUrl: string,
+  opts: {
+    encode: "passthrough" | "no-binding";
+    cache: "PASS" | "MISS";
+    extra?: Record<string, string>;
+  },
+): Promise<Response> {
+  const sourceResponse = await fetch(sourceUrl);
   if (!sourceResponse.ok) {
     return withCors(new Response(`Source fetch failed: ${sourceResponse.status}`, {
       status: 502,
     }));
   }
-
   const headers = new Headers({
-    "Content-Type":
-      sourceResponse.headers.get("Content-Type") || "audio/mpeg",
-    "X-Transcode-Cache": "PASS",
-    "X-Transcode-Encode": "passthrough-pending-container",
+    "Content-Type": sourceResponse.headers.get("Content-Type") || "audio/mpeg",
+    "X-Transcode-Cache": opts.cache,
+    "X-Transcode-Encode": opts.encode,
+    ...(opts.extra ?? {}),
   });
+  // Forward upstream Content-Length so clients (e.g. the audio bench) can size
+  // the body from headers alone instead of draining the stream.
+  const sourceLen = sourceResponse.headers.get("Content-Length");
+  if (sourceLen) headers.set("Content-Length", sourceLen);
+  // Savings-headers contract: best-effort source bytes + CORS so a browser can
+  // read the X-Transcode-* headers cross-origin.
   const sb = sourceBytesFromContentLength(sourceResponse.headers);
-  if (sb !== undefined) headers.set("X-Transcode-Source-Bytes", sb);
+  if (sb !== undefined && !headers.has("X-Transcode-Source-Bytes")) {
+    headers.set("X-Transcode-Source-Bytes", sb);
+  }
+  // Forward the upstream status so non-200 successes (e.g. 206 Partial Content)
+  // are preserved for range-aware clients rather than normalized to 200.
   return withCors(new Response(sourceResponse.body, {
     status: sourceResponse.status,
     headers,
   }));
+}
+
+interface AudioHeaderParts {
+  cache: "HIT" | "MISS";
+  encode: string; // codec name on a real transcode
+  preset: string;
+  q: string;
+  contentType: string;
+  bitrate?: string;
+  sampleRate?: string;
+  channels?: string;
+  duration?: string; // seconds, from the container's ffprobe (length is preserved by transcode)
+  sourceBytes?: string;
+  outputBytes?: string;
+}
+
+// The descriptive header set for a transcoded (or cached) audio response. The
+// ffprobe-derived fields (bitrate/sample-rate/channels) plus the byte counts
+// are what let the demo and case study tell the byte-savings story, the audio
+// analog of the image path's source/encode dimension headers.
+function audioHeaders(p: AudioHeaderParts): Headers {
+  const h = new Headers({
+    "Content-Type": p.contentType,
+    "X-Transcode-Cache": p.cache,
+    "X-Transcode-Encode": p.encode,
+    "X-Transcode-Preset": p.preset,
+    "X-Transcode-Quality": p.q,
+    "Cache-Control": "public, max-age=31536000, immutable",
+  });
+  if (p.bitrate) h.set("X-Transcode-Bitrate", p.bitrate);
+  if (p.sampleRate) h.set("X-Transcode-SampleRate", p.sampleRate);
+  if (p.channels) h.set("X-Transcode-Channels", p.channels);
+  if (p.duration) h.set("X-Transcode-Duration", p.duration);
+  if (p.sourceBytes) h.set("X-Transcode-Source-Bytes", p.sourceBytes);
+  if (p.outputBytes) h.set("X-Transcode-Output-Bytes", p.outputBytes);
+  return h;
 }

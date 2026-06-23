@@ -80,3 +80,33 @@ Each page stays its own single-`<script>` HTML file, served on its own route, ex
 7. `bun run typecheck` and `bun test` pass.
 8. Smoke verification against the preview worker: the four routes above return their expected status/content-type.
 9. The image proxy still passes its existing smoke (no regression from this change).
+
+---
+
+## Update (2026-05-29) — A Fourth Route, and the Shared Nav Becomes an Invariant
+
+This doc planned **three** pages, one menu. The audio bench shipped after it,
+so there are now **four**: `/film`, `/bench` (image bench), `/bench/audio`
+(audio bench), and `/casestudy`. Three things changed from the plan above:
+
+- **Fourth route.** `/bench/audio` is a first-class demo page, same
+  separate-file / single-`<script>` / thin-loader pattern. The image bench's
+  label in the menu is now "Image bench" (was "Bench") to distinguish the two.
+- **Shared nav is now enforced, not just convention.** The "nav drift" risk
+  this doc accepted ("a label/route change must be made in N places") is
+  mitigated: `demo-page.test.ts` now asserts every page links to all four
+  routes — including `/bench/audio` — and that exactly one item per page carries
+  `aria-current="page"`. The menu is the identical four-link set on every page;
+  only the current marker differs.
+- **Bench measurement bypasses the browser cache.** The CORS note above still
+  holds (same-origin `fetch` reads `X-Transcode-*`). But because `/audio`
+  responses are `Cache-Control: immutable`, the browser will replay a frozen
+  `X-Transcode-Cache` header from disk cache on repeat probes — a server HIT
+  reads as the first-fetch MISS. The bench's measurement fetch therefore uses
+  `cache: 'no-store'` so each probe reflects real server state. See the Learning
+  row in `canon/encodings/2026-05-29-audio-bench-parity.tsv` and the handoff
+  `canon/handoffs/2026-05-29-audio-bench-parity.md`.
+
+The chosen topology (separate route-served files, shared menu, guard test per
+page) held up — extending to a fourth page was purely additive, exactly as the
+"Reversibility: high" note predicted.

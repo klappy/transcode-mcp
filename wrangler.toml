@@ -12,15 +12,96 @@ compatibility_flags = [ "nodejs_compat" ]
 [images]
 binding = "IMAGES"
 
-# R2 bucket for audio output (lazy writes)
-# [[r2_buckets]]
-# binding = "AUDIO_BUCKET"
-# bucket_name = "transcode-mcp-audio"
+# R2 bucket for transcoded audio output — content-addressed, lazy writes,
+# 90-day lifecycle GC (configured on the bucket). The Worker owns the key and
+# the read/write; the container never touches R2.
+[[r2_buckets]]
+binding = "AUDIO_BUCKET"
+bucket_name = "transcode-mcp-audio"
 
-# Container / Durable Object for heavy audio work (future)
-# [durable_objects]
-# bindings = [{ name = "AUDIO_CONTAINER", class_name = "AudioContainer" }]
+# Audio transcode Container, fronted by the AudioContainer Durable Object.
+# ffmpeg + the recipe table live in container/. The Worker dispatches
+# (source_url, preset, q, codec); the container stays cache/credential-ignorant.
+[[containers]]
+class_name = "AudioContainer"
+image = "./container/Dockerfile"
+max_instances = 5
 
-# For local dev with `wrangler dev`
-[dev]
+[[durable_objects.bindings]]
+class_name = "AudioContainer"
+name = "AUDIO_CONTAINER"
+
+[[migrations]]
+new_sqlite_classes = [ "AudioContainer" ]
+tag = "v1"
+
+# For local preview with `wrangler preview`
+[preview]
 port = 8787
+
+# ─────────────────────────────────────────────────────────────────────────────
+# THREE-TIER DEPLOY MODEL — one config, deployed as separate isolated Workers.
+# Nothing below ever touches production (`transcode-mcp`, the top-level config).
+#
+#   prod     : main branch     -> wrangler deploy                 -> transcode-mcp
+#   staging  : staging branch  -> wrangler deploy --env staging   -> transcode-mcp-staging
+#   preview  : every PR branch -> wrangler deploy --env preview --name transcode-mcp-pr-<N>
+#
+# Bindings are NON-inheritable in Wrangler environments, so each tier redeclares
+# what it needs against its OWN resources. Prod and staging share NO state.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── STAGING ──────────────────────────────────────────────────────────────────
+# A full second stack: its OWN container, DO class, and R2 bucket. Distinct DO
+# class (AudioContainerStaging) because a container application is keyed on the
+# DO class name, not the worker name — reusing `AudioContainer` would collide
+# with prod (DURABLE_OBJECT_ALREADY_HAS_APPLICATION). This is the constant
+# staging URL (transcode-mcp-staging.<subdomain>.workers.dev) where live audio
+# transcoding is validated before anything merges toward prod.
+#
+# One-time: wrangler r2 bucket create transcode-mcp-audio-staging
+[env.staging]
+name = "transcode-mcp-staging"
+
+[env.staging.vars]
+
+[env.staging.images]
+binding = "IMAGES"
+
+[[env.staging.r2_buckets]]
+binding = "AUDIO_BUCKET"
+bucket_name = "transcode-mcp-audio-staging"
+
+[[env.staging.containers]]
+class_name = "AudioContainerStaging"
+image = "./container/Dockerfile"
+max_instances = 5
+
+[[env.staging.durable_objects.bindings]]
+class_name = "AudioContainerStaging"
+name = "AUDIO_CONTAINER"
+
+[[env.staging.migrations]]
+new_sqlite_classes = [ "AudioContainerStaging" ]
+tag = "v1"
+
+# ── PREVIEW (per-PR branch builds) ───────────────────────────────────────────
+# Deliberately NO container, NO Durable Object, NO migration, NO R2 bucket.
+# This is the proven design; it regressed in 6c8182c, which bolted a container
+# onto the preview tier and broke every branch build. A container application is
+# keyed on its DO class, and a non-production branch build cannot stand up a new
+# container/DO on the shared preview worker — so the deploy fails. Kept
+# container-less, the branch build is a clean worker-only deploy:
+#   - No container application => no DO-class collision => scales to N branches.
+#   - worker.ts needs AUDIO_CONTAINER + AUDIO_BUCKET to transcode; absent here BY
+#     DESIGN, so audio falls back to passthrough on previews (image path, MCP
+#     tool, demo pages, and the savings headers all still validate).
+# Live audio transcoding is validated on STAGING (which DOES build the
+# container), not per-branch.
+[env.preview]
+name = "transcode-mcp-preview"
+
+[env.preview.vars]
+
+[env.preview.images]
+binding = "IMAGES"

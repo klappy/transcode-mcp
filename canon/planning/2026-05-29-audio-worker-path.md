@@ -78,7 +78,7 @@ AAC bitrates cannot reuse the opus numbers; AAC at 8–16k voice is unacceptable
 
 ## Response Contract — Headers and Fallbacks at Image Parity
 
-Headers on a transcoded response: `X-Transcode-Cache` (HIT/MISS/PASS), `X-Transcode-Encode` (`opus`/`aac`/`mp3`/`passthrough`/`no-binding`), `X-Transcode-Preset`, `X-Transcode-Quality`, `X-Transcode-Bitrate`, `X-Transcode-SampleRate`, `X-Transcode-Channels`, source and output byte counts, a `Content-Type` of `audio/ogg`, `audio/mp4`, or `audio/mpeg` matching the real output, and `Cache-Control: public, max-age=31536000, immutable`. Fallbacks mirror images: no options yields passthrough; missing R2 or container binding yields passthrough with `X-Transcode-Encode: no-binding`; a transcode error yields 502 or 500 with `X-Transcode-Error`. The no-binding fallback is what keeps `wrangler dev` usable without a container.
+Headers on a transcoded response: `X-Transcode-Cache` (HIT/MISS/PASS), `X-Transcode-Encode` (`opus`/`aac`/`mp3`/`passthrough`/`no-binding`), `X-Transcode-Preset`, `X-Transcode-Quality`, `X-Transcode-Bitrate`, `X-Transcode-SampleRate`, `X-Transcode-Channels`, `X-Transcode-Duration` (seconds, forwarded from the container's ffprobe; preserved by transcode, so source and every variant share one length), source and output byte counts, a `Content-Type` of `audio/ogg`, `audio/mp4`, or `audio/mpeg` matching the real output, and `Cache-Control: public, max-age=31536000, immutable`. Fallbacks mirror images: no options yields passthrough; missing R2 or container binding yields passthrough with `X-Transcode-Encode: no-binding`; a transcode error yields 502 or 500 with `X-Transcode-Error`. The no-binding fallback is what keeps `wrangler dev` usable without a container.
 
 ## MCP Surface Changes
 
@@ -97,7 +97,7 @@ The `generate_transcode_url` tool already emits `preset` and `q`. Two changes: t
 - **Older-iOS tail.** Covered by the AAC `<source>`; the browser self-selects, so no device is left without a playable file.
 - **AAC low-bitrate voice quality.** Unknown until the listening test; the native-versus-libfdk decision rides on it. Held open deliberately.
 - **Scope-creep breakage.** Prior canon-parity ships in the oddkit ledger landed their scope and also broke an adjacent thing. Mitigation: the image path is not touched, and the audio path ships behind the existing passthrough fallback, so a container failure degrades to today's behavior rather than erroring.
-- **Cost.** The matrix measures music opus near $0.0000217 per audio-minute in a container; R2 with 90-day lifecycle GC bounds storage. No new Worker npm dependencies, since R2 and the Durable Object are bindings; the container is a separate build artifact and does not touch `bun.lock`.
+- **Cost.** The matrix measures music opus near $0.0000217 per audio-minute in a container; R2 with 90-day lifecycle GC bounds storage. R2 stays a pure binding (no dependency); the container image is a separate build artifact that does not touch `bun.lock`. The Worker does take one new npm dependency — `@cloudflare/containers` — which supplies the `Container` Durable Object base class and the `getContainer()` dispatch helper that the official Cloudflare Containers API requires; it is the idiomatic, reversible way to wire the DO and was accepted via an oddkit challenge during Slice 1 rather than hand-rolling the DO plumbing.
 
 Reversibility is high. Every piece is additive behind a fallback, and reverting to passthrough is removing two bindings and one handler branch.
 
