@@ -85,17 +85,19 @@ name = "AUDIO_CONTAINER"
 new_sqlite_classes = [ "AudioContainerStaging" ]
 tag = "v1"
 
-# ── DEV (shared preview backend) ─────────────────────────────────────────────
-# ONE shared preview worker. Every PR branch uploads a VERSION of transcode-mcp-preview
-# (Workers Builds non-production branch build -> `wrangler versions upload`),
-# getting its own stable preview URL (<branch>-transcode-mcp-preview.<sub>.workers.dev)
-# while sharing this one container/DO/bucket. Distinct DO class AudioContainerPreview
-# (container apps are keyed on the DO class). Last-build-wins on shared state;
-# code-only PRs preview their own version safely. A PR that changes the DO shape
-# needs a new migration, which `versions upload` rejects — known edge case,
-# handled when we hit it (deploy that branch to the preview *branch* via full deploy).
-#
-# One-time: wrangler r2 bucket create transcode-mcp-audio-preview
+# ── PREVIEW (per-PR branch builds) ───────────────────────────────────────────
+# Deliberately NO container, NO Durable Object, NO migration, NO R2 bucket.
+# This is the proven design; it regressed in 6c8182c, which bolted a container
+# onto the preview tier and broke every branch build. A container application is
+# keyed on its DO class, and a non-production branch build cannot stand up a new
+# container/DO on the shared preview worker — so the deploy fails. Kept
+# container-less, the branch build is a clean worker-only deploy:
+#   - No container application => no DO-class collision => scales to N branches.
+#   - worker.ts needs AUDIO_CONTAINER + AUDIO_BUCKET to transcode; absent here BY
+#     DESIGN, so audio falls back to passthrough on previews (image path, MCP
+#     tool, demo pages, and the savings headers all still validate).
+# Live audio transcoding is validated on STAGING (which DOES build the
+# container), not per-branch.
 [env.preview]
 name = "transcode-mcp-preview"
 
@@ -103,20 +105,3 @@ name = "transcode-mcp-preview"
 
 [env.preview.images]
 binding = "IMAGES"
-
-[[env.preview.r2_buckets]]
-binding = "AUDIO_BUCKET"
-bucket_name = "transcode-mcp-audio-preview"
-
-[[env.preview.containers]]
-class_name = "AudioContainerPreview"
-image = "./container/Dockerfile"
-max_instances = 5
-
-[[env.preview.durable_objects.bindings]]
-class_name = "AudioContainerPreview"
-name = "AUDIO_CONTAINER"
-
-[[env.preview.migrations]]
-new_sqlite_classes = [ "AudioContainerPreview" ]
-tag = "v1"
