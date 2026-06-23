@@ -57,6 +57,32 @@ See full details in [canon/values/project-identity.md](canon/values/project-iden
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for current state.
 
+## Response Headers & CORS
+
+The proxy is transparent about what it did. Every transcoded image response
+carries a descriptive `X-Transcode-*` set so the caller can see which
+constraint bound the output and which knobs to turn. **Currently shipped** on
+the `/image/*` transcode path:
+
+| Header | Meaning |
+|--------|---------|
+| `X-Transcode-Source-W` / `-H`   | Measured source dimensions (px) |
+| `X-Transcode-Encode-W` / `-H`   | Encode dimensions after half-class overshoot |
+| `X-Transcode-Quality`           | Effective quality (0–100) |
+| `X-Transcode-Format`            | Output content type chosen |
+| `X-Transcode-Binding`           | Which constraint bound the encode dimension |
+| `X-Transcode-Cache`             | `HIT` / `MISS` / `PASS` |
+
+**Planned — savings-headers slice** (spec:
+[`canon/planning/2026-06-22-response-savings-headers.md`](canon/planning/2026-06-22-response-savings-headers.md)):
+adds `X-Transcode-Source-Bytes` and `X-Transcode-Encoded-Bytes` (the source and
+transcoded file sizes the proxy already measures), plus
+`Access-Control-Allow-Origin: *` and an `Access-Control-Expose-Headers` list, so
+a browser `fetch()` can read the byte counts cross-origin and show real savings
+instead of a heuristic. New response headers extend the `X-Transcode-*` family;
+the as-built names are canonical (see the drift note in
+[`canon/handoffs/2026-05-29-design-session.md`](canon/handoffs/2026-05-29-design-session.md)).
+
 ## Testing
 
 The MCP server is tested at four layers, in order of feedback speed:

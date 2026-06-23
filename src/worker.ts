@@ -10,8 +10,12 @@
 // audio, demo page.
 // The Worker does NOT own: ffmpeg flags, codec internals, perceptual judgments.
 
-import { createMcpHandler } from "agents/mcp";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+// MCP machinery (agents/mcp + the SDK) is imported lazily inside the /mcp
+// route — those modules pull workerd-only built-ins that a test/build runtime
+// can't resolve. McpServer is a type-only import here (erased at runtime) for
+// the createServer signature. Container is a runtime import (AudioContainer
+// extends it), so it stays eager.
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Container, getRandom } from "@cloudflare/containers";
 import { z } from "zod";
 import { parseProxyPath, ProxyPathError } from "./lib/parse-proxy-path";
@@ -92,8 +96,60 @@ interface ImagesResult {
   image(): ReadableStream;
 }
 
-function createServer(request: Request) {
-  const server = new McpServer({ name: "transcode-mcp", version: "0.3.0" });
+// --- Response envelope: savings headers + CORS -----------------------------
+// The X-Transcode-* family is the as-built canonical vocabulary
+// (canon/handoffs/2026-05-29-design-session.md "Drift Note"). Browsers cannot
+// read custom headers cross-origin without Access-Control-Expose-Headers, and a
+// fetch() is blocked without Access-Control-Allow-Origin — that missing CORS,
+// not a missing number, is why the consuming dashboard read 0 B.
+// See canon/planning/2026-06-22-response-savings-headers.md.
+const CORS_EXPOSE_HEADERS = [
+  "Content-Length",
+  "X-Transcode-Source-Bytes",
+  "X-Transcode-Encoded-Bytes",
+  "X-Transcode-Cache",
+  "X-Transcode-Format",
+  "X-Transcode-Quality",
+  "X-Transcode-Source-W",
+  "X-Transcode-Source-H",
+  "X-Transcode-Encode-W",
+  "X-Transcode-Encode-H",
+  "X-Transcode-Binding",
+  // Audio path (PR #25): the dashboard reads these to tell the audio
+  // byte-savings story, the audio analog of the image dimension headers.
+  "X-Transcode-Output-Bytes",
+  "X-Transcode-Preset",
+  "X-Transcode-Bitrate",
+  "X-Transcode-SampleRate",
+  "X-Transcode-Channels",
+  "X-Transcode-Duration",
+  "X-Transcode-Encode",
+].join(", ");
+
+// One DRY helper applied to every served image/audio response — transcode,
+// passthrough, no-binding, audio passthrough, and error. Mutates and returns
+// the response; idempotent. Public, read-only image metadata only, so the
+// wildcard origin is the correct CDN-like choice.
+function withCors(response: Response): Response {
+  response.headers.set("Access-Control-Allow-Origin", "*");
+  response.headers.set("Access-Control-Expose-Headers", CORS_EXPOSE_HEADERS);
+  return response;
+}
+
+// Best-effort source bytes for non-transcode paths: parse an upstream
+// Content-Length into a clean non-negative integer string, or undefined when
+// absent or unparseable. The caller then reads an honest zero-savings rather
+// than a measurement gap.
+function sourceBytesFromContentLength(headers: Headers): string | undefined {
+  const raw = headers.get("Content-Length");
+  if (raw === null) return undefined;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0) return undefined;
+  return String(n);
+}
+
+function createServer(request: Request, McpServerCtor: typeof McpServer) {
+  const server = new McpServerCtor({ name: "transcode-mcp", version: "0.3.0" });
 
   server.tool(
     "generate_transcode_url",
@@ -159,9 +215,17 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
-    // MCP endpoint
+    // MCP endpoint. The MCP machinery (agents/mcp + the SDK) is imported lazily
+    // here so the proxy module stays importable outside the Workers runtime —
+    // agents/dist pulls the runtime-only `cloudflare:email` virtual module at
+    // import time, which would otherwise break `bun test`. Behaviour at runtime
+    // is unchanged; wrangler bundles these literal dynamic imports.
     if (url.pathname.startsWith("/mcp")) {
-      const server = createServer(request);
+      const { createMcpHandler } = await import("agents/mcp");
+      const { McpServer: McpServerCtor } = await import(
+        "@modelcontextprotocol/sdk/server/mcp.js"
+      );
+      const server = createServer(request, McpServerCtor);
       const handler = createMcpHandler(server);
       return handler(request, env, ctx);
     }
@@ -228,13 +292,13 @@ async function handleImageProxy(
     parsed = parseProxyPath(requestUrl.pathname, requestUrl.search);
   } catch (err) {
     if (err instanceof ProxyPathError) {
-      return new Response(err.message, { status: err.status });
+      return withCors(new Response(err.message, { status: err.status }));
     }
-    return new Response("Bad request", { status: 400 });
+    return withCors(new Response("Bad request", { status: 400 }));
   }
 
   if (parsed.mediaType !== "image") {
-    return new Response("Not an image route", { status: 404 });
+    return withCors(new Response("Not an image route", { status: 404 }));
   }
 
   const { sourceUrl, options } = parsed;
@@ -246,7 +310,10 @@ async function handleImageProxy(
   if (cached) {
     const headers = new Headers(cached.headers);
     headers.set("X-Transcode-Cache", "HIT");
-    return new Response(cached.body, { status: cached.status, headers });
+    // The byte headers ride along for free: they were stored on the MISS that
+    // populated this entry. withCors re-asserts CORS so even pre-existing
+    // cache entries (stored before this change) serve readable headers.
+    return withCors(new Response(cached.body, { status: cached.status, headers }));
   }
 
   // Fetch source
@@ -254,36 +321,36 @@ async function handleImageProxy(
     headers: { Accept: "image/avif,image/webp,image/*,*/*" },
   });
   if (!sourceResponse.ok) {
-    return new Response(`Source fetch failed: ${sourceResponse.status}`, {
+    return withCors(new Response(`Source fetch failed: ${sourceResponse.status}`, {
       status: 502,
-    });
+    }));
   }
   if (!sourceResponse.body) {
-    return new Response("Source has no body", { status: 502 });
+    return withCors(new Response("Source has no body", { status: 502 }));
   }
 
   // If no transform options given, return passthrough
   if (!options.w && !options.h && !options.q && !options.f && !options.s) {
-    return new Response(sourceResponse.body, {
-      status: 200,
-      headers: {
-        "Content-Type": sourceResponse.headers.get("Content-Type") || "image/jpeg",
-        "X-Transcode-Cache": "PASS",
-        "X-Transcode-Encode": "passthrough",
-      },
+    const headers = new Headers({
+      "Content-Type": sourceResponse.headers.get("Content-Type") || "image/jpeg",
+      "X-Transcode-Cache": "PASS",
+      "X-Transcode-Encode": "passthrough",
     });
+    const sb = sourceBytesFromContentLength(sourceResponse.headers);
+    if (sb !== undefined) headers.set("X-Transcode-Source-Bytes", sb);
+    return withCors(new Response(sourceResponse.body, { status: 200, headers }));
   }
 
   // If no IMAGES binding (local preview or unconfigured), fall back to passthrough
   if (!env.IMAGES) {
-    return new Response(sourceResponse.body, {
-      status: 200,
-      headers: {
-        "Content-Type": sourceResponse.headers.get("Content-Type") || "image/jpeg",
-        "X-Transcode-Cache": "MISS",
-        "X-Transcode-Encode": "no-binding",
-      },
+    const headers = new Headers({
+      "Content-Type": sourceResponse.headers.get("Content-Type") || "image/jpeg",
+      "X-Transcode-Cache": "MISS",
+      "X-Transcode-Encode": "no-binding",
     });
+    const sb = sourceBytesFromContentLength(sourceResponse.headers);
+    if (sb !== undefined) headers.set("X-Transcode-Source-Bytes", sb);
+    return withCors(new Response(sourceResponse.body, { status: 200, headers }));
   }
 
   try {
@@ -345,22 +412,35 @@ async function handleImageProxy(
       "X-Transcode-Format": format,
       "Cache-Control": "public, max-age=31536000, immutable",
     });
+    // Source bytes are already in hand from the info() call made for dimensions.
+    // Guarded because some source formats may not report a measurable fileSize.
+    if (Number.isFinite(info.fileSize) && info.fileSize >= 0) {
+      responseHeaders.set("X-Transcode-Source-Bytes", String(Math.trunc(info.fileSize)));
+    }
 
     // Build the response and cache it
     const transformed = out.response();
     // We can't easily clone the binding's response, so re-read the body
     const buf = await transformed.arrayBuffer();
-    const response = new Response(buf, { status: 200, headers: responseHeaders });
+    // Encoded bytes = the exact buffer that becomes the response body. We do
+    // NOT set Content-Length ourselves: the runtime derives it from this same
+    // buffer, so X-Transcode-Encoded-Bytes == Content-Length on the wire by
+    // construction. Forcing Content-Length here would make that equality
+    // tautological and defeat the disconfirmer; the live smoke proves it
+    // against the real runtime instead.
+    responseHeaders.set("X-Transcode-Encoded-Bytes", String(buf.byteLength));
+    const response = withCors(new Response(buf, { status: 200, headers: responseHeaders }));
 
-    // Cache asynchronously
+    // Cache asynchronously. The clone carries the byte + CORS headers, so the
+    // cache-HIT path replays them for free.
     ctx.waitUntil(cache.put(cacheKey, response.clone()));
 
     return response;
   } catch (err: any) {
-    return new Response(`Transform failed: ${err?.message || "unknown"}`, {
+    return withCors(new Response(`Transform failed: ${err?.message || "unknown"}`, {
       status: 500,
       headers: { "X-Transcode-Error": "true" },
-    });
+    }));
   }
 }
 
@@ -403,13 +483,13 @@ async function handleAudioProxy(
     parsed = parseProxyPath(requestUrl.pathname, requestUrl.search);
   } catch (err) {
     if (err instanceof ProxyPathError) {
-      return new Response(err.message, { status: err.status });
+      return withCors(new Response(err.message, { status: err.status }));
     }
-    return new Response("Bad request", { status: 400 });
+    return withCors(new Response("Bad request", { status: 400 }));
   }
 
   if (parsed.mediaType !== "audio") {
-    return new Response("Not an audio route", { status: 404 });
+    return withCors(new Response("Not an audio route", { status: 404 }));
   }
 
   const { sourceUrl, options } = parsed;
@@ -468,7 +548,7 @@ async function handleAudioProxy(
     // R2 body is a ReadableStream so the runtime can't auto-set Content-Length;
     // set it explicitly to keep transport headers identical to the MISS path.
     headers.set("Content-Length", String(hit.size));
-    return new Response(hit.body, { status: 200, headers });
+    return withCors(new Response(hit.body, { status: 200, headers }));
   }
 
   // Miss -> dispatch to the container. Transcoding is stateless (Worker owns
@@ -547,7 +627,7 @@ async function handleAudioProxy(
     // Swallow R2 write failure; the encoded body is still served below.
   }
 
-  return new Response(buf, {
+  return withCors(new Response(buf, {
     status: 200,
     headers: audioHeaders({
       cache: "MISS",
@@ -562,7 +642,7 @@ async function handleAudioProxy(
       sourceBytes: meta.sourceBytes,
       outputBytes: String(buf.byteLength),
     }),
-  });
+  }));
 }
 
 // Passthrough fallback: fetch the source and hand it back unchanged. Used for
@@ -578,9 +658,9 @@ async function passthroughAudio(
 ): Promise<Response> {
   const sourceResponse = await fetch(sourceUrl);
   if (!sourceResponse.ok) {
-    return new Response(`Source fetch failed: ${sourceResponse.status}`, {
+    return withCors(new Response(`Source fetch failed: ${sourceResponse.status}`, {
       status: 502,
-    });
+    }));
   }
   const headers = new Headers({
     "Content-Type": sourceResponse.headers.get("Content-Type") || "audio/mpeg",
@@ -592,7 +672,13 @@ async function passthroughAudio(
   // the body from headers alone instead of draining the stream.
   const sourceLen = sourceResponse.headers.get("Content-Length");
   if (sourceLen) headers.set("Content-Length", sourceLen);
-  return new Response(sourceResponse.body, { status: 200, headers });
+  // Savings-headers contract: best-effort source bytes + CORS so a browser can
+  // read the X-Transcode-* headers cross-origin.
+  const sb = sourceBytesFromContentLength(sourceResponse.headers);
+  if (sb !== undefined && !headers.has("X-Transcode-Source-Bytes")) {
+    headers.set("X-Transcode-Source-Bytes", sb);
+  }
+  return withCors(new Response(sourceResponse.body, { status: 200, headers }));
 }
 
 interface AudioHeaderParts {
