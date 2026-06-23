@@ -176,6 +176,27 @@ The O-open is parked, not blocked. It does not require action this epoch.
 
 ---
 
+## Drift Note (2026-06-22) — As-Built Header Names Reconciled
+
+The transparency-echo contract above named `X-Encode-Dimension`, `X-Bound-By`,
+and `X-Quality`. The worker's code follow-through shipped a different, more
+granular family instead: `X-Transcode-Source-W/H`, `X-Transcode-Encode-W/H`,
+`X-Transcode-Quality`, `X-Transcode-Format`, `X-Transcode-Binding`, and
+`X-Transcode-Cache` (see `src/worker.ts`). The intent of `X-Bound-By` — declare
+which constraint bound the output — is satisfied in substance by
+`X-Transcode-Binding`; `X-Encode-Dimension` is carried by the separate
+`X-Transcode-Encode-W/H`; `X-Quality` by `X-Transcode-Quality` +
+`X-Transcode-Format`.
+
+As of the 2026-06-22 savings-headers session, the **as-built `X-Transcode-*`
+family is canonical**. The names in the "What Got Decided" and "Handoff"
+sections above record the original design intent, not the shipped contract; do
+not migrate live headers to them. New response headers extend `X-Transcode-*`
+(e.g. `X-Transcode-Source-Bytes`, `X-Transcode-Encoded-Bytes`). See
+`canon/planning/2026-06-22-response-savings-headers.md`.
+
+---
+
 ## References
 
 - Encoded rows for this session: `canon/encodings/2026-05-29-design-session.tsv`

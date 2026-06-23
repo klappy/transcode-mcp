@@ -96,4 +96,23 @@ Same URL vocabulary, different transport. The MCP tool generates proxy URLs.
 The LLM is a smart URL constructor — it picks the right preset and width based
 on the user's context and returns URL strings.
 
+## Response Envelope
+
+The Worker owns the response envelope (per
+[canon/planning/2026-05-26-worker-container-boundary.md](canon/planning/2026-05-26-worker-container-boundary.md)).
+Image transcode responses carry a descriptive `X-Transcode-*` header set —
+source/encode dimensions, quality, format, binding constraint, and cache status
+(`HIT`/`MISS`/`PASS`). These names are the as-built canonical family (see the
+drift note in
+[canon/handoffs/2026-05-29-design-session.md](canon/handoffs/2026-05-29-design-session.md)).
+
+The savings-headers slice
+([canon/planning/2026-06-22-response-savings-headers.md](canon/planning/2026-06-22-response-savings-headers.md))
+extends this envelope with `X-Transcode-Source-Bytes` and
+`X-Transcode-Encoded-Bytes` (the file sizes the proxy already measures) and
+opens CORS (`Access-Control-Allow-Origin: *` + `Access-Control-Expose-Headers`)
+so a browser can read the byte counts cross-origin. The proxy emits primitives —
+source bytes, encoded bytes, cache status — and the caller computes whatever
+savings metric it wants.
+
 ## What Comes Next
