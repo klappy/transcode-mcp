@@ -65,10 +65,15 @@ export function buildToolResponse(args: ToolArgs, origin: string): ToolResponse 
   let guidance: string;
 
   if (mediaType === "audio") {
-    const options: Record<string, string> = {};
-    if (args.preset !== undefined) options.preset = args.preset;
-    if (args.q !== undefined) options.q = args.q;
-    if (args.f !== undefined) options.f = args.f;
+    // Emit the canonical defaults (preset=voice, q=medium, f=opus) when the
+    // caller omits them so a minimal tool call still produces an option segment
+    // and hits the worker's transcode path. A bare /audio/{source} URL would be
+    // treated as "no options" and passthrough, contradicting AUDIO_GUIDANCE.
+    const options: Record<string, string> = {
+      preset: args.preset ?? "voice",
+      q: args.q ?? "medium",
+      f: args.f ?? "opus",
+    };
     proxyPath = generateTranscodeUrl({
       mediaType: "audio",
       sourceUrl: args.source_url,

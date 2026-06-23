@@ -678,7 +678,12 @@ async function passthroughAudio(
   if (sb !== undefined && !headers.has("X-Transcode-Source-Bytes")) {
     headers.set("X-Transcode-Source-Bytes", sb);
   }
-  return withCors(new Response(sourceResponse.body, { status: 200, headers }));
+  // Forward the upstream status so non-200 successes (e.g. 206 Partial Content)
+  // are preserved for range-aware clients rather than normalized to 200.
+  return withCors(new Response(sourceResponse.body, {
+    status: sourceResponse.status,
+    headers,
+  }));
 }
 
 interface AudioHeaderParts {
