@@ -10,7 +10,7 @@
 // the MCP Inspector would.
 
 const DEFAULTS = {
-  prod: "https://transcode-mcp.klappy.workers.dev",
+  prod: "https://transcode.klappy.dev",
 };
 
 // Mirror the CI slug rule: replace '/' with '-' in the current git branch,

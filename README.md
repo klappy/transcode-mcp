@@ -117,7 +117,7 @@ The [official MCP Inspector](https://github.com/modelcontextprotocol/inspector) 
 npx @modelcontextprotocol/inspector
 # In the UI:
 #   Transport: Streamable HTTP
-#   URL: https://transcode-mcp.klappy.workers.dev/mcp
+#   URL: https://transcode.klappy.dev/mcp
 ```
 
 ### 4. Real MCP client (the actual product use case)
@@ -131,7 +131,7 @@ Point a real client at the deployed `/mcp` endpoint to verify it integrates corr
   "mcpServers": {
     "transcode-mcp": {
       "type": "http",
-      "url": "https://transcode-mcp.klappy.workers.dev/mcp"
+      "url": "https://transcode.klappy.dev/mcp"
     }
   }
 }

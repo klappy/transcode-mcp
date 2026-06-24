@@ -13,7 +13,7 @@
  *
  * Usage:
  *   bun run smoke-test.ts
- *   WORKER_BASE_URL=https://transcode-mcp.klappy.workers.dev bun run smoke-test.ts
+ *   WORKER_BASE_URL=https://transcode.klappy.dev bun run smoke-test.ts
  */
 
 import { encodeDimension } from "./src/lib/encode-dimension";
