@@ -35,10 +35,10 @@ jobs:
 
   # Compute the per-branch Cloudflare preview URL once and share it with the
   # smoke jobs. Per-branch previews are VERSIONS of the shared
-  # `transcode-mcp-preview` worker, created by that worker's Workers Builds
+  # `transcode-mcp-development` worker, created by that worker's Workers Builds
   # project when non-production branch builds are enabled. Cloudflare aliases
   # each branch to:
-  #   <branch-slug>-transcode-mcp-preview.<subdomain>.workers.dev   ('/' -> '-')
+  #   <branch-slug>-transcode-mcp-development.<subdomain>.workers.dev   ('/' -> '-')
   # Names that push the label past 63 chars hit CF's truncation+hash scheme,
   # which we don't derive (rare for this repo). NOTE: this is a *preview* host,
   # so it only exists for branches the preview project actually builds (PR
@@ -58,7 +58,7 @@ jobs:
           # Cloudflare replaces '/' with '-'; leave the rest of the slug
           # rules to CF (rare-case truncation handled by their hash scheme).
           SLUG="${REF//\//-}"
-          BASE_URL="https://${SLUG}-transcode-mcp-preview.klappy.workers.dev"
+          BASE_URL="https://${SLUG}-transcode-mcp-development.klappy.workers.dev"
           echo "base_url=${BASE_URL}" >> "$GITHUB_OUTPUT"
           echo "Branch: ${REF}"
           echo "Preview: ${BASE_URL}"

@@ -59,19 +59,20 @@ export class AudioContainer extends Container<Env> {
 // DURABLE_OBJECT_ALREADY_HAS_APPLICATION). Staging (wrangler.toml [env.staging])
 // binds its container + migration to this distinct class instead. Behavior is
 // identical to AudioContainer; only the class name differs so the platform sees
-// two separate applications. Branch previews bind NO container, so they need no
-// class of their own (audio falls back to passthrough on previews).
+// two separate applications. Each same-account tier (staging, development,
+// production) likewise binds its own distinct class against its own resources.
 export class AudioContainerStaging extends AudioContainer {}
 
-// Preview's container class. Same reasoning as staging — a container application is
-// keyed on the DO class name, so the shared preview worker needs its own class
-// distinct from prod and staging. Preview is the single shared preview backend:
-// every PR branch uploads a VERSION of transcode-mcp-preview (its own preview URL),
-// all sharing this one AudioContainerPreview + the preview bucket. Last-build-wins on
-// the shared DO state; code-only PRs are effectively parallel-safe (each version
-// previews its own code). A PR that changes the DO shape needs a new migration,
-// which `wrangler versions upload` rejects — the one known edge case.
-export class AudioContainerPreview extends AudioContainer {}
+// Development's container class -- the main-fed integration tier
+// (transcode-mcp-development), the lowest rung of development -> staging ->
+// production. Distinct DO class for the same account-scoped container-keying
+// reason as staging/production. The development CF project's production branch
+// is `main`, so a full `wrangler deploy --env development` runs only for main
+// and stands up this DO/container once; per-PR branch builds upload preview
+// VERSIONS that REUSE it. Last-build-wins on the shared DO state; code-only PRs
+// preview their own code. A PR that changes the DO shape needs a new migration,
+// which `wrangler versions upload` rejects -- promote that branch via staging.
+export class AudioContainerDevelopment extends AudioContainer {}
 
 // Production's container class — the additive primary prod instance
 // (transcode-mcp-production). Distinct DO class for the same account-scoped
