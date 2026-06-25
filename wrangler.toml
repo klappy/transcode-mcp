@@ -39,17 +39,24 @@ tag = "v1"
 [preview]
 port = 8787
 
-# ─────────────────────────────────────────────────────────────────────────────
-# THREE-TIER DEPLOY MODEL — one config, deployed as separate isolated Workers.
-# Nothing below ever touches production (`transcode-mcp`, the top-level config).
+# -----------------------------------------------------------------------------
+# DEPLOY MODEL -- one config, deployed as separate isolated same-account Workers,
+# each via its OWN Cloudflare project (production branch + a pinned --env deploy
+# command). Bindings are NON-inheritable across Wrangler environments, so every
+# tier redeclares what it needs against its OWN resources; tiers share NO state.
 #
-#   prod     : main branch     -> wrangler deploy                 -> transcode-mcp
-#   staging  : staging branch  -> wrangler deploy --env staging   -> transcode-mcp-staging
-#   preview  : every PR branch -> wrangler deploy --env preview --name transcode-mcp-pr-<N>
+#   production  : production branch -> wrangler deploy --env production  -> transcode-mcp-production   (primary; serves transcode.klappy.dev)
+#   staging     : staging branch    -> wrangler deploy --env staging     -> transcode-mcp-staging
+#   development : main branch        -> wrangler deploy --env development -> transcode-mcp-development   (integration; PR branches preview as versions here)
 #
-# Bindings are NON-inheritable in Wrangler environments, so each tier redeclares
-# what it needs against its OWN resources. Prod and staging share NO state.
-# ─────────────────────────────────────────────────────────────────────────────
+# Promotion runs development(main) -> staging -> production.
+#
+# The top-level config below (name = "transcode-mcp") is LEGACY: the original
+# single-prod instance, retired in favor of [env.production]. No CF project
+# deploys it (no bare `wrangler deploy`); it remains only as the default/base.
+# TODO(cleanup): retire or repoint the top-level config + its transcode-mcp-audio
+# bucket once the old transcode-mcp project teardown is confirmed complete.
+# -----------------------------------------------------------------------------
 
 # ── STAGING ──────────────────────────────────────────────────────────────────
 # A full second stack: its OWN container, DO class, and R2 bucket. Distinct DO
@@ -85,26 +92,46 @@ name = "AUDIO_CONTAINER"
 new_sqlite_classes = [ "AudioContainerStaging" ]
 tag = "v1"
 
-# ── PREVIEW (per-PR branch builds) ───────────────────────────────────────────
-# Deliberately NO container, NO Durable Object, NO migration, NO R2 bucket.
-# This is the proven design; it regressed in 6c8182c, which bolted a container
-# onto the preview tier and broke every branch build. A container application is
-# keyed on its DO class, and a non-production branch build cannot stand up a new
-# container/DO on the shared preview worker — so the deploy fails. Kept
-# container-less, the branch build is a clean worker-only deploy:
-#   - No container application => no DO-class collision => scales to N branches.
-#   - worker.ts needs AUDIO_CONTAINER + AUDIO_BUCKET to transcode; absent here BY
-#     DESIGN, so audio falls back to passthrough on previews (image path, MCP
-#     tool, demo pages, and the savings headers all still validate).
-# Live audio transcoding is validated on STAGING (which DOES build the
-# container), not per-branch.
-[env.preview]
-name = "transcode-mcp-preview"
+# -- DEVELOPMENT (the main-fed integration tier) ------------------------------
+# Lowest rung of the promotion ladder: development -> staging -> production.
+# Fed by `main` via its own CF project (production branch = `main`, deploy
+# command = `npx wrangler deploy --env development`): every merge to main lands
+# here first and is exercised end-to-end (real audio transcoding) before being
+# promoted to staging. Per-PR branch builds render as preview *versions* on this
+# same worker, REUSING the AudioContainerDevelopment DO/container that the main
+# deploy already stood up -- so there is no per-branch container standup (the
+# failure mode 6c8182c hit on the old preview tier; here only the single
+# production branch `main` runs a full deploy, so it never recurs).
+#
+# Full stack like staging/production: its OWN worker, DO class, and R2 bucket
+# (same-account uniqueness). Worker CODE + binding names are identical across
+# tiers, so development runs exactly what staging and production run.
+#
+# One-time: wrangler r2 bucket create transcode-mcp-audio-development
+[env.development]
+name = "transcode-mcp-development"
 
-[env.preview.vars]
+[env.development.vars]
 
-[env.preview.images]
+[env.development.images]
 binding = "IMAGES"
+
+[[env.development.r2_buckets]]
+binding = "AUDIO_BUCKET"
+bucket_name = "transcode-mcp-audio-development"
+
+[[env.development.containers]]
+class_name = "AudioContainerDevelopment"
+image = "./container/Dockerfile"
+max_instances = 5
+
+[[env.development.durable_objects.bindings]]
+class_name = "AudioContainerDevelopment"
+name = "AUDIO_CONTAINER"
+
+[[env.development.migrations]]
+new_sqlite_classes = [ "AudioContainerDevelopment" ]
+tag = "v1"
 
 # ── PRODUCTION (the primary instance) ────────────────────────────────────────
 # Additive primary prod stack: its OWN worker (transcode-mcp-production), DO
