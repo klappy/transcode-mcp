@@ -155,4 +155,6 @@ The project's durable record lives in `canon/`. Exploration artifacts, planning 
 
 ## License
 
-TBD ("pay it forward, pay it back" model under consideration)
+[FSL-1.1-ALv2](./LICENSE.md) — Functional Source License, Version 1.1, with Apache 2.0
+future grant. Source-available with a two-year non-compete; each version converts to
+Apache 2.0 (including its patent grant) two years after release.
