@@ -17,6 +17,10 @@
 // extends it), so it stays eager.
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Container, getRandom } from "@cloudflare/containers";
+// Single source of truth for the version the MCP server reports. package.json
+// is the only place a release bump happens; a hardcoded copy here drifted
+// (0.1.0 vs 0.3.0) for a month before anyone noticed.
+import { version as PKG_VERSION } from "../package.json";
 import { z } from "zod";
 import { parseProxyPath, ProxyPathError } from "./lib/parse-proxy-path";
 import { encodeDimension, QUALITY_MAP, type Quality } from "./lib/encode-dimension";
@@ -156,7 +160,7 @@ function sourceBytesFromContentLength(headers: Headers): string | undefined {
 }
 
 function createServer(request: Request, McpServerCtor: typeof McpServer) {
-  const server = new McpServerCtor({ name: "transcode-mcp", version: "0.3.0" });
+  const server = new McpServerCtor({ name: "transcode-mcp", version: PKG_VERSION });
 
   server.tool(
     "generate_transcode_url",

@@ -2,8 +2,13 @@
 
 ## Current State
 
-Exploration complete (2026-05-26, session 1). Planning in progress (2026-05-26,
-session 2).
+Execution phase — core functionality live in production (as of 2026-07-06).
+Image and audio proxy paths, the MCP tool surface (`generate_transcode_url` +
+`docs`), and the demo pages all ship from a three-tier deploy
+(`main` → development, `staging`, `production`; see
+[canon/governance/deploy-architecture.md](canon/governance/deploy-architecture.md)),
+with production serving transcode.klappy.dev. Exploration and planning
+completed 2026-05-26; the journals live in [canon/handoffs/](canon/handoffs/).
 
 ## What It Is
 
