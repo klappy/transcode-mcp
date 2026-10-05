@@ -33,7 +33,7 @@ export interface ParsedAudioRequest {
   sourceUrl: string;
 }
 
-export interface ParsedVideoRequest {mediaType:"video"; options:{preset:"fia";q:"medium";f:"mp4"};sourceUrl:string;}
+export interface ParsedVideoRequest {mediaType:"video"; options:{preset:"fia";q:"medium";f:"mp4";size?:"small"|"medium"|"large"};sourceUrl:string;}
 export type ParsedRequest = ParsedImageRequest | ParsedAudioRequest | ParsedVideoRequest;
 
 export class ProxyPathError extends Error {
@@ -83,7 +83,7 @@ export function parseProxyPath(
   const sourceUrl = rest.slice(urlStart) + search;
   const optionsSegment = rest.slice(0, urlStart).replace(/\/$/, "");
 
-  if(mediaType === "video" && optionsSegment){const seen=new Set();for(const pair of optionsSegment.split(',')){const m=/^(preset|q|f)=([^=]+)$/.exec(pair);if(!m||seen.has(m[1]))throw new ProxyPathError("Malformed video options");seen.add(m[1]);}}
+  if(mediaType === "video" && optionsSegment){const seen=new Set();for(const pair of optionsSegment.split(',')){const m=/^(preset|q|f|size)=([^=]+)$/.exec(pair);if(!m||seen.has(m[1]))throw new ProxyPathError("Malformed video options");seen.add(m[1]);}}
   const options = optionsSegment ? parseOptions(optionsSegment) : {};
 
   if(mediaType === "video"){try{return {mediaType:"video",options:videoOptions(options),sourceUrl};}catch{throw new ProxyPathError("Unsupported video options");}}

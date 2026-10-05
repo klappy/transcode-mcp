@@ -1,3 +1,4 @@
+import {videoOptions,selectVideoContract} from "./video";
 // Canon URL constructor. Pure function: inputs -> deterministic proxy path.
 // URL vocabulary defined in canon/planning/2026-05-26-url-vocabulary-and-presets.md.
 
@@ -20,11 +21,12 @@ export interface AudioOptions {
 export type GenerateTranscodeUrlInput =
   | { mediaType: "image"; sourceUrl: string; options?: ImageOptions }
   | { mediaType: "audio"; sourceUrl: string; options?: AudioOptions }
-  | { mediaType: "video"; sourceUrl: string; options?: {preset:"fia";q:"medium";f:"mp4"} };
+  | { mediaType: "video"; sourceUrl: string; options?: {preset:"fia";q:"medium";f:"mp4";size?:"small"|"medium"|"large"} };
 
 export function generateTranscodeUrl(input: GenerateTranscodeUrlInput): string {
   const { mediaType, sourceUrl } = input;
-  const options = input.options ?? {};
+  const options = mediaType === "video" ? videoOptions((input.options ?? {}) as Record<string,string>) : input.options ?? {};
+  if(mediaType === "video" && !selectVideoContract(sourceUrl,(options as {size?:string}).size))throw Error("Unsupported video source/size");
 
   const optionSegment = Object.entries(options)
     .filter(([, value]) => value !== undefined && value !== null)

@@ -1,0 +1,44 @@
+{
+  "recipe": "fia-video@3-medium",
+  "source": {
+    "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
+    "sha256": "257f632552979b05716ca438ab654b7489229f34ca59c6bca22149d3b42f3718",
+    "bytes": 49851846,
+    "provenance": {
+      "publisher": "Word Collective",
+      "license": "CC BY-SA 4.0",
+      "assetId": "a13",
+      "assetVersion": "1.0.4",
+      "metadataRevision": "1c02713d022bd96a29c78f5b75455315d6d35a6e",
+      "transformation": "H.264/AAC MP4 re-encode, 960x540, stereo"
+    }
+  },
+  "limits": {
+    "bytes": 62914560,
+    "requestBytes": 8192,
+    "sourceMs": 120000,
+    "encodeMs": 300000,
+    "jobMs": 600000,
+    "stderrBytes": 65536,
+    "passlogFileBytes": 33554432,
+    "passlogTotalBytes": 67108864
+  },
+  "encoding": {
+    "width": 960,
+    "height": 540,
+    "fps": 50,
+    "preset": "medium",
+    "videoBps": 253125,
+    "classBps": 253125,
+    "maxrateBps": 506250,
+    "bufferBits": 1012500,
+    "keyint": 1500,
+    "minKeyint": 1,
+    "scenecut": 60,
+    "passes": 2,
+    "audioBps": 54000,
+    "audioChannels": 2,
+    "sar": "1:1"
+  },
+  "recipeRevision": "d73df8652aa47846d18d8fdedadfaeee4fd1615c"
+}
