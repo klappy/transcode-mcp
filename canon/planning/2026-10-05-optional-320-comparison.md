@@ -7,6 +7,8 @@ mode: planning
 
 # One optional 320p FIA comparison
 
+The original numeric proposal below is retained history. The current [aligned-canvas contract](2026-10-05-aligned-video-canvases.md) supersedes its raster and bitrate: 576×320, explicit SAR 80:81 and DAR 16:9, 133334 bits/s video with the declared peak/buffer. Qualify this small candidate first; larger profiles receive the same rules only after the motion and geometry review. The manual harness implements that successor.
+
 > Measure one retained-source320p H264/AAC candidate and an Opus Low listening reference, without adding a supported preset. Keep the existing Small AAC treatment until actual listening verifies the user’s Low-quality floor; report size, detail and timing separately.
 
 ## Summary
