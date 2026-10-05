@@ -165,4 +165,4 @@ Apache 2.0 (including its patent grant) two years after release.
 
 ### Current video quality budget
 
-The [video quality budget revision](canon/planning/2026-10-05-video-quality-budget-revision.md) records the authorized twenty-percent video-budget increase, unchanged audio/50fps, and next-larger-display continuous-motion acceptance. Search the existing docs tool for “video quality budget” and retrieve this single document; new outputs remain unqualified until measured and reviewed.
+The [video quality budget revision](canon/planning/2026-10-05-video-quality-budget-revision.md) records the authorized fifty-percent video-budget increase, unchanged audio/50fps, and next-larger-display continuous-motion acceptance. Search the existing docs tool for “video quality budget” and retrieve this single document; new outputs remain unqualified until measured and reviewed.
