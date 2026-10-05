@@ -93,12 +93,12 @@ describe('embedded FIA video previews',()=>{
   expect(DEMO_VIDEO_HTML).toContain('if(publication.ready&&item.url)video.src=item.url');
   expect(DEMO_VIDEO_HTML).toContain("video.addEventListener('play'");
  });
- test('five distinct matched local posters fit the aggregate byte budget and provenance hashes',async()=>{
+ test('six distinct matched local posters fit the aggregate byte budget and provenance hashes',async()=>{
   const {createHash}=await import('node:crypto');
   const provenance=(await import('./demo-video-posters.json')).default;
   const match=DEMO_VIDEO_HTML.match(/const posters=(\{[^\n]+\});/);expect(match).not.toBeNull();
-  const posters=JSON.parse(match![1]);expect(Object.keys(posters).sort()).toEqual(['medium','old','opt','small','source']);
-  let total=0;for(const row of provenance.posters){const bytes=Buffer.from(posters[row.id].split(',')[1],'base64');total+=bytes.length;expect(bytes.length).toBe(row.jpeg.bytes);expect(createHash('sha256').update(bytes).digest('hex')).toBe(row.jpeg.sha256);expect(row.actualSeconds).toBe(10);expect(row.crop).toBe(false);if(row.id==='small'||row.id==='medium'){expect(row.resize).toBe(true);expect(row.width/row.height).toBe(16/9);expect(row.transformation).toContain('no crop');}else expect(row.resize).toBe(false);}
+  const posters=JSON.parse(match![1]);expect(Object.keys(posters).sort()).toEqual(['medium','old','opt','small','source','xsmall']);
+  let total=0;for(const row of provenance.posters){const bytes=Buffer.from(posters[row.id].split(',')[1],'base64');total+=bytes.length;expect(bytes.length).toBe(row.jpeg.bytes);expect(createHash('sha256').update(bytes).digest('hex')).toBe(row.jpeg.sha256);expect(row.actualSeconds).toBe(10);expect(row.crop).toBe(false);if(row.id==='small'||row.id==='medium'||row.id==='xsmall'){expect(row.resize).toBe(true);expect(row.width/row.height).toBe(16/9);expect(row.transformation).toContain('no crop');}else expect(row.resize).toBe(false);}
   expect(total).toBe(provenance.aggregateBytes);expect(total).toBeLessThanOrEqual(200000);
   const old=provenance.posters.find(p=>p.id==='old')!;expect([old.width,old.height]).toEqual([400,224]);
  });

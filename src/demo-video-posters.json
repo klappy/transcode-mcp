@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "method": "Decode first frame at or after10s; normalize coded SAR for fullframe16:9 JPEG poster; no video encoding; source and compact reference posters retained unchanged.",
   "pyavVersion": "19.0.1",
-  "aggregateBytes": 187416,
+  "aggregateBytes": 197272,
   "posters": [
     {
       "id": "source",
@@ -111,6 +111,29 @@
         "subsampling": 2,
         "bytes": 50699,
         "sha256": "49d93e7c02acf5e28b6b130dccaf044c4189a080d5c00e353edbc7f8949295f2"
+      }
+    },
+    {
+      "id": "xsmall",
+      "sourceSha256": "627ac30873371b3c237eead9b582672016da5a3d44c3b420dc0149850bf8003d",
+      "sourceBytes": 1825753,
+      "sourceUrl": "https://transcode-mcp-development.klappy.workers.dev/video/preset=fia,q=medium,f=mp4,size=xsmall/https://s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
+      "requestedSeconds": 10,
+      "actualSeconds": 10.0,
+      "width": 576,
+      "height": 324,
+      "codedWidth": 576,
+      "codedHeight": 320,
+      "sourceSampleAspectRatio": "80/81",
+      "resize": true,
+      "transformation": "Square-pixel16:9 display normalization; complete decoded frame, no crop",
+      "crop": false,
+      "jpeg": {
+        "quality": 20,
+        "optimize": true,
+        "subsampling": 2,
+        "bytes": 9856,
+        "sha256": "129c3cc724e1a9a4d6b3950db0d78319851faf702b8bf6aa266857c7fa8a5c93"
       }
     }
   ]
