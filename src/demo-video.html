@@ -8,7 +8,7 @@
 <header class="topbar"><a class="brand" href="/">Agent-native <span>media proxy</span></a><nav class="xnav" aria-label="Main"><a href="/film">Film</a><a href="/bench">Image bench</a><a href="/bench/audio">Audio bench</a><a href="/bench/video" aria-current="page">FIA video</a><a href="/casestudy">Case study</a></nav></header>
 <main>
 <h1>Same video. Less to carry.</h1><p class="intro">Compare six versions of the Jordan River resource. Play a pair, then weigh the picture against the file size.</p>
-<p class="note" id="catalog-status">Current DEV comparison: 25fps with a 50% higher video budget. Stage and production qualification are pending.</p>
+<p class="note" id="catalog-status">Current DEV comparison: 25fps delivery options, including 320p. The 480p–720p options use the 50% higher video budget. Stage and production qualification are pending.</p>
 <div id="players">
 <section class="comparison-group" aria-labelledby="detail-title"><h2 id="detail-title">720p, <span id="saving">89%</span> smaller</h2><div class="players" id="detail-pair"></div><p class="pair-result" id="detail-result"></p></section>
 <section class="comparison-group" aria-labelledby="small-title"><h2 id="small-title">Existing compact version and optimized 320p</h2><div class="players" id="small-pair"></div><p class="pair-result" id="small-result"></p></section>
@@ -42,7 +42,7 @@ document.getElementById('minutes').addEventListener('input',update);update();
 
 const byId=Object.fromEntries(items.map(item=>[item.id,item]));
 const maps=[['Nazareth/Judea',7735008],['Locations in Mark',6712636],['Aerial Judea/Jerusalem',6646608]];const largerMaps=maps.filter(([,bytes])=>bytes>byId.opt.bytes);document.getElementById('map-comparison').textContent=largerMaps.length?'This displayed 720p file is smaller than these original FIA map files: '+largerMaps.map(([name])=>name).join(', ')+'. Optimized map files are much smaller.':'Original FIA maps also benefit from optimized delivery. Compare exact file sizes for the resources you plan to carry.';
-const currentCount=Object.values(catalogEvidence).filter(e=>e.current).length;if(currentCount)document.getElementById('catalog-status').textContent=currentCount===4?'Current DEV comparison: 25fps with a 50% higher video budget. Stage and production qualification are pending.':currentCount+' of 4 optimized players show the current qualified catalog. Other optimized players remain explicitly historical.';
+const currentCount=Object.values(catalogEvidence).filter(e=>e.current).length;if(currentCount)document.getElementById('catalog-status').textContent=currentCount===4?'Current DEV comparison: 25fps delivery options, including 320p. The 480p–720p options use the 50% higher video budget. Stage and production qualification are pending.':currentCount+' of 4 optimized players show the current qualified catalog. Other optimized players remain explicitly historical.';
 document.getElementById('saving').textContent=((1-byId.opt.bytes/byId.source.bytes)*100).toFixed(0)+'%';
 document.getElementById('detail-result').textContent='The same resolution, '+format(byId.source.bytes-byId.opt.bytes)+' less per video.';
 document.getElementById('small-result').textContent='320p uses '+((1-byId.xsmall.bytes/byId.old.bytes)*100).toFixed(2)+'% less space in this example. Play both to compare the picture.';
