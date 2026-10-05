@@ -10,7 +10,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY server.mjs recipes.mjs ./
+COPY server.mjs recipes.mjs video.mjs video-contract.json ./
 
 ENV PORT=8080
 EXPOSE 8080

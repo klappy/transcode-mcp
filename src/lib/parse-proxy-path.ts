@@ -1,3 +1,4 @@
+import {videoOptions} from "./video";
 // Parses the canon URL path: /{media_type}/{options}/{source_url}
 // Spec: canon/planning/2026-05-26-url-vocabulary-and-presets.md
 //
@@ -5,7 +6,7 @@
 // The options segment is comma-separated key=value pairs before the source URL.
 // If no options are present, the path is /{media_type}/{source_url}.
 
-export type MediaType = "image" | "audio";
+export type MediaType = "image" | "audio" | "video";
 
 export interface ParsedImageRequest {
   mediaType: "image";
@@ -32,7 +33,8 @@ export interface ParsedAudioRequest {
   sourceUrl: string;
 }
 
-export type ParsedRequest = ParsedImageRequest | ParsedAudioRequest;
+export interface ParsedVideoRequest {mediaType:"video"; options:{preset:"fia";q:"medium";f:"mp4"};sourceUrl:string;}
+export type ParsedRequest = ParsedImageRequest | ParsedAudioRequest | ParsedVideoRequest;
 
 export class ProxyPathError extends Error {
   constructor(message: string, public readonly status = 400) {
@@ -57,7 +59,7 @@ export function parseProxyPath(
   const mediaType = trimmed.slice(0, firstSlash);
   const rest = trimmed.slice(firstSlash + 1);
 
-  if (mediaType !== "image" && mediaType !== "audio") {
+  if (mediaType !== "image" && mediaType !== "audio" && mediaType !== "video") {
     throw new ProxyPathError(`Unknown media_type: ${mediaType}`, 404);
   }
 
@@ -81,8 +83,10 @@ export function parseProxyPath(
   const sourceUrl = rest.slice(urlStart) + search;
   const optionsSegment = rest.slice(0, urlStart).replace(/\/$/, "");
 
+  if(mediaType === "video" && optionsSegment){const seen=new Set();for(const pair of optionsSegment.split(',')){const m=/^(preset|q|f)=([^=]+)$/.exec(pair);if(!m||seen.has(m[1]))throw new ProxyPathError("Malformed video options");seen.add(m[1]);}}
   const options = optionsSegment ? parseOptions(optionsSegment) : {};
 
+  if(mediaType === "video"){try{return {mediaType:"video",options:videoOptions(options),sourceUrl};}catch{throw new ProxyPathError("Unsupported video options");}}
   if (mediaType === "image") {
     return {
       mediaType: "image",
