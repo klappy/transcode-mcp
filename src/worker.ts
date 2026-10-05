@@ -1,7 +1,8 @@
 import { DEMO_VIDEO_HTML } from "./demo-video";
 import { handleVideoReference } from "./lib/video-reference";
+import { legacyPinFor, serveLegacyVideoPin, servePinnedFallback } from "./lib/video-legacy-pins";
 import { liveDocs, docsSchema } from "./lib/docs";
-import {handleVideoProxy, VideoOwner, videoSlot, videoOptions, selectVideoContract} from "./lib/video";
+import {handleVideoProxy, VideoOwner, videoSlot, videoOptions, selectVideoContract, VIDEO_SOURCE_REJECTION} from "./lib/video";
 // src/worker.ts
 // Proxy-first + lazy transcoding MCP server.
 //
@@ -303,13 +304,20 @@ export default {
         const parsed = parseProxyPath(url.pathname, url.search);
         if (parsed.mediaType !== 'video') return new Response('Invalid video route', {status:400});
         videoOptions(parsed.options);
-        if (!selectVideoContract(parsed.sourceUrl,parsed.options.size)) return new Response('Video source not approved', {status:403});
+        if (!selectVideoContract(parsed.sourceUrl,parsed.options.size)) return new Response(VIDEO_SOURCE_REJECTION, {status:403});
+        // Released alpha.13 omitted-size URLs serve their pinned bytes; otherwise unchanged.
+        const pin = legacyPinFor(url.pathname, url.search);
+        const pinned = await serveLegacyVideoPin(request, env.AUDIO_BUCKET, pin);
+        if (pinned) return pinned;
         if (!env.AUDIO_CONTAINER) return new Response('Video service unavailable', {status:503});
         const slot = await videoSlot(parsed.sourceUrl, AUDIO_CONTAINER_INSTANCES,parsed.options.size);
         const stub = env.AUDIO_CONTAINER.get(env.AUDIO_CONTAINER.idFromName(slot));
         const target = new URL('https://audio-container/video-delivery');
         target.searchParams.set('source', parsed.sourceUrl);
         target.searchParams.set('size', parsed.options.size||'large');
+        // Pinned identity with no retained bytes: encode may run, but only output
+        // equal to the pinned bytes is served (full GET, verified before any byte).
+        if (pin && ['GET','HEAD'].includes(request.method)) return servePinnedFallback(request, pin, () => stub.fetch(new Request(target, {method:'GET'})));
         return stub.fetch(new Request(target, {method:request.method, headers:request.headers}));
       } catch { return new Response('Invalid video request', {status:400}); }
     }

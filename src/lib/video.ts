@@ -9,10 +9,18 @@ import compositeLarge from '../../container/video-contract-4k-xlarge.json';
 import medium from '../../container/video-contract-medium.json';
 import extension from '../../container/video-source-extension.json';
 import {createVideoCatalog} from '../../container/video-catalog.mjs';
+import {createLazyVideoSelect,isApprovedVideoSource,VIDEO_SOURCE_ALLOWED_PREFIXES,type LazyVideoContract} from '../../container/video-sources.mjs';
+export {isApprovedVideoSource,VIDEO_SOURCE_ALLOWED_PREFIXES};
 export { contract as videoContract };
 export type VideoSize='xsmall'|'small'|'medium'|'large'|'xlarge';
 export const videoContracts=[contract,a184,a10];
-export const selectVideoContract=createVideoCatalog(videoContracts,{xsmall,small,medium},extension.recipeRevision,[{size:'small',contract:compositeSmall},{size:'xlarge',contract:compositeLarge}]).select;
+export const selectCatalogVideoContract=createVideoCatalog(videoContracts,{xsmall,small,medium},extension.recipeRevision,[{size:'small',contract:compositeSmall},{size:'xlarge',contract:compositeLarge}]).select;
+export const selectLazyVideoContract=createLazyVideoSelect({xsmall,small,medium,large:contract,xlarge:compositeLarge});
+export type SelectedVideoContract=typeof contract|typeof small|LazyVideoContract;
+// Exact catalog rows first (unchanged contracts and cache keys); otherwise any
+// canonical URL on an approved host encodes lazily (operator ruling 2026-10-05).
+export function selectVideoContract(url:string,size:string='large'):SelectedVideoContract|undefined{return selectCatalogVideoContract(url,size)??selectLazyVideoContract(url,size);}
+export const VIDEO_SOURCE_REJECTION='Video source not approved: source URL must be a canonical https URL under '+VIDEO_SOURCE_ALLOWED_PREFIXES.join(' or ');
 export function videoOptions(raw: Record<string, string>) {
     for (const [key,value] of Object.entries(raw)) {
         if(key==='size'){if(!['xsmall','small','medium','large','xlarge'].includes(value))throw Error('Unsupported video size');}
@@ -20,7 +28,7 @@ export function videoOptions(raw: Record<string, string>) {
     }
     return {preset:'fia',q:'medium',f:'mp4',...(raw.size&&raw.size!=='large'?{size:raw.size as VideoSize}:{})} as const;
 }
-export async function videoKey(encoderRevision: string, selected: typeof contract | typeof small=contract) { if (!/^[a-f0-9]{64}$/.test(encoderRevision))
+export async function videoKey(encoderRevision: string, selected: SelectedVideoContract=contract) { if (!/^[a-f0-9]{64}$/.test(encoderRevision))
     throw Error('Invalid encoder revision'); return 'video-v1/' + Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify({ contract:selected, encoderRevision })))), x => x.toString(16).padStart(2, '0')).join('') + '.mp4'; }
 export function byteRange(value: string | null, size: number): {
     offset: number;
@@ -97,7 +105,7 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
     fetch: (r: Request) => Promise<Response>;
 }>, source: string, options: Record<string, string>, owner?: VideoOwner): Promise<Response> {
     const consumerStarted = Date.now();
-    const headers = new Headers({ 'Access-Control-Allow-Origin': '*', 'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges, ETag, X-Transcode-Cache, X-Transcode-Encode', 'Accept-Ranges': 'bytes' });
+    const headers = new Headers({ 'Access-Control-Allow-Origin': '*', 'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges, ETag, X-Transcode-Cache, X-Transcode-Encode, X-Transcode-Video-Width, X-Transcode-Video-Height', 'Accept-Ranges': 'bytes' });
     const fail = (status: number, message: string) => new Response(message, { status, headers });
     if (request.method === 'OPTIONS') {
         headers.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
@@ -114,17 +122,22 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
     }
     const contract=selectVideoContract(source,options.size);
     if (!contract)
-        return fail(403, 'Video source not approved');
+        return fail(403, VIDEO_SOURCE_REJECTION);
     if (!bucket)
         return fail(503, 'Video storage unavailable');
     try {
+        // Pinned rows must match their pinned source; lazy rows record what was fetched.
+        const sourceIdentityOk = (sha: unknown, bytes: unknown, checkBytes = true) => contract.source.sha256 !== undefined
+            ? sha === contract.source.sha256 && (!checkBytes || bytes === contract.source.bytes)
+            : typeof sha === 'string' && /^[a-f0-9]{64}$/.test(sha) && (!checkBytes || (Number.isSafeInteger(bytes) && (bytes as number) > 0));
         const prepare = async (signal = AbortSignal.timeout(contract.limits.jobMs), cacheOnly = false) => {
         signal.throwIfAborted();
         const worker = await instance();
         signal.throwIfAborted();
+        const lazy = 'lazy' in contract.source && contract.source.lazy === true;
         const legacySource = videoContracts.find(source => source.source.url === contract.source.url);
-        const sourceQuery = legacySource ? 'assetId='+encodeURIComponent(legacySource.source.provenance.assetId) : 'source_url='+encodeURIComponent(contract.source.url);
-        const info = await worker.fetch(new Request('https://audio-container/video-info?'+sourceQuery+'&size='+(options.size||'large'), { signal }));
+        const sourceQuery = legacySource && !lazy ? 'assetId='+encodeURIComponent(legacySource.source.provenance.assetId) : 'source_url='+encodeURIComponent(contract.source.url);
+        const info = await worker.fetch(new Request('https://audio-container/'+(lazy?'video-lazy-info':'video-info')+'?'+sourceQuery+'&size='+(options.size||'large'), { signal }));
         if (info.status !== 200)
             return fail(503, 'Video encoder unavailable');
         const encoder = await info.json() as {
@@ -138,14 +151,17 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
         if (!object) {
             if (cacheOnly) return null;
             cache = 'MISS';
-            const encoded = await worker.fetch(new Request('https://audio-container/video-transcode', { method: 'POST', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source_url: source, size: options.size||'large', recipe: contract.recipe, encoderRevision: encoder.revision }) }));
+            const encoded = await worker.fetch(new Request('https://audio-container/'+(lazy?'video-lazy-transcode':'video-transcode'), { method: 'POST', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source_url: source, size: options.size||'large', recipe: contract.recipe, encoderRevision: encoder.revision }) }));
             if (encoded.status === 503)
                 return fail(503, 'Video capacity busy');
+            // Lazy source the encoder cannot take (e.g. variable frame rate): rejected before encoding.
+            if (lazy && encoded.status === 422)
+                return fail(422, 'Video source unsupported: ' + (await encoded.text()).slice(0, 300));
             if (encoded.status !== 200 || !encoded.body)
                 return fail(502, 'Video transform failed');
             if (signal.aborted) { await encoded.body.cancel().catch(() => {}); signal.throwIfAborted(); }
             const meta = JSON.parse(encoded.headers.get('X-Video-Metadata') || '{}');
-            if (meta.encoderRevision !== encoder.revision || meta.sourceSha256 !== contract.source.sha256 || meta.sourceBytes !== contract.source.bytes || meta.recipe !== contract.recipe || !Number.isSafeInteger(meta.bytes) || meta.bytes <= 0 || meta.bytes > contract.limits.bytes || !/^[a-f0-9]{64}$/.test(meta.sha256))
+            if (meta.encoderRevision !== encoder.revision || !sourceIdentityOk(meta.sourceSha256, meta.sourceBytes) || meta.recipe !== contract.recipe || !Number.isSafeInteger(meta.bytes) || meta.bytes <= 0 || meta.bytes > contract.limits.bytes || !/^[a-f0-9]{64}$/.test(meta.sha256))
                 return fail(502, 'Video metadata invalid');
             // Quarantine bytes under an unaddressable temporary key. Only a verified
             // completed artifact is copied to the canonical delivery key.
@@ -186,7 +202,7 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
                 return fail(502, 'Video publication failed');
         }
         const stored = object.customMetadata;
-        if (stored?.sourceSha256 !== contract.source.sha256 || stored?.sourceUrl !== source || stored?.encoderRevision !== encoder.revision || stored?.recipe !== contract.recipe || Number(stored?.bytes) !== object.size || !/^[a-f0-9]{64}$/.test(stored?.sha256 || ''))
+        if (!sourceIdentityOk(stored?.sourceSha256, undefined, false) || stored?.sourceUrl !== source || stored?.encoderRevision !== encoder.revision || stored?.recipe !== contract.recipe || Number(stored?.bytes) !== object.size || !/^[a-f0-9]{64}$/.test(stored?.sha256 || ''))
             return fail(502, 'Video cache metadata invalid');
         return { object, key, cache };
         };
@@ -230,6 +246,8 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
         headers.set('ETag', '"' + object.customMetadata?.sha256 + '"');
         headers.set('X-Transcode-Cache', cache);
         headers.set('X-Transcode-Encode', 'h264');
+        // Actual encoded raster (a lazy source shorter than the target is not upscaled).
+        for (const [name, key] of [['X-Transcode-Video-Width', 'width'], ['X-Transcode-Video-Height', 'height']]) { const v = object.customMetadata?.[key]; if (v && /^\d+$/.test(v)) headers.set(name, v); }
         headers.set('Content-Length', String(range?.length ?? object.size));
         if (range)
             headers.set('Content-Range', `bytes ${range.offset}-${range.offset + range.length - 1}/${object.size}`);
