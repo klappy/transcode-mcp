@@ -15,7 +15,7 @@ test("forwards structural filters and independent flags without local ranking",a
  expect(request.disclosure).toEqual(["metadata","blockquote"]);expect(request.audience).toEqual(["canon","public"]);expect(request.offset).toBe(40);expect(request.public).toBe(false);expect(request.include).toEqual(["journals"]);
 });
 test("single URI get defaults body; explicit narrower disclosure preserved",async()=>{
- for(const disclosure of [undefined,[]] as any[]){let calls=0;await docs({query:hit.uri,action:"get",disclosure},async a=>{calls++;expect(a.disclosure).toEqual(disclosure??["body"]);return wrap({status:"FOUND",data:{...hit,body:"Full",content_hash:"opaque"}})});expect(calls).toBe(1);}
+ for(const disclosure of [undefined,[]] as any[]){let calls=0;await docs({query:hit.uri,action:"get",disclosure},async a=>{calls++;expect(a.disclosure).toEqual(disclosure??["body"]);return wrap({status:"FOUND",data:{...hit,...(disclosure===undefined?{body:"Full"}:{}),content_hash:"opaque"}})});expect(calls).toBe(1);}
 });
 test("upstream cap and forbidden disclosure errors remain structured",async()=>{
  const error={status:"ERROR",error_code:"DISCLOSURE_FLAG_NOT_PERMITTED",requested_flag:"body"};
@@ -42,4 +42,16 @@ test("shared deadline aborts hanging upstream",async()=>{
 });
 test("public schema exposes progressive controls and rejects invalid arguments",()=>{
  const schema=z.object(docsSchema);expect(schema.parse({query:"x"}).action).toBe("search");expect(schema.safeParse({query:"x",disclosure:["full"]}).success).toBe(false);expect(schema.safeParse({query:"x",limit:501}).success).toBe(false);
+});
+
+test("unavailable bound knowledge base cannot masquerade as valid fallback",async()=>{
+ for(const flags of [{knowledge_base_error:"missing"},{debug:{knowledge_base_error:"missing"}}]) {
+  const raw={content:[{type:"text",text:JSON.stringify({result:search,...flags})}]};
+  const r=await docs({query:"x"},async()=>raw);expect(output(r).result.error_code).toBe("DOCS_UNAVAILABLE");
+ }
+});
+test("invalid identities and unrequested disclosure fail closed",async()=>{
+ for(const entry of [{title:"missing URI"},{uri:"x"},{...hit,body:"forbidden"},{...hit,metadata:{hidden:true}},{...hit,summary:"unrequested"}]) {
+  expect((await docs({query:"x"},async()=>wrap({...search,data:[entry]}))).isError).toBe(true);
+ }
 });

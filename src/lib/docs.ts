@@ -35,6 +35,7 @@ function unpack(raw: any): any {
   const text = raw?.content?.find((c: any) => c.type === "text")?.text;
   if (typeof text !== "string" || new TextEncoder().encode(text).length > DOCS_MAX_BYTES) throw new Error("Invalid or oversized Oddkit response");
   const parsed = JSON.parse(text);
+  if (parsed?.knowledge_base_error || parsed?.debug?.knowledge_base_error) throw new Error("Bound knowledge base unavailable");
   if (!parsed?.result || typeof parsed.result.status !== "string") throw new Error("Invalid Oddkit envelope");
   if (raw?.isError && parsed.result.status !== "ERROR") throw new Error("Oddkit protocol error");
   return parsed;
@@ -60,6 +61,14 @@ export async function docs(args: Args, call: Caller, timeoutMs = DOCS_TIMEOUT_MS
     const result = envelope.result;
     if (result.status !== "ERROR") {
       if (action === "search" && !Array.isArray(result.data)) throw new Error("Invalid search data");
+      const entries = action === "search" ? result.data : (result.status === "FOUND" ? [result.data] : []);
+      const disclosure = request.disclosure as string[];
+      for (const entry of entries) {
+        if (typeof entry?.uri !== "string" || typeof entry?.title !== "string") throw new Error("Invalid retrieval entry");
+        for (const field of ["body", "metadata", "summary", "blockquote"]) {
+          if (field in entry && (!disclosure.includes(field) || (action === "search" && field === "body"))) throw new Error("Upstream violated disclosure contract");
+        }
+      }
       if (action === "get" && result.status === "FOUND" && (result.data?.uri !== args.query || typeof result.data.title !== "string")) throw new Error("Invalid document identity");
     }
     const output: Record<string, unknown> = { action, result, governance_source: envelope.governance_source ?? result.governance_source ?? "undeclared" };
