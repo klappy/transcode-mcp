@@ -41,9 +41,9 @@ The comparison now plans for 320, 480, 540, 720, 912 and 1080 to cover phone, ta
 | Option | Evidence | Coded raster / SAR assumption | Video / audio kbps | Nominal MB/min before mux | With assumed 5% mux |
 |---|---|---|---:|---:|---:|
 | 912p | planning-only-unmeasured | 1616×912 / 304:303 | 658.536 / 96 | 5.659 | 5.942 |
-| 1080p | planning-only-not-implemented | 1920×1088 / 136:135 | 1481.706 / 216 | 12.733 | 13.370 |
+| 1080p | planning-only-not-implemented | 1920×1088 / 136:135 | 1481.706 / 216 | 12.733 | 13.369 |
 
-Both modeled options preserve 16:9 and assume 25 fps/AAC stereo.912 intentionally has the same bitrate as 720, so its nominal file size is the same; higher raster does not automatically add bytes. 1080 assumes both the 720 video request and AAC bitrate multiplied by 2.25, the displayed-area ratio: 1,481,706bps video and 216,000bps stereo AAC. This keeps the planning audio allocation proportional rather than imposing an unapproved 96k cap. Existing measured audio choices and the required quality floor remain unchanged; no cross-codec quality equivalence is inferred. This is an explicit unapproved planning assumption, not a selected production setting. The illustrative 1920×1088 raster and 136:135 SAR preserve 16:9 with 16-pixel alignment. No approved 1080 source, encoder output, browser proof or timing is claimed.
+Both modeled options preserve 16:9 and assume 25 fps/AAC stereo. 912 intentionally has the same bitrate as 720, so its nominal file size is the same; higher raster does not automatically add bytes. 1080 assumes both the 720 video request and AAC bitrate multiplied by 2.25, the displayed-area ratio: 1,481,706bps video and 216,000bps stereo AAC. This keeps the planning audio allocation proportional rather than imposing an unapproved 96k cap. Existing measured audio choices and the required quality floor remain unchanged; no cross-codec quality equivalence is inferred. This is an explicit unapproved planning assumption, not a selected production setting. The illustrative 1920×1088 raster and 136:135 SAR preserve 16:9 with 16-pixel alignment. No approved 1080 source, encoder output, browser proof or timing is claimed.
 
 ### Transparent compute scenarios
 
