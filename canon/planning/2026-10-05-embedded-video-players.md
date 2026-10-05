@@ -28,7 +28,27 @@ Rejected autoplay/metadata preloading for thumbnails because it spends video ban
 
 Apply the live driver's-seat, product, design and vodka lens instructions to this transcode showcase, as explicitly requested by the operator. Do not silently reuse FIA-v2 registration or claim endorsement by a human lens owner. Product reviews the single comparison journey; design reviews the rendered player against this contract and the previous page outside the changed well. Architecture reviews the narrow static presentation boundary, not a new server system.
 
-The showcase is L5 presentation embedded in the existing Worker. It knows fixed comparison labels, verified resource URLs, preview bytes and published measurements. It does not know encoding internals, storage ownership or user accounts. It is not a new player platform, media cache, transcoder or offline-pack manager. No MCP tools, durable bindings, source handlers, container settings or encoding contracts change.
+The showcase is L5 presentation embedded in the existing Worker. No MCP tools, durable bindings, source handlers, container settings or encoding contracts change.
+
+### Knows
+- Fixed comparison labels and verified resource URLs.
+- Preview bytes derived from the retained files and published measurements.
+- Presentation state needed to pause another player when native playback starts.
+
+### Does NOT Know
+- Encoding internals, storage ownership or user accounts.
+- Automatic download selection, source discovery or media generation policy.
+
+### Is NOT
+- A new player platform, media cache or transcoder.
+- An offline-pack manager or a new MCP service.
+
+### Scoped lens registration
+- Target: this embedded-player correction only; operator explicitly invokes all four lenses. No FIA-v2 registration is reused and no human endorsement is implied.
+- Driver's-seat: current method `klappy://canon/methods/driver-seat-lens`, content hash `adp0vp`; delta above precedes challenge.
+- Product: `klappy/kitchen cookbook/lenses/product-lens.md` blob `bc6e51814b7789986781b7a2be80b674ad9c4c07`; primary partner comparison journey above, no collecting or results surface added.
+- Design: `klappy/kitchen cookbook/lenses/design-lens.md` blob `e8ba65f5696da28fd52928209e7a7d2e702abbe7`; operator's visible-player correction plus this contract governs the media well; prior production page at `625ec4d563fe895f6fd11a23ff27d8dafbefed85` governs surrounding layout and tokens. Initial unplayed before/after pairs at390×844 and1280×800 are required; a rendered draft is not described as a pre-approved mock.
+- Architecture: `klappy/kitchen cookbook/lenses/vodka-lens.md` blob `4120066966d83d0753c967ae43a5ca186ea1054c`; governed components are `src/demo-video.html`, its existing `src/demo-video.ts` embedding wrapper, fixed poster data/provenance and this contract, all L5 presentation. Spec boundaries are the three enumerations above. Existing `wrangler.jsonc` bindings and `src/index.ts` registration/route wiring remain unchanged; zero new tools, bindings or modules outside the presentation surface. Governance home is `canon/planning/`; maintainer is the existing transcode repository owner. Preview data is static derived presentation, not a new durable truth store. No domain conditionals are introduced in substrate code. Existing server/API and media-service qualification remain separate and are not recertified by this narrow review.
 
 ## Acceptance, release and reversal
 
