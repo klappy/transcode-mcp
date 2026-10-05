@@ -1,3 +1,4 @@
+import { liveDocs, docsSchema } from "./lib/docs";
 import {handleVideoProxy, VideoOwner, videoSlot, videoOptions, selectVideoContract} from "./lib/video";
 // src/worker.ts
 // Proxy-first + lazy transcoding MCP server.
@@ -232,6 +233,7 @@ function createServer(request: Request, McpServerCtor: typeof McpServer) {
     },
   );
 
+  server.tool("docs", docsSchema, liveDocs);
   return server;
 }
 
