@@ -1,7 +1,7 @@
 // Bun lacks the Workers FixedLengthStream primitive; byte/hash checks remain real.
 (globalThis as any).FixedLengthStream=class extends TransformStream {constructor(_size:number){super();}};
 import { test, expect } from 'bun:test';
-import { byteRange, videoKey, videoOptions, videoContract, handleVideoProxy } from './video';
+import { byteRange, videoKey, videoOptions, videoContract, videoContracts, selectVideoContract, handleVideoProxy } from './video';
 import { parseProxyPath } from './parse-proxy-path';
 import { buildToolResponse } from './mcp-tool';
 test('video range honors suffix/open/clamped ranges and rejects unsafe/multiple ranges', () => {
@@ -61,3 +61,7 @@ for(const fault of ['short','oversized','staging rejection','cancelled'])test(`q
  const response=await handleVideoProxy(new Request('https://proxy/video',{signal:controller.signal}),bucket,instance,videoContract.source.url,{});
  expect(response.status).toBe(502);expect(published).toBe(0);expect(deleted.length).toBe(1);expect(deleted[0]).toStartWith('video-pending/');
 });
+
+test('source-specific cache keys separate all three contracts and reject URL variants',async()=>{const keys=await Promise.all(videoContracts.map(c=>videoKey('a'.repeat(64),c)));expect(new Set(keys).size).toBe(3);for(const c of videoContracts){expect(selectVideoContract(c.source.url)).toBe(c);expect(selectVideoContract(c.source.url+'?unapproved')).toBeUndefined();}});
+
+test('new sources reject forged a13 metadata before quarantine publication',async()=>{for(const selected of videoContracts.slice(1)){let writes=0;const bucket={head:async()=>null,put:async()=>{writes++;}} as unknown as R2Bucket;const instance=async()=>({fetch:async(req:Request)=>new URL(req.url).pathname==='/video-info'?Response.json({revision:'a'.repeat(64)}):new Response(new Uint8Array([1]),{headers:{'X-Video-Metadata':JSON.stringify({encoderRevision:'a'.repeat(64),sourceSha256:videoContract.source.sha256,sourceBytes:videoContract.source.bytes,recipe:selected.recipe,bytes:1,sha256:'b'.repeat(64)})}})});expect((await handleVideoProxy(new Request('https://proxy/video'),bucket,instance,selected.source.url,{})).status).toBe(502);expect(writes).toBe(0);}});

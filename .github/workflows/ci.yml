@@ -1,6 +1,14 @@
 name: CI
 
 on:
+  workflow_dispatch:
+    inputs:
+      asset:
+        description: Reviewed source qualification target
+        required: true
+        type: choice
+        options: [a13, a184, a10]
+        default: a184
   push:
     branches: [main]
   pull_request:
@@ -43,6 +51,11 @@ jobs:
     name: Video — bounded Linux encode
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: true
+      max-parallel: 1
+      matrix:
+        asset: ${{ fromJSON(github.event_name == 'workflow_dispatch' && format('["{0}"]', inputs.asset) || '["a13","a184"]') }}
     permissions:
       contents: read
       actions: read
@@ -56,7 +69,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD: ${{ github.sha }}
         run: |
-          if git diff --quiet "$BASE" "$HEAD" -- container src/lib/video.ts scripts/video-integration.mjs scripts/video-benchmark.mjs scripts/video-retained-source.mjs .github/workflows/ci.yml; then
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ] && git diff --quiet "$BASE" "$HEAD" -- container src/lib/video.ts scripts/video-integration.mjs scripts/video-benchmark.mjs scripts/video-retained-source.mjs scripts/video-acquire-proof.mjs .github/workflows/ci.yml; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -66,7 +79,7 @@ jobs:
         with:
           node-version: 22
       - name: Acquire exact retained qualification artifact
-        if: steps.paths.outputs.changed == 'true'
+        if: steps.paths.outputs.changed == 'true' && matrix.asset == 'a13'
         uses: actions/download-artifact@v4
         with:
           artifact-ids: 11321498762
@@ -74,6 +87,9 @@ jobs:
           github-token: ${{ github.token }}
           path: prior-video-evidence
           merge-multiple: true
+      - name: Prepare one verified qualification source
+        if: steps.paths.outputs.changed == 'true'
+        run: node scripts/video-acquire-proof.mjs '${{ matrix.asset }}' video-evidence prior-video-evidence
       - name: Build actual encoder image
         if: steps.paths.outputs.changed == 'true'
         run: docker build -t fia-video-proof container
@@ -82,10 +98,10 @@ jobs:
         run: |
           mkdir -p video-evidence
           docker image inspect fia-video-proof > video-evidence/image.json
-          docker run -d --name fia-video-proof -p 127.0.0.1:8080:8080 -v "$PWD/video-evidence:/evidence" -v "$PWD:/proof:ro" -v "$PWD/prior-video-evidence:/prior:ro" fia-video-proof node --import /proof/scripts/video-retained-source.mjs /app/server.mjs
+          docker run -d --name fia-video-proof -e FIA_PROOF_ASSET='${{ matrix.asset }}' -p 127.0.0.1:8080:8080 -v "$PWD/video-evidence:/evidence" -v "$PWD:/proof:ro" -v "$PWD/prior-video-evidence:/prior:ro" fia-video-proof node --import /proof/scripts/video-retained-source.mjs /app/server.mjs
       - name: Verify actual selected delivery runtime against retained source
         if: steps.paths.outputs.changed == 'true'
-        run: node scripts/video-integration.mjs video-evidence
+        run: node scripts/video-integration.mjs video-evidence '${{ matrix.asset }}'
       - name: Preserve container logs and stop
         if: always() && steps.paths.outputs.changed == 'true'
         run: |
@@ -94,6 +110,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always() && steps.paths.outputs.changed == 'true'
         with:
-          name: video-container-proof
+          name: video-container-proof-${{ matrix.asset }}
           path: video-evidence
           retention-days: 7

@@ -4,6 +4,8 @@ import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 export const contract = JSON.parse(await readFile(new URL('./video-contract.json', import.meta.url), 'utf8'));
+export const videoContracts=[contract,...await Promise.all(['a184','a10'].map(async id=>JSON.parse(await readFile(new URL(`./video-contract-${id}.json`,import.meta.url),'utf8'))))];
+export const selectVideoContract=url=>videoContracts.find(c=>c.source.url===url);
 const hash = b => createHash('sha256').update(b).digest('hex');
 let busy = false;
 export function runBounded(command, args, { timeout = 30000, signal, outputPath, limit = contract.limits.bytes, onStderr, onSpawn, onClose } = {}) {
@@ -35,7 +37,7 @@ export function runBounded(command, args, { timeout = 30000, signal, outputPath,
             resolve(stdout); });
     });
 }
-export async function encoderIdentity(signal) {
+export async function encoderIdentity(signal, selected=contract) {
     const version = (await runBounded('/usr/bin/ffmpeg', ['-version'], { signal })).toString();
     const executableSha256=hash(await readFile('/usr/bin/ffmpeg'));
     const linkage=(await runBounded('/usr/bin/ldd',['/usr/bin/ffmpeg'],{signal})).toString();
@@ -43,7 +45,7 @@ export async function encoderIdentity(signal) {
     if(!paths.length||linkage.includes('not found'))throw Error('Encoder linkage unavailable');
     const libraries={};for(const path of paths)libraries[path]=hash(await readFile(path));
     const adapterSha256=hash(await readFile(new URL('./video.mjs',import.meta.url)));
-    return { revision:hash(JSON.stringify({contract,version,executableSha256,adapterSha256,libraries})), version, executableSha256, adapterSha256, libraries };
+    return { revision:hash(JSON.stringify({contract:selected,version,executableSha256,adapterSha256,libraries})), version, executableSha256, adapterSha256, libraries };
 }
 export function validateOutput(source, result) {
     const v = source.streams?.find(s => s.codec_type === 'video'), o = result.streams?.find(s => s.codec_type === 'video');
@@ -58,17 +60,17 @@ export function validateOutput(source, result) {
     return { duration, width: o.width, height: o.height, videoCodec: o.codec_name, audioCodec: oa[0]?.codec_name || null };
 }
 async function probe(path, signal) { return JSON.parse((await runBounded('/usr/bin/ffprobe', ['-v', 'error', '-show_streams', '-show_format', '-of', 'json', path], { signal })).toString()); }
-export function videoPhaseLogger(sink=line=>console.log(line),clock=()=>Date.now()){
+export function videoPhaseLogger(sink=line=>console.log(line),clock=()=>Date.now(),selected=contract){
  const jobId=randomUUID(),start=clock();let count=0;
  const phases=new Set(['job-start','source-verified','encode-spawned','encode-exited','cancellation-observed','cleanup-complete','cleanup-failed']);
- return(phase,details={})=>{if(!phases.has(phase)||count>=16)return;const event={schema:1,event:'fia-video-phase',jobId,assetId:contract.source.provenance.assetId,recipe:contract.recipe,phase,elapsedMs:Math.max(0,clock()-start)};if([1,2].includes(details.pass))event.pass=details.pass;if(['success','cancel','failure'].includes(details.outcome))event.outcome=details.outcome;const line=JSON.stringify(event);if(Buffer.byteLength(line)>1024)return;count++;try{sink(line);}catch{}};
+ return(phase,details={})=>{if(!phases.has(phase)||count>=16)return;const event={schema:1,event:'fia-video-phase',jobId,assetId:selected.source.provenance.assetId,recipe:selected.recipe,phase,elapsedMs:Math.max(0,clock()-start)};if([1,2].includes(details.pass))event.pass=details.pass;if(['success','cancel','failure'].includes(details.outcome))event.outcome=details.outcome;const line=JSON.stringify(event);if(Buffer.byteLength(line)>1024)return;count++;try{sink(line);}catch{}};
 }
-export function deliveryPassArguments(input,output,prefix,pass){
+export function deliveryPassArguments(input,output,prefix,pass,contract=videoContracts[0]){
  const e=contract.encoding;if(![1,2].includes(pass))throw Error('Invalid pass');
  const common=['-nostdin','-hide_banner','-y','-protocol_whitelist','file,pipe','-i',input,'-map','0:v:0','-vf',`scale=${e.width}:${e.height}:flags=lanczos`,'-c:v','libx264','-preset',e.preset,'-pix_fmt','yuv420p','-b:v',String(e.videoBps),'-maxrate',String(e.maxrateBps),'-bufsize',String(e.bufferBits),'-g',String(e.keyint),'-keyint_min',String(e.minKeyint),'-sc_threshold',String(e.scenecut),'-passlogfile',prefix];
  return pass===1?[...common,'-pass','1','-an','-f','null','/dev/null']:[...common,'-map','0:a:0?','-pass','2','-c:a','aac','-b:a',`${e.audioKbps}k`,'-ac','2','-movflags','+faststart',output];
 }
-export async function encodeDelivery(input,output,dir,sourceProbe,signal,phase=()=>{}){
+export async function encodeDelivery(input,output,dir,sourceProbe,signal,phase=()=>{},contract=videoContracts[0]){
  const e=contract.encoding,v=sourceProbe.streams.find(s=>s.codec_type==='video');
  if(v?.width!==e.width||v?.height!==e.height||v?.avg_frame_rate!=='50/1')throw Error('Unqualified source geometry/cadence');
  const prefix=join(dir,'pass'),start=Date.now(),passes=[],statistics=[];
@@ -76,7 +78,7 @@ export async function encodeDelivery(input,output,dir,sourceProbe,signal,phase=(
  try{
   for(const pass of [1,2]){
    const remaining=contract.limits.encodeMs-(Date.now()-start);if(remaining<=0)throw Error('Combined encode deadline');let log='',spawned=false,reported=false;const began=Date.now();
-   await runBounded('/usr/bin/ffmpeg',deliveryPassArguments(input,output,prefix,pass),{timeout:remaining,signal:local,outputPath:pass===1?'/dev/null':output,limit:pass===1?contract.limits.passlogFileBytes:contract.limits.bytes,onSpawn:()=>{spawned=true;},onClose:({outcome})=>phase('encode-exited',{pass,outcome}),onStderr:b=>{log=(log+b.toString()).slice(-contract.limits.stderrBytes);if(spawned&&!reported&&/frame=\s*[1-9]\d*/.test(log)){reported=true;phase('encode-spawned',{pass});}}});
+   await runBounded('/usr/bin/ffmpeg',deliveryPassArguments(input,output,prefix,pass,contract),{timeout:remaining,signal:local,outputPath:pass===1?'/dev/null':output,limit:pass===1?contract.limits.passlogFileBytes:contract.limits.bytes,onSpawn:()=>{spawned=true;},onClose:({outcome})=>phase('encode-exited',{pass,outcome}),onStderr:b=>{log=(log+b.toString()).slice(-contract.limits.stderrBytes);if(spawned&&!reported&&/frame=\s*[1-9]\d*/.test(log)){reported=true;phase('encode-spawned',{pass});}}});
    const settings=pass===1?(await readFile(prefix+'-0.log','utf8')).split('\n')[0]:log;
    for(const token of [`bitrate=${Math.floor(e.videoBps/1000)}`,`vbv_maxrate=${e.maxrateBps/1000}`,`vbv_bufsize=${e.bufferBits/1000}`,`keyint=${e.keyint}`,`scenecut=${e.scenecut}`,pass===1?'rc=abr':'rc=2pass'])if(!settings.includes(token))throw Error('Unconfirmed encoder setting '+token);
    let total=0;for(const name of (await readdir(dir)).filter(n=>n.startsWith('pass'))){if(!/^pass-0\.log(?:\.mbtree)?(?:\.temp)?$/.test(name))throw Error('Unexpected statistics file');const length=(await stat(join(dir,name))).size;if(length>contract.limits.passlogFileBytes)throw Error('Statistics file ceiling');total+=length;}if(total>contract.limits.passlogTotalBytes)throw Error('Statistics aggregate ceiling');
@@ -87,10 +89,12 @@ export async function encodeDelivery(input,output,dir,sourceProbe,signal,phase=(
  }finally{for(const name of (await readdir(dir)).filter(n=>n.startsWith('pass')))await rm(join(dir,name),{force:true});}
 }
 export async function handleVideo(req, res) {
-    if (req.url === '/video-info') {
+    const infoUrl=new URL(req.url,'http://container');
+    if (infoUrl.pathname === '/video-info') {
         if(req.method !== 'GET'){res.writeHead(405).end('GET only');return true;}
+        const selected=videoContracts.find(c=>c.source.provenance.assetId===(infoUrl.searchParams.get('assetId')||'a13'));if(!selected){res.writeHead(400).end('Unapproved asset');return true;}
         try {
-            res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(await encoderIdentity()));
+            res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(await encoderIdentity(undefined,selected)));
         }
         catch {
             res.writeHead(503).end('Encoder unavailable');
@@ -120,15 +124,16 @@ export async function handleVideo(req, res) {
     try {
         let raw = Buffer.alloc(0);
         for await (const b of req) {
-            if (raw.length + b.length > contract.limits.requestBytes)
+            if (raw.length + b.length > videoContracts[0].limits.requestBytes)
                 throw Error('Request too large');
             raw = Buffer.concat([raw, b]);
         }
         const job = JSON.parse(raw);
-        if (job.source_url !== contract.source.url || job.recipe !== contract.recipe)
+        const selected=selectVideoContract(job.source_url);if(!selected)throw Error('Unapproved source');const contract=selected;
+        if (job.recipe !== contract.recipe || (job.assetId!==undefined&&job.assetId!==contract.source.provenance.assetId))
             throw Error('Unapproved video source or recipe');
-        phase=videoPhaseLogger();hasJob=true;phase('job-start');
-        const encoder = await encoderIdentity(controller.signal);
+        phase=videoPhaseLogger(undefined,undefined,contract);hasJob=true;phase('job-start');
+        const encoder = await encoderIdentity(controller.signal,contract);
         if (job.encoderRevision !== encoder.revision)
             throw Error('Encoder identity changed');
         dir = await mkdtemp(join(tmpdir(), 'fia-video-'));
@@ -162,7 +167,7 @@ export async function handleVideo(req, res) {
             throw Error('Source identity mismatch');
         phase('source-verified');
         const sourceProbe = await probe(input, controller.signal);
-        const encoding=await encodeDelivery(input,output,dir,sourceProbe,controller.signal,phase);
+        const encoding=await encodeDelivery(input,output,dir,sourceProbe,controller.signal,phase,contract);
         const outputProbe = await probe(output, controller.signal), metadata = validateOutput(sourceProbe, outputProbe);
         const length = (await stat(output)).size;
         if (!length || length > contract.limits.bytes)

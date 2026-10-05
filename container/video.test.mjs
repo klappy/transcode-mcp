@@ -22,3 +22,9 @@ test('phase logger emits only bounded safe correlated fields',async()=>{
 test('real child spawn/close callbacks distinguish cancellation and failed spawn',async()=>{
  const events=[],controller=new AbortController();await expect(runBounded(process.execPath,['-e','setTimeout(()=>{},10000)'],{signal:controller.signal,onSpawn(){events.push('spawn');controller.abort();},onClose({outcome}){events.push(outcome);}})).rejects.toThrow('cancelled');expect(events).toEqual(['spawn','cancel']);const failed=[];await expect(runBounded('/definitely-missing-fia-executable',[],{onSpawn(){failed.push('spawn');},onClose({outcome}){failed.push(outcome);}})).rejects.toThrow();expect(failed).toEqual(['failure']);
 });
+
+test('three source contracts resolve exactly and label the selected job',async()=>{
+ const {videoContracts,selectVideoContract,videoPhaseLogger}=await import('./video.mjs');expect(videoContracts.map(c=>c.source.provenance.assetId)).toEqual(['a13','a184','a10']);expect(selectVideoContract(videoContracts[1].source.url+'?forged')).toBeUndefined();for(const c of videoContracts){expect(selectVideoContract(c.source.url)).toBe(c);const lines=[];videoPhaseLogger(l=>lines.push(JSON.parse(l)),()=>1,c)('job-start');expect(lines[0].assetId).toBe(c.source.provenance.assetId);expect(c.encoding.fps).toBe(50);expect(c.encoding.keyint).toBe(1500);}
+});
+
+test('unknown info asset rejects without invoking encoder',async()=>{const {handleVideo}=await import('./video.mjs');let status;await handleVideo({url:'/video-info?assetId=unknown',method:'GET'},{writeHead(code){status=code;return this;},end(){}});expect(status).toBe(400);});
