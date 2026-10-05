@@ -8,7 +8,7 @@ test('closed target parser and MCP preserve absent/large identity and quality me
  expect(videoOptions({size:'large'})).toEqual(videoOptions({}));
  expect(selectVideoContract(url,'large')).toBe(selectVideoContract(url));
  expect(await videoSlot(url,5,'large')).toBe(await videoSlot(url,5));
- for(const size of ['small','medium','large'] as const){const args={media_type:'video' as const,source_url:url,size};const r=buildToolResponse(args,'https://example.test');const parsed=parseProxyPath(r.proxy_path);expect(parsed.mediaType).toBe('video');expect(parsed.options.q).toBe('medium');expect(selectVideoContract(url,size)?.encoding.height).toBe({small:480,medium:540,large:720}[size]);}
+ for(const size of ['small','medium','large'] as const){const args={media_type:'video' as const,source_url:url,size};const r=buildToolResponse(args,'https://example.test');const parsed=parseProxyPath(r.proxy_path);expect(parsed.mediaType).toBe('video');expect(parsed.options.q).toBe('medium');expect(selectVideoContract(url,size)?.encoding.height).toBe({small:480,medium:544,large:720}[size]);}
  for(const invalid of ['size=1080','size=4k','size=__proto__','w=854','h=480','s=480','resolution=480','size=small,size=large'])expect(()=>parseProxyPath('/video/'+invalid+'/'+url)).toThrow();
  expect(()=>buildToolResponse({media_type:'video',source_url:url,size:'small',w:854},'https://x')).toThrow();
  expect(()=>generateTranscodeUrl({mediaType:'video',sourceUrl:url,options:{size:'4k'} as never})).toThrow();

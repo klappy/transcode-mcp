@@ -2,12 +2,14 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {fpsArguments,requireJobCapacity,qualifyFpsPair} from './policy.mjs';
-import {deliveryPassArguments,contract} from '../../container/video.mjs';
+import {deliveryPassArguments,contract as currentContract} from '../../container/video.mjs';
+// Historical experiment fixture remains the original rate, independent of current delivery.
+const contract=structuredClone(currentContract);Object.assign(contract.encoding,{videoBps:439024,classBps:450000,maxrateBps:900000,bufferBits:1800000});
 const plan=JSON.parse(await readFile(new URL('./plan.json',import.meta.url)));
 test('25fps changes only filter cadence and30-second GOP;50 remains exact runtimearguments',()=>{
  const options={source:'/source',output:'/output',prefix:'/pass',pass:2};const original=structuredClone(contract);
- assert.deepEqual(fpsArguments(deliveryPassArguments,contract,{...options,fps:50}),deliveryPassArguments(options.source,options.output,options.prefix,2));
- const a=fpsArguments(deliveryPassArguments,contract,{...options,fps:25});assert.equal(a[a.indexOf('-g')+1],'750');assert.equal(a[a.indexOf('-vf')+1],'scale=1280:720:flags=lanczos,fps=fps=25:round=near');assert.equal(a[a.indexOf('-b:v')+1],'439024');assert.equal(a[a.indexOf('-b:a')+1],'96k');assert.equal(a[a.indexOf('-maxrate')+1],'900000');assert.deepEqual(contract,original);assert.throws(()=>fpsArguments(deliveryPassArguments,contract,{...options,fps:30}));
+ assert.deepEqual(fpsArguments(deliveryPassArguments,contract,{...options,fps:50}),deliveryPassArguments(options.source,options.output,options.prefix,2,contract));
+ const a=fpsArguments(deliveryPassArguments,contract,{...options,fps:25});assert.equal(a[a.indexOf('-g')+1],'750');assert.equal(a[a.indexOf('-vf')+1],'scale=1280:720:flags=lanczos,setsar=1/1:max=65535,fps=fps=25:round=near');assert.equal(a[a.indexOf('-b:v')+1],'439024');assert.equal(a[a.indexOf('-b:a')+1],'96k');assert.equal(a[a.indexOf('-maxrate')+1],'900000');assert.deepEqual(contract,original);assert.throws(()=>fpsArguments(deliveryPassArguments,contract,{...options,fps:30}));
 });
 test('deadline and disk reservation reject a late or oversized job before starting',()=>{
  requireJobCapacity(plan,{remainingMs:330000,diskBytes:0});assert.throws(()=>requireJobCapacity(plan,{remainingMs:329999,diskBytes:0}),/deadline/);assert.throws(()=>requireJobCapacity(plan,{remainingMs:400000,diskBytes:plan.limits.diskBytes-1}),/disk/);
