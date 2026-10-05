@@ -110,6 +110,7 @@ tag = "v1"
 # One-time: wrangler r2 bucket create transcode-mcp-audio-development
 [env.development]
 name = "transcode-mcp-development"
+compatibility_flags = [ "nodejs_compat", "enable_request_signal" ]
 
 [env.development.observability]
 enabled = true
@@ -128,6 +129,7 @@ bucket_name = "transcode-mcp-audio-development"
 class_name = "AudioContainerDevelopment"
 image = "./container/Dockerfile"
 max_instances = 5
+instance_type = "standard-4"
 
 [[env.development.durable_objects.bindings]]
 class_name = "AudioContainerDevelopment"
