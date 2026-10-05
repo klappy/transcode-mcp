@@ -16,7 +16,7 @@ test('closed target parser and MCP preserve absent/large identity and quality me
 test('full contracts separate cache/admission and unsupported source combinations fail closed',async()=>{
  const contracts=['small','medium','large'].map(size=>selectVideoContract(url,size)!);
  expect(new Set(await Promise.all(contracts.map(c=>videoKey('a'.repeat(64),c)))).size).toBe(3);
- for(const c of videoContracts.slice(1)){expect(selectVideoContract(c.source.url)).toBe(c);expect(selectVideoContract(c.source.url,'small')).toBeUndefined();expect(()=>buildToolResponse({media_type:'video',source_url:c.source.url,size:'medium'},'https://x')).toThrow();}
+ for(const c of videoContracts.slice(1)){expect(selectVideoContract(c.source.url)).toBe(c);expect(selectVideoContract(c.source.url,'small')?.encoding.height).toBe(480);expect(buildToolResponse({media_type:'video',source_url:c.source.url,size:'medium'},'https://x').proxy_path).toContain('size=medium');}
  expect(selectVideoContract(url,'constructor')).toBeUndefined();
  let resolve!:()=>void,calls=0;const owner=new VideoOwner(()=>{});const pending=owner.run(JSON.stringify(contracts[0]),()=>{calls++;return new Promise<void>(r=>resolve=r)});const joined=owner.run(JSON.stringify(contracts[0]),async()=>{calls++});await expect(owner.run(JSON.stringify(contracts[1]),async()=>{})).rejects.toThrow('busy');await Promise.resolve();expect(calls).toBe(1);resolve();await Promise.all([pending,joined]);
 });

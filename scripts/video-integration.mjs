@@ -1,3 +1,4 @@
+import {selectVideoContract} from '../container/video.mjs';
 import {measuredRates} from './video-qualification-policy.mjs';
 // Real Linux delivery runtime proof with CI-only retained-source transport.
 // No origin request, deployment or R2 writes.
@@ -7,7 +8,7 @@ import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {resolve,join} from 'node:path';
-const targetSize=process.argv[4]||'large';assert.ok(['small','medium','large'].includes(targetSize));const asset=process.argv[3]||'a13';assert.ok(targetSize==='large'||asset==='a13');assert.ok(['a13','a184','a10'].includes(asset));const contract=JSON.parse(await readFile(new URL(`../container/video-contract${targetSize==='large'?(asset==='a13'?'':'-'+asset):'-'+targetSize}.json`,import.meta.url)));const duration={a13:79.153,a184:56.453,a10:55.857}[asset];const trackDuration={a13:79.14,a184:56.42,a10:55.84}[asset];
+const targetSize=process.argv[4]||'large';assert.ok(['small','medium','large'].includes(targetSize));const asset=process.argv[3]||'a13';assert.ok(['a13','a184','a10'].includes(asset));const contract=selectVideoContract(`https://s3.amazonaws.com/cbbt-er.public/media/videos/${asset}/720p.mp4`,targetSize);assert.ok(contract);const duration={a13:79.153,a184:56.453,a10:55.857}[asset];const trackDuration={a13:79.14,a184:56.42,a10:55.84}[asset];
 const frameSeconds=asset==='a13'?[10,40,70]:[duration*.1,duration*.5,duration*.9];
 const output=resolve(process.argv[2]||'video-evidence');await mkdir(output,{recursive:true});
 const receipt={status:'running',scope:'Actual Linux delivery handler and two-pass encode with pinned local source transport; origin acquisition count separately recorded; browser/range/R2 acceptance remains separate',startedAt:new Date().toISOString(),source:contract.source,recipe:contract.recipe,targetSize,contract,reviewedCommit:process.env.REVIEWED_COMMIT||null};

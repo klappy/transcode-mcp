@@ -3,10 +3,12 @@ import { createHash, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import {createVideoCatalog} from './video-catalog.mjs';
 export const contract = JSON.parse(await readFile(new URL('./video-contract.json', import.meta.url), 'utf8'));
 export const videoContracts=[contract,...await Promise.all(['a184','a10'].map(async id=>JSON.parse(await readFile(new URL(`./video-contract-${id}.json`,import.meta.url),'utf8'))))];
 const targetContracts=Object.fromEntries(await Promise.all(['small','medium'].map(async size=>[size,JSON.parse(await readFile(new URL(`./video-contract-${size}.json`,import.meta.url),'utf8'))])));
-export const selectVideoContract=(url,size='large')=>size==='large'?videoContracts.find(c=>c.source.url===url):url===contract.source.url&&['small','medium'].includes(size)?targetContracts[size]:undefined;
+const extension=JSON.parse(await readFile(new URL('./video-source-extension.json',import.meta.url),'utf8'));
+export const selectVideoContract=createVideoCatalog(videoContracts,targetContracts,extension.recipeRevision).select;
 const hash = b => createHash('sha256').update(b).digest('hex');
 let busy = false;
 export function runBounded(command, args, { timeout = 30000, signal, outputPath, limit = contract.limits.bytes, onStderr, onSpawn, onClose } = {}) {
@@ -46,7 +48,8 @@ export async function encoderIdentity(signal, selected=contract) {
     if(!paths.length||linkage.includes('not found'))throw Error('Encoder linkage unavailable');
     const libraries={};for(const path of paths)libraries[path]=hash(await readFile(path));
     const adapterSha256=hash(await readFile(new URL('./video.mjs',import.meta.url)));
-    return { revision:hash(JSON.stringify({contract:selected,version,executableSha256,adapterSha256,libraries})), version, executableSha256, adapterSha256, libraries };
+    const catalogSha256=hash(await readFile(new URL('./video-catalog.mjs',import.meta.url)));
+    return { revision:hash(JSON.stringify({contract:selected,version,executableSha256,adapterSha256,catalogSha256,libraries})), version, executableSha256, adapterSha256, catalogSha256, libraries };
 }
 export function validateOutput(source, result, selected=contract) {
     const v = source.streams?.find(s => s.codec_type === 'video'), o = result.streams?.find(s => s.codec_type === 'video');
