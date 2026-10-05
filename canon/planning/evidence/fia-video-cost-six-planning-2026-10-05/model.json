@@ -1,0 +1,229 @@
+{
+  "modelVersion": "six-options-planning-v4",
+  "asOf": "2026-10-05",
+  "measuredFourModel": {
+    "path": "../fia-video-cost-four-current-2026-10-05/model.json",
+    "sha256": "64ef2f4a3433cccde357f655ac2987a168a51e39841e1642788035490cac3864"
+  },
+  "measuredRowsUnchanged": [
+    {
+      "sizeLabel": 320,
+      "raster": [
+        576,
+        320
+      ],
+      "videoBps": 133334,
+      "audioBps": 42667,
+      "channels": 1,
+      "fps": 25,
+      "observedEncodeSeconds": 17.965,
+      "observedSourceSeconds": 79.153,
+      "observedBytes": 1825753,
+      "observedScope": "Actual Cloudflare DEV capped25fps a13 xsmall standard-4; CPU utilization unmeasured",
+      "proxyEncodeSecondsPerSourceMinute": 13.61792983209733,
+      "grossComputeUsdPerSourceMinuteProxy": 0.0015170373832956426,
+      "newNominalMBPerMinute": 1.3200075,
+      "qualityScore": null,
+      "actualFileMBPerMinute": 1.3837052849636216,
+      "observedOutputSeconds": 79.168,
+      "passSeconds": [
+        7.299,
+        10.663
+      ],
+      "actualVsNominalBeforeMuxRatio": 1.0482556235200342
+    },
+    {
+      "sizeLabel": 480,
+      "raster": [
+        864,
+        480
+      ],
+      "videoBps": 300000,
+      "audioBps": 42667,
+      "channels": 1,
+      "fps": 25,
+      "observedEncodeSeconds": 30.393,
+      "observedSourceSeconds": 79.153,
+      "observedBytes": 3493851,
+      "observedScope": "Actual capped25fps +50% video budget, Cloudflare DEV a13 standard-4; active CPU usage unmeasured",
+      "proxyEncodeSecondsPerSourceMinute": 23.03867193915581,
+      "grossComputeUsdPerSourceMinuteProxy": 0.0025665080540219574,
+      "newNominalMBPerMinute": 2.5700025,
+      "qualityScore": null,
+      "firstHttpSeconds": 40.779,
+      "observedOutputSeconds": 79.168,
+      "cachedTransferSeconds": 1.225,
+      "actualFileMBPerMinute": 2.647926687550525,
+      "actualVsNominalBeforeMuxRatio": 1.0303206660501398
+    },
+    {
+      "sizeLabel": 540,
+      "raster": [
+        960,
+        544
+      ],
+      "videoBps": 379688,
+      "audioBps": 54000,
+      "channels": 2,
+      "fps": 25,
+      "observedEncodeSeconds": 30.284,
+      "observedSourceSeconds": 79.153,
+      "observedBytes": 4386076,
+      "observedScope": "Actual capped25fps +50% video budget, Cloudflare DEV a13 standard-4; active CPU usage unmeasured",
+      "proxyEncodeSecondsPerSourceMinute": 22.956047149192067,
+      "grossComputeUsdPerSourceMinuteProxy": 0.002557303652419996,
+      "newNominalMBPerMinute": 3.25266,
+      "qualityScore": null,
+      "observedOutputSeconds": 79.168,
+      "firstHttpSeconds": 39.485,
+      "cachedTransferSeconds": 0.989,
+      "actualFileMBPerMinute": 3.32412793047696,
+      "actualVsNominalBeforeMuxRatio": 1.0219721490954972
+    },
+    {
+      "sizeLabel": 720,
+      "raster": [
+        1280,
+        720
+      ],
+      "videoBps": 658536,
+      "audioBps": 96000,
+      "channels": 2,
+      "fps": 25,
+      "observedEncodeSeconds": 43.168,
+      "observedSourceSeconds": 79.153,
+      "observedBytes": 7598950,
+      "observedScope": "Actual capped25fps +50% video budget, Cloudflare DEV a13 standard-4; active CPU usage unmeasured",
+      "proxyEncodeSecondsPerSourceMinute": 32.722448928025464,
+      "grossComputeUsdPerSourceMinuteProxy": 0.0036452808105820367,
+      "newNominalMBPerMinute": 5.65902,
+      "qualityScore": null,
+      "observedOutputSeconds": 79.168,
+      "firstHttpSeconds": 48.492,
+      "cachedTransferSeconds": 1.048,
+      "actualFileMBPerMinute": 5.759107215036378,
+      "actualVsNominalBeforeMuxRatio": 1.017686315834964
+    }
+  ],
+  "planningRows": [
+    {
+      "sizeLabel": 912,
+      "status": "planning-only-unmeasured",
+      "codedRasterAssumption": [
+        1616,
+        912
+      ],
+      "sarAssumption": "304:303",
+      "dar": "16:9",
+      "fpsAssumption": 25,
+      "videoBpsAssumption": 658536,
+      "classBpsAssumption": 675000,
+      "audioBpsAssumption": 96000,
+      "audioChannelsAssumption": 2,
+      "nominalMBPerMinuteBeforeMux": 5.65902,
+      "nominalMBPerMinuteWith5pctMux": 5.941971000000001,
+      "observedBytes": null,
+      "observedEncodeSeconds": null,
+      "qualityScore": null,
+      "basis": "912 matches720 budget;1080 uses720 video bitrate multiplied by displayed-area ratio(1080/720)^2=2.25, an unapproved modeling assumption only",
+      "computeScenarios": [
+        {
+          "name": "low",
+          "encodingPixelExponent": 0,
+          "additional4KSourceSecondsPerMinute": 0,
+          "grossEncodeWallSecondsPerSourceMinute": 32.722448928025464,
+          "grossFullCPUResourceUSDPerSourceMinute": 0.0036452808105820367,
+          "all93GrossComputeUSD": 0.4155877438003093
+        },
+        {
+          "name": "central",
+          "encodingPixelExponent": 1,
+          "additional4KSourceSecondsPerMinute": 15,
+          "grossEncodeWallSecondsPerSourceMinute": 67.32864957740071,
+          "grossFullCPUResourceUSDPerSourceMinute": 0.007500411562922439,
+          "all93GrossComputeUSD": 0.8550998622547787
+        },
+        {
+          "name": "high",
+          "encodingPixelExponent": 1.5,
+          "additional4KSourceSecondsPerMinute": 45,
+          "grossEncodeWallSecondsPerSourceMinute": 111.17384831068497,
+          "grossFullCPUResourceUSDPerSourceMinute": 0.012384766701810306,
+          "all93GrossComputeUSD": 1.411950825888976
+        }
+      ]
+    },
+    {
+      "sizeLabel": 1080,
+      "status": "planning-only-not-implemented",
+      "codedRasterAssumption": [
+        1920,
+        1088
+      ],
+      "sarAssumption": "136:135",
+      "dar": "16:9",
+      "fpsAssumption": 25,
+      "videoBpsAssumption": 1481706,
+      "classBpsAssumption": 1518750,
+      "audioBpsAssumption": 96000,
+      "audioChannelsAssumption": 2,
+      "nominalMBPerMinuteBeforeMux": 11.832795,
+      "nominalMBPerMinuteWith5pctMux": 12.424434750000001,
+      "observedBytes": null,
+      "observedEncodeSeconds": null,
+      "qualityScore": null,
+      "basis": "912 matches720 budget;1080 uses720 video bitrate multiplied by displayed-area ratio(1080/720)^2=2.25, an unapproved modeling assumption only",
+      "computeScenarios": [
+        {
+          "name": "low",
+          "encodingPixelExponent": 0,
+          "additional4KSourceSecondsPerMinute": 0,
+          "grossEncodeWallSecondsPerSourceMinute": 32.722448928025464,
+          "grossFullCPUResourceUSDPerSourceMinute": 0.0036452808105820367,
+          "all93GrossComputeUSD": 0.4155877438003093
+        },
+        {
+          "name": "central",
+          "encodingPixelExponent": 1,
+          "additional4KSourceSecondsPerMinute": 15,
+          "grossEncodeWallSecondsPerSourceMinute": 89.17088423685772,
+          "grossFullCPUResourceUSDPerSourceMinute": 0.00993363650398595,
+          "all93GrossComputeUSD": 1.1325046812414852
+        },
+        {
+          "name": "high",
+          "encodingPixelExponent": 1.5,
+          "additional4KSourceSecondsPerMinute": 45,
+          "grossEncodeWallSecondsPerSourceMinute": 156.66762656151508,
+          "grossFullCPUResourceUSDPerSourceMinute": 0.01745277359895278,
+          "all93GrossComputeUSD": 1.989739386329551
+        }
+      ]
+    }
+  ],
+  "formula": "Tnew=T720*(codedPixelsNew/codedPixels720)^p + D; T720 is the actual720 encode-seconds/source-minute anchor. D is additional unmeasured4K source penalty. p,D are explicit scenarios, not empirical confidence bounds. Gross resource allocation=Tnew*0.0001114.",
+  "scope": "93 pinned English source IDs,114.007min imputed. Four measured anchors extrapolated; newtwo nominal/modeled only. Not all FIA, no current1080 implementation, no new encoding authorization.",
+  "allSixScenarios": [
+    {
+      "name": "low",
+      "grossEncodeResourceProxyUSD": 2.0038669042128237,
+      "mixedMeasuredAndNominalOutputGB": 3.5890873277047906,
+      "grossR2MonthlyUSD": 0.05383630991557185,
+      "limitations": "Encode-wall resource allocation only; startup/IO/idle/DO and billing allowances/rounding excluded. Decode penalty scenarios not observations."
+    },
+    {
+      "name": "central",
+      "grossEncodeResourceProxyUSD": 3.160295960108469,
+      "mixedMeasuredAndNominalOutputGB": 3.5890873277047906,
+      "grossR2MonthlyUSD": 0.05383630991557185,
+      "limitations": "Encode-wall resource allocation only; startup/IO/idle/DO and billing allowances/rounding excluded. Decode penalty scenarios not observations."
+    },
+    {
+      "name": "high",
+      "grossEncodeResourceProxyUSD": 4.574381628830732,
+      "mixedMeasuredAndNominalOutputGB": 3.5890873277047906,
+      "grossR2MonthlyUSD": 0.05383630991557185,
+      "limitations": "Encode-wall resource allocation only; startup/IO/idle/DO and billing allowances/rounding excluded. Decode penalty scenarios not observations."
+    }
+  ]
+}
