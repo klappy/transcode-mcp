@@ -122,7 +122,9 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
         signal.throwIfAborted();
         const worker = await instance();
         signal.throwIfAborted();
-        const info = await worker.fetch(new Request('https://audio-container/video-info?source_url='+encodeURIComponent(contract.source.url)+'&size='+(options.size||'large'), { signal }));
+        const legacySource = videoContracts.find(source => source.source.url === contract.source.url);
+        const sourceQuery = legacySource ? 'assetId='+encodeURIComponent(legacySource.source.provenance.assetId) : 'source_url='+encodeURIComponent(contract.source.url);
+        const info = await worker.fetch(new Request('https://audio-container/video-info?'+sourceQuery+'&size='+(options.size||'large'), { signal }));
         if (info.status !== 200)
             return fail(503, 'Video encoder unavailable');
         const encoder = await info.json() as {
