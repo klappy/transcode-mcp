@@ -1,4 +1,4 @@
-import {handleVideoProxy} from "./lib/video";
+import {handleVideoProxy, VideoOwner, videoSlot, videoOptions, selectVideoContract} from "./lib/video";
 // src/worker.ts
 // Proxy-first + lazy transcoding MCP server.
 //
@@ -48,12 +48,22 @@ interface Env {
   AUDIO_CONTAINER?: DurableObjectNamespace<AudioContainer>;
 }
 
-// Durable Object that fronts the audio transcode Container. It owns only
-// lifecycle (port + idle sleep); ffmpeg, the recipe table, and source fetching
+// Durable Object that fronts the transcode Container. It owns lifecycle and
+// bounded video cache publication; ffmpeg, the recipe table, and source fetching
 // all live INSIDE the container image (container/). The Worker never sees an
 // ffmpeg flag — that is the worker/container boundary
 // (canon/planning/2026-05-26-worker-container-boundary.md).
 export class AudioContainer extends Container<Env> {
+  private videoOwner = new VideoOwner(promise => this.ctx.waitUntil(promise));
+  override async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+    if (url.pathname === '/video-delivery') {
+      return handleVideoProxy(request, this.env.AUDIO_BUCKET,
+        async () => ({ fetch: (r: Request) => super.fetch(r) }),
+        url.searchParams.get('source') || '', {}, this.videoOwner);
+    }
+    return super.fetch(request);
+  }
   defaultPort = 8080; // the container HTTP server listens here
   sleepAfter = "10m"; // stop the instance after 10m idle to bound cost
 }
@@ -279,7 +289,20 @@ export default {
       return htmlResponse(ADMIN_PAGE_HTML);
     }
 
-    if(url.pathname.startsWith('/video/')){try{const parsed=parseProxyPath(url.pathname,url.search);if(parsed.mediaType!=='video')return new Response('Invalid route',{status:400});return handleVideoProxy(request,env.AUDIO_BUCKET,async()=>{if(!env.AUDIO_CONTAINER)throw Error('No container');return getRandom(env.AUDIO_CONTAINER,AUDIO_CONTAINER_INSTANCES);},parsed.sourceUrl,parsed.options);}catch{return new Response('Invalid video request',{status:400});}}
+    if (url.pathname.startsWith('/video/')) {
+      try {
+        const parsed = parseProxyPath(url.pathname, url.search);
+        if (parsed.mediaType !== 'video') return new Response('Invalid video route', {status:400});
+        videoOptions(parsed.options);
+        if (!selectVideoContract(parsed.sourceUrl)) return new Response('Video source not approved', {status:403});
+        if (!env.AUDIO_CONTAINER) return new Response('Video service unavailable', {status:503});
+        const slot = await videoSlot(parsed.sourceUrl, AUDIO_CONTAINER_INSTANCES);
+        const stub = env.AUDIO_CONTAINER.get(env.AUDIO_CONTAINER.idFromName(slot));
+        const target = new URL('https://audio-container/video-delivery');
+        target.searchParams.set('source', parsed.sourceUrl);
+        return stub.fetch(new Request(target, {method:request.method, headers:request.headers}));
+      } catch { return new Response('Invalid video request', {status:400}); }
+    }
     // Image proxy
     if (url.pathname.startsWith("/image/")) {
       return handleImageProxy(request, env, ctx);

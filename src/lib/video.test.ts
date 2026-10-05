@@ -48,13 +48,12 @@ test('verified transform publishes once; ranges and HEAD use cache, corrupted me
     expect((await get()).status).toBe(502);
 });
 test('hash mismatch is never published', async () => { let writes = 0; const revision = 'a'.repeat(64); const bucket = { head: async () => null, put: async (_key:string,body:any) => {await new Response(body).arrayBuffer();if(!_key.startsWith("video-pending/"))writes++;}, delete:async()=>{} } as unknown as R2Bucket; const instance = async () => ({ fetch: async (req: Request) => new URL(req.url).pathname === '/video-info' ? Response.json({ revision }) : new Response(new Uint8Array([1]), { headers: { 'X-Video-Metadata': JSON.stringify({ encoderRevision: revision, sourceSha256: videoContract.source.sha256, sourceBytes: videoContract.source.bytes, recipe: videoContract.recipe, bytes: 1, sha256: '0'.repeat(64) }) } }) }); expect((await handleVideoProxy(new Request('https://proxy/video'), bucket, instance, videoContract.source.url, {})).status).toBe(502); expect(writes).toBe(0); });
-for(const fault of ['short','oversized','staging rejection','cancelled'])test(`quarantine ${fault} cannot publish canonical bytes and removes pending key`,async()=>{
+for(const fault of ['short','oversized','staging rejection','missing staging'])test(`quarantine ${fault} cannot publish canonical bytes and removes pending key`,async()=>{
  const revision='a'.repeat(64),controller=new AbortController();let published=0;const deleted:string[]=[];
  const data=new Uint8Array([1,2,3]);const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',data)),x=>x.toString(16).padStart(2,'0')).join('');
  const bucket={head:async()=>null,delete:async(key:string)=>{deleted.push(key);},put:async(key:string,body:any)=>{
   if(!key.startsWith('video-pending/'))published++;
   if(fault==='staging rejection')throw Error('storage failure');
-  if(fault==='cancelled')controller.abort();
   await new Response(body).arrayBuffer();
  },get:async()=>{throw Error('Unverified staging must not be read');}}as unknown as R2Bucket;
  const instance=async()=>({fetch:async(req:Request)=>new URL(req.url).pathname==='/video-info'?Response.json({revision}):new Response(data,{headers:{'X-Video-Metadata':JSON.stringify({encoderRevision:revision,sourceSha256:videoContract.source.sha256,sourceBytes:videoContract.source.bytes,recipe:videoContract.recipe,bytes:fault==='short'?4:fault==='oversized'?2:3,sha256:hash})}})});
