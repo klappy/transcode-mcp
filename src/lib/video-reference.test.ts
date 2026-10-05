@@ -20,7 +20,7 @@ describe('fixed verified R2 references',()=>{
  test('TOCTOU object mismatch cancels selected body',async()=>{const f=fixture();const old=f.bucket.get.bind(f.bucket);(f.bucket as any).get=async(k:string,o:any)=>{const v=await old(k,o);if(k.endsWith('.mp4'))(v as any).etag='changed';return v;};expect((await handleVideoReference(request(),f.bucket)).status).toBe(503);expect(f.cancelled()).toBe(true);});
 });
 
-for(const id of ['a13-small-qualified-v1','a13-medium-qualified-v1','a13-large-qualified-v1'] as const)test(`qualified comparison ${id} binds its output review and reads R2 only`,async()=>{
+for(const id of ['a13-small-qualified-v1','a13-medium-qualified-v1','a13-large-qualified-v1','a13-xsmall-25fps-benchmark-v1','a13-small-25fps-benchmark-v1','a13-medium-25fps-benchmark-v1','a13-large-25fps-benchmark-v1'] as const)test(`qualified comparison ${id} binds its output review and reads R2 only`,async()=>{
  const ref=videoReferences[id],key=`video-reference-v1/${ref.sha256}`;let bodyReads=0;
  const publication={schemaVersion:1,referenceId:id,sha256:ref.sha256,bytes:ref.bytes,sourceUrl:ref.url,rights:'CC-BY-SA-4.0',sourceReview:String(ref.review),r2Etag:'stored'};
  const object={size:ref.bytes,etag:'stored',httpMetadata:{contentType:'video/mp4'}};
