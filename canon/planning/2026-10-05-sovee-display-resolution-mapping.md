@@ -43,6 +43,8 @@ Manifest/chunk delivery and seamless adaptive switching are deferred architectur
 
 The [cost report](2026-10-05-fia-video-cost-rubric.md) uses measured 50 fps outputs or older 50 fps timing proxies, with the 320 sample measured on different CI hardware. It does **not** measure the new ≤30 fps cap or these larger encoded canvases. Fewer frames may reduce work, larger canvases may increase it, and neither effect can be priced by an assumed linear factor. Retain the existing estimate as a labeled historical planning scenario until relevant measurements exist; no further encode is requested here.
 
-## Higher-resolution source lead
+## Historical higher-resolution source lead
+
+The following paragraph records the earlier metadata-only discovery, retained as history. Subsequently the video-only4K acquisition and approved-AAC composite were separately verified; that composite is not a publisher-original master and its provenance/qualification remain separate from this mapping proposal.
 
 The public [Jordan River YouTube player](https://www.youtube.com/watch?v=AmunLtggLUI), by Video Bible Dictionary, advertised a 3840×2160 VP9 rendition at 50 fps on 5 October 2026. Its 79-second duration is consistent with the current 79.153-second FIA resource, but does not establish byte or edition identity. This is player-format metadata, not a downloaded/decoded master. The actual description distinguishes the music-bearing YouTube edition from a shareable source-video/voiceover edition and directs users to contact the publisher for CC BY-SA 4.0 delivery. A licensed 4K master URL is not yet established. Retain the approved 720p source until the higher-resolution source and its reuse terms are bound to the existing source ledger. No claim is made that every playlist video is 4K.
