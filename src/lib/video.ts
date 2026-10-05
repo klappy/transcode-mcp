@@ -37,21 +37,37 @@ export function byteRange(value: string | null, size: number): {
     return { offset: start, length: end - start + 1 };
 }
 export class VideoBusyError extends Error {}
+export class VideoDeadlineError extends Error {}
 export class VideoOwner {
-    private active?: { key: string; promise: Promise<unknown> };
-    constructor(private retain: (promise: Promise<unknown>) => void) {}
-    run<T>(key: string, task: () => Promise<T>): Promise<T> {
+    private active?: { key: string; consumer: Promise<unknown> };
+    constructor(private retain: (promise: Promise<unknown>) => void,
+        private deadlineMs = 600_000,
+        private report: (event: {event:string; deadlineExceeded:boolean}) => void = event => console.error(JSON.stringify(event))) {}
+    run<T>(key: string, task: (signal: AbortSignal) => Promise<T>): Promise<T> {
         if (this.active) {
             if (this.active.key !== key) return Promise.reject(new VideoBusyError('Video capacity busy'));
-            return this.active.promise as Promise<T>;
+            return this.active.consumer as Promise<T>;
         }
-        // Admission is synchronous, before task's first asynchronous operation.
-        const owner = { key, promise: Promise.resolve().then(task) as Promise<unknown> };
+        const controller = new AbortController();
+        let rejectDeadline!: (error: Error) => void;
+        const deadline = new Promise<never>((_, reject) => { rejectDeadline = reject; });
+        const timer = setTimeout(() => {
+            const error = new VideoDeadlineError('Video execution deadline');
+            controller.abort(error);
+            rejectDeadline(error);
+        }, this.deadlineMs);
+        const owner = { key, consumer: undefined as unknown as Promise<T> };
+        // The settlement promise, not the consumer race, owns the slot.
+        const settlement = Promise.resolve().then(() => task(controller.signal)).finally(() => {
+            clearTimeout(timer);
+            if (this.active === owner) this.active = undefined;
+        });
+        owner.consumer = Promise.race([settlement, deadline]);
         this.active = owner;
-        owner.promise = owner.promise.finally(() => { if (this.active === owner) this.active = undefined; });
-        // Retain all work; caller still receives failures. No unhandled rejection.
-        this.retain(owner.promise.catch(() => undefined));
-        return owner.promise as Promise<T>;
+        this.retain(settlement.catch(() => {
+            this.report({event:'video-owner-failed', deadlineExceeded:controller.signal.aborted});
+        }));
+        return owner.consumer;
     }
 }
 export async function videoSlot(source: string, count: number) {
@@ -84,16 +100,21 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
     if (!bucket)
         return fail(503, 'Video storage unavailable');
     try {
-        const prepare = async () => {
-        const signal=AbortSignal.timeout(contract.limits.jobMs);
-        const worker = await instance(), info = await worker.fetch(new Request('https://audio-container/video-info?assetId='+contract.source.provenance.assetId, { signal }));
+        const prepare = async (signal = AbortSignal.timeout(contract.limits.jobMs)) => {
+        signal.throwIfAborted();
+        const worker = await instance();
+        signal.throwIfAborted();
+        const info = await worker.fetch(new Request('https://audio-container/video-info?assetId='+contract.source.provenance.assetId, { signal }));
         if (info.status !== 200)
             return fail(503, 'Video encoder unavailable');
         const encoder = await info.json() as {
             revision: string;
         };
+        signal.throwIfAborted();
         const key = await videoKey(encoder.revision,contract);
+        signal.throwIfAborted();
         let object = await bucket.head(key), cache = 'HIT';
+        signal.throwIfAborted();
         if (!object) {
             cache = 'MISS';
             const encoded = await worker.fetch(new Request('https://audio-container/video-transcode', { method: 'POST', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source_url: source, recipe: contract.recipe, encoderRevision: encoder.revision }) }));
@@ -101,6 +122,7 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
                 return fail(503, 'Video capacity busy');
             if (encoded.status !== 200 || !encoded.body)
                 return fail(502, 'Video transform failed');
+            if (signal.aborted) { await encoded.body.cancel().catch(() => {}); signal.throwIfAborted(); }
             const meta = JSON.parse(encoded.headers.get('X-Video-Metadata') || '{}');
             if (meta.encoderRevision !== encoder.revision || meta.sourceSha256 !== contract.source.sha256 || meta.sourceBytes !== contract.source.bytes || meta.recipe !== contract.recipe || !Number.isSafeInteger(meta.bytes) || meta.bytes <= 0 || meta.bytes > contract.limits.bytes || !/^[a-f0-9]{64}$/.test(meta.sha256))
                 return fail(502, 'Video metadata invalid');
@@ -126,15 +148,19 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
                 const lengthBound=new FixedLengthStream(meta.bytes);
                 const transferAbort=new AbortController();
                 const pumping=checked.pipeTo(lengthBound.writable,{signal:AbortSignal.any([signal,transferAbort.signal])});
+                signal.throwIfAborted();
                 const storing=bucket.put(pending,lengthBound.readable).catch(async error=>{transferAbort.abort(error);await lengthBound.readable.cancel(error).catch(()=>{});throw error;});
                 const settled=await Promise.allSettled([pumping,storing]);
                 for(const outcome of settled)if(outcome.status==='rejected')throw outcome.reason;
                 if(size!==meta.bytes||digest.digest('hex')!==meta.sha256)throw Error('Video byte identity mismatch');
+                signal.throwIfAborted();
                 const staged=await bucket.get(pending);
                 if(!staged||signal.aborted)throw Error('Video staging unavailable');
                 await bucket.put(key,staged.body,{httpMetadata:{contentType:'video/mp4'},customMetadata:{...Object.fromEntries(Object.entries(meta).map(([k,v])=>[k,typeof v==='object'?JSON.stringify(v):String(v)])),sourceUrl:source}});
             } finally { await reader.cancel().catch(()=>{});await bucket.delete(pending); }
+            signal.throwIfAborted();
             object = await bucket.head(key);
+            signal.throwIfAborted();
             if (!object)
                 return fail(502, 'Video publication failed');
         }
@@ -170,6 +196,7 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
         return new Response(hit.body, { status: range ? 206 : 200, headers });
     }
     catch (error) {
+        if (error instanceof VideoDeadlineError) return fail(504, 'Video execution deadline; completion may still settle');
         if (error instanceof VideoBusyError) return fail(503, 'Video capacity busy');
         return fail(502, 'Video service unavailable');
     }
