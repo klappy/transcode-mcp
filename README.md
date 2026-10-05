@@ -31,6 +31,10 @@ If a proposed rule reduces bytes but degrades quality below the floor — reject
 
 ---
 
+## Current video optimization policy
+
+The [2026-10-04 operator correction](canon/planning/2026-10-04-sovee-video-policy-correction.md) separates encoded resolution, the budget two steps below it, and playback one step above player fit when bandwidth permits. It supersedes the old half-step ceiling for new video work; numeric recipes remain unqualified. Read this before implementing or tuning video. The document is available directly in this repository; this link does not depend on a deployed MCP docs tool.
+
 ## Project Identity — Proactive Integrity
 
 **Orientation:** Before I speak, I observe. Before I claim, I verify. Before I confirm, I prove. What I have not seen, I do not know. What I have not verified, I will not imply.
@@ -41,7 +45,7 @@ See full details in [canon/values/project-identity.md](canon/values/project-iden
 
 **Execution phase — Core functionality live**
 
-- Real MCP tools: `generate_transcode_url` (with perceptual half-class math) + `docs` (canon proxy via oddkit)
+- MCP URL builder: `generate_transcode_url`; canon is directly available in this repository and through separately configured Oddkit. A deployed `docs` tool is not assumed.
 - Real lazy proxy handlers for `/image/*` and `/audio/*`
 - Optimized FFmpeg audio transcoding (voip mode, VBR, filters, streaming)
 - Production deployment via Cloudflare direct integration
@@ -49,7 +53,7 @@ See full details in [canon/values/project-identity.md](canon/values/project-iden
 ## Features
 
 - **MCP Control Surface**: LLM agents can call `generate_transcode_url` to get optimized proxy URLs.
-- **Canon-Aware `docs` Tool**: Proxies natural language queries to the project's canon (following the PTXprint-MCP / oddkit pattern).
+- **Canon documentation**: use the [canon index](canon/README.md), direct repository documents, or [configured Oddkit retrieval](canon/governance/oddkit-mcp-clients.md); documentation discovery does not require an unverified deployed `docs` tool.
 - **Proxy-First + Lazy Architecture**: URLs are generated instantly; actual transcoding/caching only happens on first request.
 - **Perceptual Optimization**: Uses encoder-parameter selection (resolution × quality × format) tuned to the per-request budget, with preset-specific ffmpeg recipes for voice vs music.
 

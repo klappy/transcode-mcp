@@ -1,3 +1,4 @@
+# 2026-10-04 precedence: historical rows preserved; video half-step ceiling is superseded by canon/planning/2026-10-04-sovee-video-policy-correction.md. Do not reinterpret the original rows as the new policy.
 # DOLCHEO+ encoding TSV — schema per canon/governance/writing-conventions.md
 # D, O, L, C rows (6 cols): type	title	body	evidence	alternatives	status
 # H rows (4 cols):           type	title	body	owner
