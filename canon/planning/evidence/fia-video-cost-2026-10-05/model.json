@@ -1,0 +1,239 @@
+{
+  "asOf": "2026-10-05",
+  "currency": "USD",
+  "units": "decimalGB/MB except container memoryGiB",
+  "rates": {
+    "cpuUsdPerVcpuSecond": 2e-05,
+    "memoryUsdPerGiBSecond": 2.5e-06,
+    "diskUsdPerGBSecond": 7e-08,
+    "r2UsdPerGBMonth": 0.015,
+    "r2ClassAPerMillion": 4.5,
+    "r2ClassBPerMillion": 0.36,
+    "r2EgressPerGB": 0
+  },
+  "instance": {
+    "vCPU": 4,
+    "memoryGiB": 12,
+    "diskGB": 20,
+    "sleepAfterSeconds": 600
+  },
+  "grossFullCpuPerSecond": 0.0001114,
+  "grossIdleMemoryDiskPerSecond": 3.14e-05,
+  "rows": [
+    {
+      "sizeLabel": 320,
+      "raster": [
+        576,
+        320
+      ],
+      "videoBps": 133334,
+      "audioBps": 42667,
+      "channels": 1,
+      "fps": 50,
+      "observedEncodeSeconds": 17.847,
+      "observedSourceSeconds": 39.6,
+      "observedBytes": 938862,
+      "observedScope": "current320sample LinuxCI",
+      "proxyEncodeSecondsPerSourceMinute": 27.04090909090909,
+      "grossComputeUsdPerSourceMinuteProxy": 0.0030123572727272724,
+      "newNominalMBPerMinute": 1.3200075,
+      "qualityScore": null
+    },
+    {
+      "sizeLabel": 480,
+      "raster": [
+        864,
+        480
+      ],
+      "videoBps": 300000,
+      "audioBps": 42667,
+      "channels": 1,
+      "fps": 50,
+      "observedEncodeSeconds": 62.614,
+      "observedSourceSeconds": 79.153,
+      "observedBytes": 3556277,
+      "observedScope": "current +50% 480 Cloudflare DEV a13, standard-4; actual CPU utilization unmeasured",
+      "proxyEncodeSecondsPerSourceMinute": 47.46301466779528,
+      "grossComputeUsdPerSourceMinuteProxy": 0.005287379833992393,
+      "newNominalMBPerMinute": 2.5700025,
+      "qualityScore": null,
+      "firstHttpSeconds": 75.442
+    },
+    {
+      "sizeLabel": 540,
+      "raster": [
+        960,
+        544
+      ],
+      "videoBps": 379688,
+      "audioBps": 54000,
+      "channels": 2,
+      "fps": 50,
+      "observedEncodeSeconds": 36.326,
+      "observedSourceSeconds": 79.153,
+      "observedBytes": 3203638,
+      "observedScope": "historical lower-budget Cloudflare a13; not new+50output",
+      "proxyEncodeSecondsPerSourceMinute": 27.536037800209716,
+      "grossComputeUsdPerSourceMinuteProxy": 0.0030675146109433622,
+      "newNominalMBPerMinute": 3.25266,
+      "qualityScore": null
+    },
+    {
+      "sizeLabel": 720,
+      "raster": [
+        1280,
+        720
+      ],
+      "videoBps": 658536,
+      "audioBps": 96000,
+      "channels": 2,
+      "fps": 50,
+      "observedEncodeSeconds": 53.409,
+      "observedSourceSeconds": 79.153,
+      "observedBytes": 5508450,
+      "observedScope": "historical lower-budget Cloudflare a13; not new+50output",
+      "proxyEncodeSecondsPerSourceMinute": 40.485389056637146,
+      "grossComputeUsdPerSourceMinuteProxy": 0.004510072340909378,
+      "newNominalMBPerMinute": 5.65902,
+      "qualityScore": null
+    }
+  ],
+  "scenarios": [
+    {
+      "set": "three320480720",
+      "uniqueSourceMinutes": 100,
+      "grossComputeProxyUSD": 1.2809809447629044,
+      "sensitivityHalfToDouble": [
+        0.6404904723814522,
+        2.5619618895258087
+      ],
+      "outputGBWithAssumed5pctMux": 1.0026481500000002,
+      "grossStorageMonthlyUSDWith5pctMux": 0.015039722250000002
+    },
+    {
+      "set": "three320480720",
+      "uniqueSourceMinutes": 104.2,
+      "grossComputeProxyUSD": 1.3347821444429464,
+      "sensitivityHalfToDouble": [
+        0.6673910722214732,
+        2.669564288885893
+      ],
+      "outputGBWithAssumed5pctMux": 1.0447593723000002,
+      "grossStorageMonthlyUSDWith5pctMux": 0.0156713905845
+    },
+    {
+      "set": "three320480720",
+      "uniqueSourceMinutes": 1000,
+      "grossComputeProxyUSD": 12.809809447629043,
+      "sensitivityHalfToDouble": [
+        6.404904723814521,
+        25.619618895258085
+      ],
+      "outputGBWithAssumed5pctMux": 10.026481500000001,
+      "grossStorageMonthlyUSDWith5pctMux": 0.1503972225
+    },
+    {
+      "set": "three480540720",
+      "uniqueSourceMinutes": 100,
+      "grossComputeProxyUSD": 1.2864966785845133,
+      "sensitivityHalfToDouble": [
+        0.6432483392922567,
+        2.5729933571690267
+      ],
+      "outputGBWithAssumed5pctMux": 1.2055766625,
+      "grossStorageMonthlyUSDWith5pctMux": 0.018083649937499998
+    },
+    {
+      "set": "three480540720",
+      "uniqueSourceMinutes": 104.2,
+      "grossComputeProxyUSD": 1.340529539085063,
+      "sensitivityHalfToDouble": [
+        0.6702647695425314,
+        2.681059078170126
+      ],
+      "outputGBWithAssumed5pctMux": 1.256210882325,
+      "grossStorageMonthlyUSDWith5pctMux": 0.018843163234875
+    },
+    {
+      "set": "three480540720",
+      "uniqueSourceMinutes": 1000,
+      "grossComputeProxyUSD": 12.864966785845134,
+      "sensitivityHalfToDouble": [
+        6.432483392922567,
+        25.729933571690268
+      ],
+      "outputGBWithAssumed5pctMux": 12.055766625,
+      "grossStorageMonthlyUSDWith5pctMux": 0.180836499375
+    },
+    {
+      "set": "four",
+      "uniqueSourceMinutes": 100,
+      "grossComputeProxyUSD": 1.5877324058572406,
+      "sensitivityHalfToDouble": [
+        0.7938662029286203,
+        3.1754648117144813
+      ],
+      "outputGBWithAssumed5pctMux": 1.34417745,
+      "grossStorageMonthlyUSDWith5pctMux": 0.02016266175
+    },
+    {
+      "set": "four",
+      "uniqueSourceMinutes": 104.2,
+      "grossComputeProxyUSD": 1.6544171669032448,
+      "sensitivityHalfToDouble": [
+        0.8272085834516224,
+        3.3088343338064896
+      ],
+      "outputGBWithAssumed5pctMux": 1.4006329029000002,
+      "grossStorageMonthlyUSDWith5pctMux": 0.021009493543500003
+    },
+    {
+      "set": "four",
+      "uniqueSourceMinutes": 1000,
+      "grossComputeProxyUSD": 15.877324058572405,
+      "sensitivityHalfToDouble": [
+        7.938662029286203,
+        31.75464811714481
+      ],
+      "outputGBWithAssumed5pctMux": 13.441774500000001,
+      "grossStorageMonthlyUSDWith5pctMux": 0.20162661750000002
+    }
+  ],
+  "priceURLs": [
+    "https://developers.cloudflare.com/containers/platform/pricing/",
+    "https://developers.cloudflare.com/r2/pricing/",
+    "https://developers.cloudflare.com/workers/platform/pricing/",
+    "https://developers.cloudflare.com/durable-objects/platform/pricing/"
+  ],
+  "limitations": [
+    "CPUuse unmeasured;4vCPUfulluse ceiling for suppliedwalltime",
+    "Current480 time measured;540/720 timing proxies use historical lower-budget output;320 different CI hardware",
+    "320CI hardware differs fromCF",
+    "Complete pinned English metadata catalog93;8 unknown duration;other languages/global FIA scope unverified",
+    "monthlyallowances shared/accountbillingrounding excludedgrossmarginal figures",
+    "oneenvironment only; multiply actualqual environments, no assumedoutputidentities"
+  ],
+  "catalog": {
+    "repo": "BibleAquifer/VideoBibleDictionary",
+    "revision": "1c02713d022bd96a29c78f5b75455315d6d35a6e",
+    "scope": "all19 English metadata JSON files; not global FIA universe",
+    "uniqueAssetIds": 93,
+    "uniqueUrls": 93,
+    "hashDeduplication": "not possible for unacquired sources; source-ID/URL dedupe only",
+    "positiveDurationCount": 85,
+    "positiveDurationSeconds": 6252,
+    "unknownDurationIds": [
+      "a2218",
+      "a2219",
+      "a2220",
+      "a2297",
+      "a2376",
+      "a2377",
+      "a2378",
+      "a2119"
+    ],
+    "imputedTotalMinutes": 114.00705882352942,
+    "imputation": "8 unknown durations assigned mean of85 positive metadata labels; not measured"
+  },
+  "latestPolicyCaveat": "User now requests clean-divisor <=30fps current policy; all existing timing proxies predate that cap and proposed larger canvases. No capped runtime/size estimate measured."
+}

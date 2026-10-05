@@ -1,16 +1,24 @@
 {
-  "recipe": "fia-video@5-large",
+  "recipe": "fia-video@5-jordan-composite-xlarge",
   "source": {
-    "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
-    "sha256": "257f632552979b05716ca438ab654b7489229f34ca59c6bca22149d3b42f3718",
-    "bytes": 49851846,
+    "url": "https://pub-27b708e1b3d94fe2ac53247a87bb142a.r2.dev/sha256/c7feeb3988378d759ed82a13e801ad77db7e3e09df2a121ea70ebecaa192a9b4.mp4",
+    "sha256": "c7feeb3988378d759ed82a13e801ad77db7e3e09df2a121ea70ebecaa192a9b4",
+    "bytes": 225659075,
     "provenance": {
       "publisher": "Word Collective",
       "license": "CC BY-SA 4.0",
       "assetId": "a13",
       "assetVersion": "1.0.4",
       "metadataRevision": "1c02713d022bd96a29c78f5b75455315d6d35a6e",
-      "transformation": "H.264/AAC MP4 re-encode, bounded to 1280x720"
+      "transformation": "H.264/AAC MP4 re-encode, 1616x912 SAR304:303 DAR16:9, stereo",
+      "sourceVariant": "publisher-4k-picture-approved-narration",
+      "videoSourceSha256": "53bc189e7e1815efd18b1ba017da3df5a0ee8b0d03ec7bfd85c9b1b41b94857b",
+      "audioSourceSha256": "257f632552979b05716ca438ab654b7489229f34ca59c6bca22149d3b42f3718",
+      "compositePacketCopy": true
+    },
+    "geometry": {
+      "width": 3840,
+      "height": 2160
     }
   },
   "limits": {
@@ -21,11 +29,12 @@
     "jobMs": 600000,
     "stderrBytes": 65536,
     "passlogFileBytes": 33554432,
-    "passlogTotalBytes": 67108864
+    "passlogTotalBytes": 67108864,
+    "sourceBytes": 268435456
   },
   "encoding": {
-    "width": 1280,
-    "height": 720,
+    "width": 1616,
+    "height": 912,
     "fps": 25,
     "preset": "medium",
     "videoBps": 658536,
@@ -37,7 +46,7 @@
     "scenecut": 60,
     "audioKbps": 96,
     "passes": 2,
-    "sar": "1:1",
+    "sar": "304:303",
     "dar": "16:9",
     "cadencePolicy": "integer-divisor-max30-v1",
     "sourceFrameRate": "50/1",

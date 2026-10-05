@@ -21,7 +21,7 @@ export interface AudioOptions {
 export type GenerateTranscodeUrlInput =
   | { mediaType: "image"; sourceUrl: string; options?: ImageOptions }
   | { mediaType: "audio"; sourceUrl: string; options?: AudioOptions }
-  | { mediaType: "video"; sourceUrl: string; options?: {preset:"fia";q:"medium";f:"mp4";size?:"small"|"medium"|"large"} };
+  | { mediaType: "video"; sourceUrl: string; options?: {preset:"fia";q:"medium";f:"mp4";size?:"xsmall"|"small"|"medium"|"large"|"xlarge"} };
 
 export function generateTranscodeUrl(input: GenerateTranscodeUrlInput): string {
   const { mediaType, sourceUrl } = input;

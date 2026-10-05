@@ -2,9 +2,10 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {fpsArguments,requireJobCapacity,qualifyFpsPair} from './policy.mjs';
-import {deliveryPassArguments,contract as currentContract} from '../../container/video.mjs';
+import {contract as currentContract} from '../../container/video.mjs';
+import {deliveryPassArguments} from '../historical-video-arguments.mjs';
 // Historical experiment fixture remains the original rate, independent of current delivery.
-const contract=structuredClone(currentContract);Object.assign(contract.encoding,{videoBps:439024,classBps:450000,maxrateBps:900000,bufferBits:1800000});
+const contract=structuredClone(currentContract);Object.assign(contract.encoding,{fps:50,keyint:1500,videoBps:439024,classBps:450000,maxrateBps:900000,bufferBits:1800000});
 const plan=JSON.parse(await readFile(new URL('./plan.json',import.meta.url)));
 test('25fps changes only filter cadence and30-second GOP;50 remains exact runtimearguments',()=>{
  const options={source:'/source',output:'/output',prefix:'/pass',pass:2};const original=structuredClone(contract);

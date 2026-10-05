@@ -63,3 +63,7 @@ See [the sampled 320p results](2026-10-05-320-sampled-results.md) for the actual
 ## Subsequent user acceptance
 
 The user accepts the +50% baseline and closes further quality experiments. The [recorded decision](2026-10-05-320-sampled-results.md#user-decision-ship-the-accepted-baseline) supersedes earlier requirements for additional motion or acoustic quality gates in this experiment. Continue mechanical integrity and sequential release verification without another tuning matrix. Reopen tuning only for a concrete use case; do not claim this decision proves all motion artifacts resolved.
+
+## Subsequent planning evidence
+
+See the [catalog cost and rendition rubric](2026-10-05-fia-video-cost-rubric.md) and [proposed Sovee display-resolution mapping](2026-10-05-sovee-display-resolution-mapping.md). The latter records a future source-limited canvas proposal; it does not change this released geometry. Cost proxies predate the newly requested clean-divisor frame-rate cap.

@@ -1,0 +1,2294 @@
+{
+  "schema": 1,
+  "scope": "93 unique English VideoBibleDictionary asset IDs/URLs; not all global FIA videos and not hash deduplication",
+  "upstreamRevision": "1c02713d022bd96a29c78f5b75455315d6d35a6e",
+  "catalogSha256": "e04a46a2636d168cb4f00f94f6e42e9ae4fb114511051f2f0fdd527e0e3bd014",
+  "playlistUrl": "https://youtube.com/playlist?list=PLRtiwzxN21Ya8U8e3HD9PUed9cb6a4bWO",
+  "summary": {
+    "assets": 93,
+    "withCandidates": 51,
+    "verified4KComposite": 1,
+    "candidateOnly": 50,
+    "unmatched": 42,
+    "exactTitleCandidates": 46,
+    "fuzzyTitleCandidates": 3,
+    "playlistEntries": 68,
+    "playlistStatus": "flat-metadata-acquired"
+  },
+  "limits": "Title matches do not verify edition,4K availability,rights or cut alignment. No media downloaded or encoded during inventory. No speech translation executed.",
+  "rows": [
+    {
+      "assetId": "a16",
+      "englishTitle": "Jar of Sour Wine",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a16/720p.mp4",
+        "durationLabels": [
+          "58 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a16/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a13",
+      "englishTitle": "Jordan River",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
+        "durationLabels": [
+          "79 seconds"
+        ],
+        "identityStatus": "accepted-source-ledger",
+        "sha256": "257f632552979b05716ca438ab654b7489229f34ca59c6bca22149d3b42f3718",
+        "bytes": 49851846,
+        "width": 1280,
+        "height": 720,
+        "duration": 79.153
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "AmunLtggLUI",
+          "title": "Jordan River - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=AmunLtggLUI",
+          "durationSeconds": 80,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": true,
+          "alignmentVerified": "sampled-zero-offset-and-remux-packet-validation",
+          "evidence": "jordan-4k-alignment/analysis.json and remux-mp4-1/receipt.json"
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
+        "status": "approved-AAC-reused-in-verified-composite",
+        "youtubeMusicAllowed": false,
+        "sourceSha256": "257f632552979b05716ca438ab654b7489229f34ca59c6bca22149d3b42f3718",
+        "rights": {
+          "metadataPath": "eng/metadata.json",
+          "metadataSha256": "cea47724dbe681d99154df819d694d1d55cb32a58e2f00a3eac1cc87ff300071",
+          "holder": "Word Collective",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/legalcode.en"
+        },
+        "sourceReview": "https://github.com/klappy/fia-app-cookbook/blob/56979f7463879b01ccdde18f6a36102d779c9680/evidence/2026-10-05-video-source-review-a13.json",
+        "compositeReceipt": "jordan-4k-alignment/remux-mp4-1/receipt.json"
+      },
+      "mappingStatus": "verified-composite"
+    },
+    {
+      "assetId": "a1354",
+      "englishTitle": "Joseph's Coat",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1354/720p.mp4",
+        "durationLabels": [
+          "88 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1354/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a21",
+      "englishTitle": "Lampstand",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a21/720p.mp4",
+        "durationLabels": [
+          "84 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "HQc-Ei2ZYZw",
+          "title": "Lampstand - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=HQc-Ei2ZYZw",
+          "durationSeconds": 85,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a21/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a27",
+      "englishTitle": "Large Basket",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a27/720p.mp4",
+        "durationLabels": [
+          "83 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "hQReCQTQu0Y",
+          "title": "Large Basket - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=hQReCQTQu0Y",
+          "durationSeconds": 84,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a27/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a2242",
+      "englishTitle": "Lifespan of a Flower",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2242/720p.mp4",
+        "durationLabels": [
+          "10 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2242/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a18",
+      "englishTitle": "Lots",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a18/720p.mp4",
+        "durationLabels": [
+          "87 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "TT75Xwgy080",
+          "title": "Lots - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=TT75Xwgy080",
+          "durationSeconds": 88,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a18/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a9",
+      "englishTitle": "Camel",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a9/720p.mp4",
+        "durationLabels": [
+          "58 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "2XpmkUsLyFs",
+          "title": "Camel - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=2XpmkUsLyFs",
+          "durationSeconds": 59,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a9/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a141",
+      "englishTitle": "Cave",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a141/720p.mp4",
+        "durationLabels": [
+          "94 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "fyc8Dh8U7Ds",
+          "title": "Cave - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=fyc8Dh8U7Ds",
+          "durationSeconds": 95,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a141/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a26",
+      "englishTitle": "Chains",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a26/720p.mp4",
+        "durationLabels": [
+          "73 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "TiqBiReasZ0",
+          "title": "Chains - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=TiqBiReasZ0",
+          "durationSeconds": 73,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a26/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a12",
+      "englishTitle": "Cliffs",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a12/720p.mp4",
+        "durationLabels": [
+          "49 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "7PUrMr_c220",
+          "title": "Cliffs - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=7PUrMr_c220",
+          "durationSeconds": 50,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a12/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a25",
+      "englishTitle": "Club",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a25/720p.mp4",
+        "durationLabels": [
+          "74 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "cbnFMyHe6j8",
+          "title": "Club - Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=cbnFMyHe6j8",
+          "durationSeconds": 75,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a25/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a28",
+      "englishTitle": "Coins",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a28/720p.mp4",
+        "durationLabels": [
+          "65 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "vP_iZpTfeTM",
+          "title": "Coin - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=vP_iZpTfeTM",
+          "durationSeconds": 66,
+          "match": "fuzzy-title-candidate",
+          "similarity": 0.8889,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a28/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a43",
+      "englishTitle": "Cooked Fish",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a43/720p.mp4",
+        "durationLabels": [
+          "81 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "pUWhJZPjjdQ",
+          "title": "Cooked Fish - Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=pUWhJZPjjdQ",
+          "durationSeconds": 82,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a43/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a29",
+      "englishTitle": "Copper Coins",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a29/720p.mp4",
+        "durationLabels": [
+          "69 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "cdMHd7c8Gys",
+          "title": "Copper Coins - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=cdMHd7c8Gys",
+          "durationSeconds": 70,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a29/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a181",
+      "englishTitle": "Cornerstone with a Wall",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a181/720p.mp4",
+        "durationLabels": [
+          "77 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a181/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a133",
+      "englishTitle": "Egyptian Cloak",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a133/720p.mp4",
+        "durationLabels": [
+          "72 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a133/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a148",
+      "englishTitle": "Entrance to Jewish House",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a148/720p.mp4",
+        "durationLabels": [
+          "88 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a148/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a1268",
+      "englishTitle": "Nests Inside Noah's Ark",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1268/720p.mp4",
+        "durationLabels": [
+          "83 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1268/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a17",
+      "englishTitle": "Tambourine",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a17/720p.mp4",
+        "durationLabels": [
+          "89 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "RVc1n5LeMK0",
+          "title": "Tambourine - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=RVc1n5LeMK0",
+          "durationSeconds": 90,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a17/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a8",
+      "englishTitle": "Tombs",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a8/720p.mp4",
+        "durationLabels": [
+          "93 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "yCpLAgDHcNY",
+          "title": "Tombs - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=yCpLAgDHcNY",
+          "durationSeconds": 94,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a8/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a23",
+      "englishTitle": "Traveler's Bag",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a23/720p.mp4",
+        "durationLabels": [
+          "47 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "jirBmFOOnGs",
+          "title": "Travellers Bag - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=jirBmFOOnGs",
+          "durationSeconds": 48,
+          "match": "fuzzy-title-candidate",
+          "similarity": 0.9286,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a23/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a4",
+      "englishTitle": "Tunic",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a4/720p.mp4",
+        "durationLabels": [
+          "82 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "0PEkAtZmDXs",
+          "title": "Tunic - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=0PEkAtZmDXs",
+          "durationSeconds": 83,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a4/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a38",
+      "englishTitle": "Unleavened Bread",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a38/720p.mp4",
+        "durationLabels": [
+          "71 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "_5Xnw5sGxZE",
+          "title": "Unleavened Bread - Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=_5Xnw5sGxZE",
+          "durationSeconds": 72,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a38/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a1355",
+      "englishTitle": "Man Who Is Girded Up",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1355/720p.mp4",
+        "durationLabels": [
+          "67 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1355/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a33",
+      "englishTitle": "Manger",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a33/720p.mp4",
+        "durationLabels": [
+          "70 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "1zipwd0oKyM",
+          "title": "Manger - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=1zipwd0oKyM",
+          "durationSeconds": 71,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a33/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a32",
+      "englishTitle": "Millstone",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a32/720p.mp4",
+        "durationLabels": [
+          "88 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "wkKK_Bz6x6Q",
+          "title": "Millstone - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=wkKK_Bz6x6Q",
+          "durationSeconds": 89,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a32/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a40",
+      "englishTitle": "Mount of Olives",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a40/720p.mp4",
+        "durationLabels": [
+          "90 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "VUTddppU22c",
+          "title": "Mount of Olives - Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=VUTddppU22c",
+          "durationSeconds": 91,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a40/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a143",
+      "englishTitle": "Mount Precipice",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a143/720p.mp4",
+        "durationLabels": [
+          "101 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "UJn5kK8Co54",
+          "title": "Mount Precipice - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=UJn5kK8Co54",
+          "durationSeconds": 102,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a143/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a1350",
+      "englishTitle": "Fine Linen Cloth",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1350/720p.mp4",
+        "durationLabels": [
+          "68 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "7p0dsfn1GXg",
+          "title": "Fine Linen Cloth - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=7p0dsfn1GXg",
+          "durationSeconds": 69,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1350/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a127",
+      "englishTitle": "Fish",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a127/720p.mp4",
+        "durationLabels": [
+          "85 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a127/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a129",
+      "englishTitle": "Fish Scales",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a129/720p.mp4",
+        "durationLabels": [
+          "72 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "quhcOe_y3PU",
+          "title": "Fish Scales - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=quhcOe_y3PU",
+          "durationSeconds": 73,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a129/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a19",
+      "englishTitle": "Fishing Net",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a19/720p.mp4",
+        "durationLabels": [
+          "82 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "2GgozdAEO6I",
+          "title": "Fishing Net - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=2GgozdAEO6I",
+          "durationSeconds": 83,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a19/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a3",
+      "englishTitle": "Four Soils",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a3/720p.mp4",
+        "durationLabels": [
+          "89 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "Z930PlbqzNI",
+          "title": "Four Soils - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=Z930PlbqzNI",
+          "durationSeconds": 90,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a3/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a30",
+      "englishTitle": "Basket as a Bushel",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a30/720p.mp4",
+        "durationLabels": [
+          "77 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a30/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a1253",
+      "englishTitle": "Basket for Provisions",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1253/720p.mp4",
+        "durationLabels": [
+          "88 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1253/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a135",
+      "englishTitle": "Belt",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a135/720p.mp4",
+        "durationLabels": [
+          "71 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "3VvcUF7IHyU",
+          "title": "Belt - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=3VvcUF7IHyU",
+          "durationSeconds": 72,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a135/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a39",
+      "englishTitle": "Bitter Herbs",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a39/720p.mp4",
+        "durationLabels": [
+          "71 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "8ZFbuFVmiEo",
+          "title": "Bitter Herbs - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=8ZFbuFVmiEo",
+          "durationSeconds": 72,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a39/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a188",
+      "englishTitle": "Bow and Arrows",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a188/720p.mp4",
+        "durationLabels": [
+          "107 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "OH9_Twn7wsg",
+          "title": "Bow and Arrow - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=OH9_Twn7wsg",
+          "durationSeconds": 108,
+          "match": "fuzzy-title-candidate",
+          "similarity": 0.963,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a188/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a22",
+      "englishTitle": "Oil Lamp",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a22/720p.mp4",
+        "durationLabels": [
+          "75 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "Vv7vrfAnvXY",
+          "title": "Oil Lamp - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=Vv7vrfAnvXY",
+          "durationSeconds": 76,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a22/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a5",
+      "englishTitle": "Olive and Palm Branches",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a5/720p.mp4",
+        "durationLabels": [
+          "68 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a5/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a44",
+      "englishTitle": "Olive Tree",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a44/720p.mp4",
+        "durationLabels": [
+          "92 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "Dm8CISs-kws",
+          "title": "Olive tree - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=Dm8CISs-kws",
+          "durationSeconds": 93,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a44/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a139",
+      "englishTitle": "Sackcloth",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a139/720p.mp4",
+        "durationLabels": [
+          "70 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a139/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a169",
+      "englishTitle": "Sacrificial Animals",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a169/720p.mp4",
+        "durationLabels": [
+          "91 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a169/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a184",
+      "englishTitle": "Sandals",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a184/720p.mp4",
+        "durationLabels": [
+          "56 seconds"
+        ],
+        "identityStatus": "accepted-source-ledger",
+        "sha256": "6e792600f8e6befa70a81f19f70358b0b9dae7f2f791325e0b4103335425fa4f",
+        "bytes": 18665321,
+        "width": 1280,
+        "height": 720,
+        "duration": 56.453
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "Hu5M8Yal6ak",
+          "title": "Sandals",
+          "url": "https://www.youtube.com/watch?v=Hu5M8Yal6ak",
+          "match": "prior-public-title-discovery",
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a184/720p.mp4",
+        "status": "approved-source-track-candidate; separate-cut-sync-required",
+        "youtubeMusicAllowed": false,
+        "sourceSha256": "6e792600f8e6befa70a81f19f70358b0b9dae7f2f791325e0b4103335425fa4f",
+        "rights": {
+          "metadataPath": "eng/metadata.json",
+          "metadataSha256": "cea47724dbe681d99154df819d694d1d55cb32a58e2f00a3eac1cc87ff300071",
+          "holder": "Word Collective",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/legalcode.en"
+        },
+        "sourceReview": "https://github.com/klappy/fia-app-cookbook/blob/56979f7463879b01ccdde18f6a36102d779c9680/evidence/2026-10-05-video-source-review-a184.json"
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a11",
+      "englishTitle": "Sea of Galilee",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a11/720p.mp4",
+        "durationLabels": [
+          "114 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "DFsPA7i6ZrU",
+          "title": "Sea of Galilee - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=DFsPA7i6ZrU",
+          "durationSeconds": 115,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a11/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a185",
+      "englishTitle": "Sickle",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a185/720p.mp4",
+        "durationLabels": [
+          "68 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a185/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a31",
+      "englishTitle": "Sleeping Mat",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a31/720p.mp4",
+        "durationLabels": [
+          "59 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "kjwz-42E61E",
+          "title": "Sleeping Mat - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=kjwz-42E61E",
+          "durationSeconds": 60,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a31/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a1262",
+      "englishTitle": "Snow",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1262/720p.mp4",
+        "durationLabels": [
+          "79 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1262/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a1381",
+      "englishTitle": "Sponge with Wine on a Stick",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1381/720p.mp4",
+        "durationLabels": [
+          "73 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1381/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a166",
+      "englishTitle": "Staff",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a166/720p.mp4",
+        "durationLabels": [
+          "53 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "kSra4SFTvL8",
+          "title": "Staff - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=kSra4SFTvL8",
+          "durationSeconds": 54,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a166/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a113",
+      "englishTitle": "Stew",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a113/720p.mp4",
+        "durationLabels": [
+          "72 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "9UnZcP8Vdco",
+          "title": "Stew - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=9UnZcP8Vdco",
+          "durationSeconds": 73,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a113/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a170",
+      "englishTitle": "Stick",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a170/720p.mp4",
+        "durationLabels": [
+          "70 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "FrCP10Ed1_U",
+          "title": "Stick - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=FrCP10Ed1_U",
+          "durationSeconds": 71,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a170/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a34",
+      "englishTitle": "Stone Wall Around a Vineyard",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a34/720p.mp4",
+        "durationLabels": [
+          "71 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a34/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a186",
+      "englishTitle": "Synagogue",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a186/720p.mp4",
+        "durationLabels": [
+          "88 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "R9uk6XFFVhM",
+          "title": "Synagogue - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=R9uk6XFFVhM",
+          "durationSeconds": 89,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a186/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a1444",
+      "englishTitle": "Hail Falling",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1444/720p.mp4",
+        "durationLabels": [
+          "12 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1444/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a2218",
+      "englishTitle": "Hammer and Tent Pegs",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2218/720p.mp4",
+        "durationLabels": [
+          "0 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2218/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a2219",
+      "englishTitle": "Hammer and Tent Pegs",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2219/720p.mp4",
+        "durationLabels": [
+          "0 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2219/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a2220",
+      "englishTitle": "Hammer and Tent Pegs",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2220/720p.mp4",
+        "durationLabels": [
+          "0 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2220/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a145",
+      "englishTitle": "House in the Time of Jesus",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a145/720p.mp4",
+        "durationLabels": [
+          "87 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a145/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a37",
+      "englishTitle": "Garden of Gethsemane",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a37/720p.mp4",
+        "durationLabels": [
+          "108 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "T3JcEY2JeEA",
+          "title": "Garden of Gethsemane - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=T3JcEY2JeEA",
+          "durationSeconds": 109,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a37/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a35",
+      "englishTitle": "Garden Tomb",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a35/720p.mp4",
+        "durationLabels": [
+          "84 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "RPYI7XiQjqs",
+          "title": "Garden Tomb - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=RPYI7XiQjqs",
+          "durationSeconds": 85,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a35/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a1352",
+      "englishTitle": "Goat Skin",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1352/720p.mp4",
+        "durationLabels": [
+          "81 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1352/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a183",
+      "englishTitle": "Adult and Kid Goat",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a183/720p.mp4",
+        "durationLabels": [
+          "67 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a183/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a1269",
+      "englishTitle": "Adult Donkey",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1269/720p.mp4",
+        "durationLabels": [
+          "89 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1269/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a41",
+      "englishTitle": "Alabaster Jar",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a41/720p.mp4",
+        "durationLabels": [
+          "73 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "XVX54Wx1bOI",
+          "title": "Alabaster Jar - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=XVX54Wx1bOI",
+          "durationSeconds": 74,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a41/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a177",
+      "englishTitle": "Ashes",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a177/720p.mp4",
+        "durationLabels": [
+          "74 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "ZV-_2bK0A7w",
+          "title": "Ashes - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=ZV-_2bK0A7w",
+          "durationSeconds": 75,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a177/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a182",
+      "englishTitle": "Axe",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a182/720p.mp4",
+        "durationLabels": [
+          "69 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "FT7WCqeIlyc",
+          "title": "Axe - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=FT7WCqeIlyc",
+          "durationSeconds": 70,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a182/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a187",
+      "englishTitle": "Reed Plant",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a187/720p.mp4",
+        "durationLabels": [
+          "82 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a187/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a1388",
+      "englishTitle": "Rooster Crowing",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1388/720p.mp4",
+        "durationLabels": [
+          "5 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1388/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a175",
+      "englishTitle": "Pearls",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a175/720p.mp4",
+        "durationLabels": [
+          "75 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "dCPwMro9eAY",
+          "title": "Pearls - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=dCPwMro9eAY",
+          "durationSeconds": 76,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a175/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a1264",
+      "englishTitle": "Pine Trees",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1264/720p.mp4",
+        "durationLabels": [
+          "91 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1264/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a2295",
+      "englishTitle": "Pine Trees",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2295/720p.mp4",
+        "durationLabels": [
+          "16 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2295/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a2296",
+      "englishTitle": "Pine Trees",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2296/720p.mp4",
+        "durationLabels": [
+          "11 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2296/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a2297",
+      "englishTitle": "Pine Trees",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2297/720p.mp4",
+        "durationLabels": [
+          "0 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2297/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a2298",
+      "englishTitle": "Pine Trees",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2298/720p.mp4",
+        "durationLabels": [
+          "67 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2298/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a180",
+      "englishTitle": "Platter",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a180/720p.mp4",
+        "durationLabels": [
+          "72 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "EZq0smEYoH0",
+          "title": "Platter - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=EZq0smEYoH0",
+          "durationSeconds": 73,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a180/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a1356",
+      "englishTitle": "Purple Robe",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1356/720p.mp4",
+        "durationLabels": [
+          "89 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1356/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a1351",
+      "englishTitle": "Purse",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1351/720p.mp4",
+        "durationLabels": [
+          "71 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1351/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a2447",
+      "englishTitle": "Yoke",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2447/720p.mp4",
+        "durationLabels": [
+          "10 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2447/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a36",
+      "englishTitle": "Watchtower for a Vineyard",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a36/720p.mp4",
+        "durationLabels": [
+          "97 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a36/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a1",
+      "englishTitle": "Wheat Ready For Harvest",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1/720p.mp4",
+        "durationLabels": [
+          "79 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "tVbP7wXRppU",
+          "title": "Wheat Ready For Harvest - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=tVbP7wXRppU",
+          "durationSeconds": 80,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a2",
+      "englishTitle": "Wheat with Heads of Grain",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2/720p.mp4",
+        "durationLabels": [
+          "131 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "j7_IiwIwRb0",
+          "title": "Wheat with heads of Grain - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=j7_IiwIwRb0",
+          "durationSeconds": 132,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a131",
+      "englishTitle": "White Robe",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a131/720p.mp4",
+        "durationLabels": [
+          "76 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "0DDFa0IVHEs",
+          "title": "White Robe - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=0DDFa0IVHEs",
+          "durationSeconds": 77,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a131/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a10",
+      "englishTitle": "Wilderness or Desert",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a10/720p.mp4",
+        "durationLabels": [
+          "55 seconds"
+        ],
+        "identityStatus": "accepted-source-ledger",
+        "sha256": "a8bbc6a9cb9a603f4cd61217f066ead1bbcd4b72ce2fe27652747f22a3713254",
+        "bytes": 11088986,
+        "width": 1280,
+        "height": 720,
+        "duration": 55.857
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "Bb2E1UC1tlo",
+          "title": "Wilderness or Desert",
+          "url": "https://www.youtube.com/watch?v=Bb2E1UC1tlo",
+          "match": "prior-public-title-discovery",
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a10/720p.mp4",
+        "status": "approved-source-track-candidate; separate-cut-sync-required",
+        "youtubeMusicAllowed": false,
+        "sourceSha256": "a8bbc6a9cb9a603f4cd61217f066ead1bbcd4b72ce2fe27652747f22a3713254",
+        "rights": {
+          "metadataPath": "eng/metadata.json",
+          "metadataSha256": "cea47724dbe681d99154df819d694d1d55cb32a58e2f00a3eac1cc87ff300071",
+          "holder": "Word Collective",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/legalcode.en"
+        },
+        "sourceReview": "https://github.com/klappy/fia-app-cookbook/blob/56979f7463879b01ccdde18f6a36102d779c9680/evidence/2026-10-05-video-source-review-a10.json"
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a2376",
+      "englishTitle": "Winepress",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2376/720p.mp4",
+        "durationLabels": [
+          "0 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2376/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a2377",
+      "englishTitle": "Winepress",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2377/720p.mp4",
+        "durationLabels": [
+          "0 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2377/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a2378",
+      "englishTitle": "Winepress",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2378/720p.mp4",
+        "durationLabels": [
+          "0 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2378/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a2379",
+      "englishTitle": "Winepress",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2379/720p.mp4",
+        "durationLabels": [
+          "96 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2379/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a6",
+      "englishTitle": "Wineskins",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a6/720p.mp4",
+        "durationLabels": [
+          "59 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "XCAKOwyZG_k",
+          "title": "Wineskins - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=XCAKOwyZG_k",
+          "durationSeconds": 60,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a6/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a24",
+      "englishTitle": "Winnowing Fork",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a24/720p.mp4",
+        "durationLabels": [
+          "75 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "tkSaJRapm2E",
+          "title": "Video Bible Dictionary - Winnowing Fork",
+          "url": "https://www.youtube.com/watch?v=tkSaJRapm2E",
+          "durationSeconds": 76,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a24/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    },
+    {
+      "assetId": "a2119",
+      "englishTitle": "Woman with Head and Face Covered",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2119/720p.mp4",
+        "durationLabels": [
+          "0 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2119/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "unmatched"
+    },
+    {
+      "assetId": "a118",
+      "englishTitle": "Writing Tablet",
+      "source": {
+        "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a118/720p.mp4",
+        "durationLabels": [
+          "72 seconds"
+        ],
+        "identityStatus": "metadata-only"
+      },
+      "youtubeCandidates": [
+        {
+          "videoId": "SB3YxLIQVYY",
+          "title": "Writing tablet - The Video Bible Dictionary",
+          "url": "https://www.youtube.com/watch?v=SB3YxLIQVYY",
+          "durationSeconds": 73,
+          "match": "normalized-title-exact",
+          "similarity": 1.0,
+          "fourKVerified": false,
+          "alignmentVerified": false
+        }
+      ],
+      "approvedAudioFallback": {
+        "candidateSource": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a118/720p.mp4",
+        "status": "not-acquired-or-reviewed-for-audio-reuse",
+        "youtubeMusicAllowed": false
+      },
+      "mappingStatus": "candidate-only"
+    }
+  ],
+  "playlistMetadataSha256": "aaf1549a285de5b8f6a7b4b5d7b9104ccc7ca7283fb9551d364082188800c5d5"
+}
