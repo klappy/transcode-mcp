@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {voiceBudget,args,verifyVideo} from './policy.mjs';import {resolveRecipe} from '../../container/recipes.mjs';
+test('Provisional proportional arithmetic only',()=>{assert.deepEqual([200000,337500,450000,675000,900000].map(voiceBudget),[8000,12000,16000,24000,32000]);});
+test('Exactly existing medium audio and video copy',()=>{const a=args('b','s','o');assert.deepEqual(a.slice(14,-3),resolveRecipe('opus','voice','medium').args);assert.equal(a.filter(x=>x==='-i').length,2);assert.ok(!a.includes('-shortest'));assert.ok(!a.includes('-vf'));});
+test('Video timeline or payload alteration rejected',()=>{verifyVideo({sha:'a'},{sha:'a'},[{pts:'1'}],[{pts:'1'}]);assert.throws(()=>verifyVideo({sha:'a'},{sha:'b'},[],[]));assert.throws(()=>verifyVideo({}, {},[{pts:'1'}],[{pts:'2'}]));});
