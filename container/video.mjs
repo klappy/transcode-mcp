@@ -58,7 +58,8 @@ export function validateOutput(source, result) {
 }
 async function probe(path, signal) { return JSON.parse((await runBounded('/usr/bin/ffprobe', ['-v', 'error', '-show_streams', '-show_format', '-of', 'json', path], { signal })).toString()); }
 export async function handleVideo(req, res) {
-    if (req.url === '/video-info' && req.method === 'GET') {
+    if (req.url === '/video-info') {
+        if(req.method !== 'GET'){res.writeHead(405).end('GET only');return true;}
         try {
             res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(await encoderIdentity()));
         }
