@@ -206,7 +206,7 @@ async function resolveAllowedUrl(raw, maxHops = 8) {
 }
 
 const server = http.createServer(async (req, res) => {
-  if(req.url === "/video-info" || req.url === "/video-transcode"){await handleVideo(req,res);return;}
+  if(req.url === "/video-info" || req.url.startsWith("/video-info?") || req.url === "/video-transcode"){await handleVideo(req,res);return;}
   if (req.method !== "POST") {
     res.writeHead(405, { "Content-Type": "text/plain" }).end("POST only");
     return;
