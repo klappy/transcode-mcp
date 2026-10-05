@@ -26,8 +26,9 @@ because the team re-derived all of it the hard way across many failed builds.
    (preview) lane shares the env worker's bucket with its live version, prod and
    staging keep their preview lanes OFF. Only the development tier shares one bucket
    among its branch versions (last-build-wins is acceptable there).
-4. **`wrangler versions upload` cannot carry a NEW migration.** Preview/version
-   uploads only work when the DO class + migration already exist on the worker.
+4. **Version URLs do not support Workers implementing Durable Objects or
+   Containers.** An uploaded version is not a reachable preview for this service.
+   No PR deployment gate may assume such an alias exists.
 5. **Prod and staging are single, stable workers** on their own branch / class /
    bucket. They never race and never share state with anything.
 
@@ -41,17 +42,9 @@ worker). Three DO classes, three buckets — the irreducible per-tier difference
 | production | `production` | `transcode-mcp-production` | `AudioContainerProduction` | `transcode-mcp-audio-production` | `wrangler deploy --env production` |
 | staging | `staging` | `transcode-mcp-staging` | `AudioContainerStaging` | `transcode-mcp-audio-staging` | `wrangler deploy --env staging` |
 | development | `main` | `transcode-mcp-development` | `AudioContainerDevelopment` | `transcode-mcp-audio-development` | `wrangler deploy --env development` |
-| PR preview | any PR branch | (a VERSION of `transcode-mcp-development`) | shared `AudioContainerDevelopment` | shared development bucket | `wrangler versions upload --env development` |
 
-- **Development is the single shared preview backend.** Every PR branch is a *version* of
-  the one preview worker, with its own stable alias
-  `<branch>-transcode-mcp-development.<subdomain>.workers.dev`. All previews share the one
-  preview container/DO/bucket. **Last-build-wins on shared state; each version still
-  previews its own code.** Code-only PRs are effectively parallel-safe. A PR that
-  changes the DO shape or container image needs a full development deployment — see below.
-- Each DO class is a trivial subclass in `src/worker.ts`:
-  `AudioContainerProduction`, `AudioContainerStaging`, `AudioContainerDevelopment`. The
-  binding NAME stays `AUDIO_CONTAINER` in every env; only the class differs.
+Each tier uses its matching `AudioContainerProduction`, `AudioContainerStaging`
+or `AudioContainerDevelopment` class, with binding name `AUDIO_CONTAINER`.
 
 ## Workers Builds project settings (the three projects)
 
@@ -71,31 +64,52 @@ Promotion is development (`main`) → staging → production. The top-level
 target. Do not create replacement stacks. Existing tier classes and buckets are
 already provisioned.
 
-`preview_urls = true` is explicit only under `[env.development]`. Wrangler now
-requires this opt-in to give uploaded versions a reachable URL. Dashboard
-`previews_enabled: true` alone did not make version a4040938 reachable. The
-initial bare versions-upload command selected legacy `AudioContainer` and failed
-with API10061; adding the development environment fixed binding selection.
+## Acceptance sequence and current platform constraint
 
-Container changes are not deployed by `versions upload`. A branch preview may
-exercise its new Worker code against the existing development container. Actual
-new container acceptance therefore requires the main development deployment and
-its source/output proof before staging promotion; never call a preview Worker
-success proof of the new container image.
+Cloudflare's [Version URLs documentation](https://developers.cloudflare.com/workers/versions-and-deployments/version-urls/)
+explicitly excludes Workers implementing Durable Objects, including Containers.
+The observed versions a4040938 and f01b8c33 both had `has_preview: false`; the
+second used explicit preview opt-in. Their upload succeeded but the alias stayed
+404. This is not a passing preview test. The earlier API10061 binding failure was
+separately corrected by targeting `--env development` in the existing trigger.
+
+PR CI requires typecheck/unit checks and, for video implementation paths, the
+actual Linux Docker proof. It does not poll an impossible preview alias. After
+independent source/container acceptance, merge to `main` for the existing Workers
+Builds development deployment. Before any staging promotion, the release owner:
+
+1. Reads the connected development build and requires success for the exact
+   merged Git SHA and development trigger. Records build UUID and Worker version.
+2. Runs both existing smoke scripts against
+   `https://transcode-mcp-development.klappy.workers.dev`:
+   `WORKER_BASE_URL=<development-url> bun run smoke-test.ts` and
+   `bun smoke-mcp.ts <development-url>`.
+3. Proves the changed runtime on that deployment. Video requires real MISS then
+   verified HIT/ranges/HEAD, source-output identity and browser playback/seek.
+   Docker-only or mock-R2 checks cannot satisfy the Worker/container/R2 boundary.
+4. Obtains independent exact evidence acceptance before promoting staging, then
+   repeats deployment identity and runtime gates before production.
+
+If the development build, smoke or changed-runtime proof fails, staging stays
+unchanged. Preserve failure receipts and repair through the same main gate.
+No direct deploy, GitHub Actions deployment, substitute service or new stack.
+Container changes only take effect on a full Workers Builds deploy; an uploaded
+Worker version cannot prove a new container image.
 
 ## Maintenance rules
 
 - **Bindings are non-inheritable in wrangler environments.** Any binding added to
   any tier MUST be mirrored into `[env.production]`, `[env.staging]` and `[env.development]`.
-- **Adding/changing a DO migration** changes the development preview workflow: PR branches
-  with a *new* migration cannot `versions upload`. To preview such a branch, push
-  merge the reviewed candidate through the normal `main` gate for a full
-  development deploy before staging promotion. This is the accepted edge case, not a bug.
+- **Adding/changing a DO migration or container image** requires the full reviewed
+  development deployment and the acceptance sequence above.
 - **Never point `--env development` or `--env staging` at the prod project.** Workers Builds
   overrides the config worker name to the project's worker; running the wrong env
   command in the prod project retargets prod.
 
 ## Failure modes seen (symptom → cause → fix)
+
+- Preview alias stays404 with successful version upload → this Container Worker
+  cannot have Version URLs → use the exact development deployment gate above.
 
 - `Failed to match Worker name ... expected transcode-mcp. Overriding` → the
   command ran in the prod-bound Workers Builds project → run it in the project
