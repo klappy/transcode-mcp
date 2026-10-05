@@ -16,7 +16,7 @@ Retain approved existing narration when the YouTube soundtrack includes music we
 
 ## Inventory captured today
 
-The [93-row source map](2026-10-05-fia-video-source-map.json) preserves every current catalog ID. The playlist returned 68 entries: 53 catalog rows have candidates (43 exact normalized titles, eight fuzzy titles, two earlier web candidates); 40 remain unmatched. Of the 53, only Jordan is verified; 52 are candidates awaiting qualification. Candidate status never authorizes source replacement. The map pins upstream metadata revision and catalog checksum.
+The [93-row source map](2026-10-05-fia-video-source-map.json) preserves every current catalog ID. The playlist returned 68 entries: 51 catalog rows have candidates (46 exact normalized titles, three fuzzy titles, two earlier web candidates); 42 remain unmatched. Of the 51, only Jordan is verified; 50 are candidates awaiting qualification. Manual candidate review rejected a false Purse-to-House match; title similarity is not sufficient evidence. Candidate status never authorizes source replacement. The map pins upstream metadata revision and catalog checksum.
 
 ## Source mapping acceptance
 
