@@ -1,5 +1,5 @@
 import {test,expect,spyOn} from 'bun:test';
-import {VideoOwner,VideoBusyError,videoSlot,videoContract,handleVideoProxy} from './video';
+import {VideoOwner,VideoBusyError,videoSlot,videoContract,selectVideoContract,videoKey,handleVideoProxy} from './video';
 (globalThis as any).FixedLengthStream=class extends TransformStream{constructor(_n:number){super();}};
 const deferred=<T>()=>{let resolve!:(v:T)=>void;const promise=new Promise<T>(r=>resolve=r);return {promise,resolve};};
 test('admission precedes async work; joins share one owner and other keys are bounded busy',async()=>{
@@ -38,17 +38,15 @@ test('disconnected consumer cannot stop verified publication; joiners and later 
  const hit=await handleVideoProxy(new Request('https://x'),bucket,instance,videoContract.source.url,{},owner);expect(hit.headers.get('X-Transcode-Cache')).toBe('HIT');expect(new Uint8Array(await hit.arrayBuffer())).toEqual(bytes);expect(transforms).toBe(1);expect([...data.keys()].some(k=>k.startsWith('video-pending/'))).toBe(false);
 });
 
-test('stalled initial storage bounds consumer wait but keeps slot until late read settles; no encode follows',async()=>{
- const read=deferred<any>(),retained:Promise<unknown>[]=[],events:any[]=[];let encodes=0;
- const owner=new VideoOwner(p=>retained.push(p),15,e=>events.push(e));
+test('stalled read-only lookup times out without occupying owner or starting a late encode',async()=>{
+ const read=deferred<any>(),retained:Promise<unknown>[]=[];let encodes=0;
+ const owner=new VideoOwner(p=>retained.push(p),15,()=>{});
  const bucket={head:()=>read.promise} as unknown as R2Bucket;
  const instance=async()=>({fetch:async(req:Request)=>{if(new URL(req.url).pathname==='/video-info')return Response.json({revision:'a'.repeat(64)});encodes++;throw Error('late encode');}});
  const response=await handleVideoProxy(new Request('https://x'),bucket,instance,videoContract.source.url,{},owner);
- expect(response.status).toBe(504);
- await expect(owner.run('other',async()=>1)).rejects.toBeInstanceOf(VideoBusyError);
- expect((await handleVideoProxy(new Request('https://x'),bucket,instance,videoContract.source.url,{},owner)).status).toBe(504);
- read.resolve(null);await retained[0];expect(encodes).toBe(0);expect(events).toEqual([{event:'video-owner-failed',deadlineExceeded:true}]);
- expect(await owner.run('other',async()=>2)).toBe(2);
+ expect(response.status).toBe(504);expect(retained.length).toBe(0);
+ expect(await owner.run('other',async()=>1)).toBe(1);
+ read.resolve(null);await new Promise(r=>setTimeout(r,0));expect(encodes).toBe(0);
 });
 
 test('verified PUT issued before deadline can seed cache later; owner remains occupied through cleanup',async()=>{
@@ -89,4 +87,38 @@ test('final consumer read uses remaining original deadline and discards a late b
  // Publication owner already settled. Independent read cannot block new work.
  expect(await owner.run('other',async()=>1)).toBe(1);
  read.resolve({body:new ReadableStream({cancel(){discarded++;}})});await Promise.resolve();await Promise.resolve();expect(discarded).toBe(1);
+});
+
+
+test('concurrent cached presets sharing a slot bypass encode admission and return independent ranges',async()=>{
+ const revision='a'.repeat(64), sizes=['small','medium','large'];
+ expect(await videoSlot(videoContract.source.url,5,'small')).toBe(await videoSlot(videoContract.source.url,5,'medium'));
+ const objects=new Map<string,any>();
+ for(const size of sizes){const c=selectVideoContract(videoContract.source.url,size)!;objects.set(await videoKey(revision,c),{size:4,customMetadata:{sourceSha256:c.source.sha256,sourceUrl:c.source.url,encoderRevision:revision,recipe:c.recipe,bytes:'4',sha256:'b'.repeat(64)}});}
+ const gate=deferred<void>();let heads=0,transforms=0,admissions=0;
+ const bucket={head:async(key:string)=>{if(++heads===3)gate.resolve();await gate.promise;return objects.get(key);},get:async()=>({body:new Response(new Uint8Array([2,3])).body})}as unknown as R2Bucket;
+ const owner=new VideoOwner(()=>{admissions++;});
+ const instance=async()=>({fetch:async(req:Request)=>{if(new URL(req.url).pathname!='/video-info'){transforms++;throw Error('No encode');}return Response.json({revision});}});
+ const replies=await Promise.all(sizes.map(size=>handleVideoProxy(new Request('https://x',{headers:{Range:'bytes=1-2'}}),bucket,instance,videoContract.source.url,{size},owner)));
+ for(const r of replies){expect(r.status).toBe(206);expect(r.headers.get('X-Transcode-Cache')).toBe('HIT');expect(r.headers.get('ETag')).toBe('"'+'b'.repeat(64)+'"');expect(new Uint8Array(await r.arrayBuffer())).toEqual(new Uint8Array([2,3]));}
+ expect(transforms).toBe(0);expect(admissions).toBe(0);
+});
+
+test('cached delivery bypasses an occupied different cold owner but rejects corrupt metadata',async()=>{
+ const gate=deferred<void>();const owner=new VideoOwner(()=>{});const cold=owner.run('cold-other',()=>gate.promise);
+ const revision='a'.repeat(64),meta={sourceSha256:videoContract.source.sha256,sourceUrl:videoContract.source.url,encoderRevision:revision,recipe:videoContract.recipe,bytes:'2',sha256:'b'.repeat(64)};
+ const bucket={head:async()=>({size:2,customMetadata:meta}),get:async()=>({body:new Response(new Uint8Array([1,2])).body})}as unknown as R2Bucket;
+ const instance=async()=>({fetch:async(req:Request)=>{expect(new URL(req.url).pathname).toBe('/video-info');return Response.json({revision});}});
+ const hit=await handleVideoProxy(new Request('https://x'),bucket,instance,videoContract.source.url,{},owner);expect(hit.status).toBe(200);await hit.body!.cancel();
+ meta.encoderRevision='c'.repeat(64);expect((await handleVideoProxy(new Request('https://x'),bucket,instance,videoContract.source.url,{},owner)).status).toBe(502);
+ gate.resolve();await cold;
+});
+
+test('miss rechecks after admission and uses intervening publication without duplicate encode',async()=>{
+ const revision='a'.repeat(64);let reads=0,transforms=0,admissions=0;
+ const object={size:2,customMetadata:{sourceSha256:videoContract.source.sha256,sourceUrl:videoContract.source.url,encoderRevision:revision,recipe:videoContract.recipe,bytes:'2',sha256:'b'.repeat(64)}};
+ const bucket={head:async()=>++reads===1?null:object,get:async()=>({body:new Response(new Uint8Array([1,2])).body})}as unknown as R2Bucket;
+ const instance=async()=>({fetch:async(req:Request)=>{if(new URL(req.url).pathname!='/video-info')transforms++;return Response.json({revision});}});
+ const owner=new VideoOwner(()=>{admissions++;});const r=await handleVideoProxy(new Request('https://x'),bucket,instance,videoContract.source.url,{},owner);
+ expect(r.status).toBe(200);expect(r.headers.get('X-Transcode-Cache')).toBe('HIT');await r.body!.cancel();expect(reads).toBe(2);expect(transforms).toBe(0);expect(admissions).toBe(1);
 });

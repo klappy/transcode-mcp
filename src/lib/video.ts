@@ -50,23 +50,28 @@ export class VideoOwner {
     constructor(private retain: (promise: Promise<unknown>) => void,
         readonly deadlineMs = 600_000,
         private report: (event: {event:string; deadlineExceeded:boolean}) => void = event => console.error(JSON.stringify(event))) {}
-    run<T>(key: string, task: (signal: AbortSignal) => Promise<T>): Promise<T> {
+    run<T>(key: string, task: (signal: AbortSignal) => Promise<T>, budgetMs = this.deadlineMs, deadlineSignal?: AbortSignal): Promise<T> {
         if (this.active) {
             if (this.active.key !== key) return Promise.reject(new VideoBusyError('Video capacity busy'));
             return this.active.consumer as Promise<T>;
         }
+        if (budgetMs <= 0) return Promise.reject(new VideoDeadlineError('Video admission deadline'));
         const controller = new AbortController();
         let rejectDeadline!: (error: Error) => void;
         const deadline = new Promise<never>((_, reject) => { rejectDeadline = reject; });
-        const timer = setTimeout(() => {
+        const expire = () => {
             const error = new VideoDeadlineError('Video execution deadline');
             controller.abort(error);
             rejectDeadline(error);
-        }, this.deadlineMs);
+        };
+        const timer = setTimeout(expire, Math.min(this.deadlineMs, budgetMs));
+        deadlineSignal?.addEventListener('abort', expire, {once:true});
+        if (deadlineSignal?.aborted) expire();
         const owner = { key, consumer: undefined as unknown as Promise<T> };
         // The settlement promise, not the consumer race, owns the slot.
         const settlement = Promise.resolve().then(() => task(controller.signal)).finally(() => {
             clearTimeout(timer);
+            deadlineSignal?.removeEventListener('abort', expire);
             if (this.active === owner) this.active = undefined;
         });
         owner.consumer = Promise.race([settlement, deadline]);
@@ -108,7 +113,7 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
     if (!bucket)
         return fail(503, 'Video storage unavailable');
     try {
-        const prepare = async (signal = AbortSignal.timeout(contract.limits.jobMs)) => {
+        const prepare = async (signal = AbortSignal.timeout(contract.limits.jobMs), cacheOnly = false) => {
         signal.throwIfAborted();
         const worker = await instance();
         signal.throwIfAborted();
@@ -124,6 +129,7 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
         let object = await bucket.head(key), cache = 'HIT';
         signal.throwIfAborted();
         if (!object) {
+            if (cacheOnly) return null;
             cache = 'MISS';
             const encoded = await worker.fetch(new Request('https://audio-container/video-transcode', { method: 'POST', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source_url: source, size: options.size||'large', recipe: contract.recipe, encoderRevision: encoder.revision }) }));
             if (encoded.status === 503)
@@ -177,7 +183,31 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
             return fail(502, 'Video cache metadata invalid');
         return { object, key, cache };
         };
-        const prepared = await (owner ? owner.run(JSON.stringify(contract), prepare) : prepare());
+        // Read-only lookup must not compete for the retained encode slot. R2 cannot
+        // be cancelled; abort plus the race prevents a late lookup starting work.
+        const lookupController = new AbortController();
+        const lookupBudget = Math.min(owner?.deadlineMs ?? contract.limits.jobMs, contract.limits.jobMs) - (Date.now() - consumerStarted);
+        if (lookupBudget <= 0) throw new VideoDeadlineError('Video lookup deadline');
+        let lookupTimer: ReturnType<typeof setTimeout>;
+        const timeout = new Promise<never>((_, reject) => {
+            lookupTimer = setTimeout(() => {
+                const error = new VideoDeadlineError('Video lookup deadline');
+                lookupController.abort(error); reject(error);
+            }, lookupBudget);
+        });
+        let prepared;
+        try {
+            const cached = await Promise.race([prepare(lookupController.signal, true), timeout]);
+            lookupController.signal.throwIfAborted();
+            // A miss rechecks under the original owner. The consumer deadline
+            // still covers lookup plus preparation; retained work settles separately.
+            const remaining = consumerStarted + Math.min(owner?.deadlineMs ?? contract.limits.jobMs, contract.limits.jobMs) - Date.now();
+            if (remaining <= 0) throw new VideoDeadlineError('Video admission deadline');
+            prepared = cached ?? await Promise.race([
+                owner ? owner.run(JSON.stringify(contract), prepare, remaining, lookupController.signal) : prepare(lookupController.signal), timeout
+            ]);
+        } finally { clearTimeout(lookupTimer!); }
+        if (!prepared) throw Error('Video preparation missing');
         if (prepared instanceof Response) return prepared.clone();
         const { object, key, cache } = prepared;
         let range;
