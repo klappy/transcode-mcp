@@ -1,4 +1,7 @@
 ---
+
+> Supersession: the rate tables and old-five equality assertions below describe the initial routing-only proposal. The [quality budget revision](2026-10-05-video-quality-budget-revision.md) now governs new encoding: +50% of original video budgets, with audio and 50fps unchanged. Implementation tests compare every source against the newly revised shared profile; they must not require equality to historical encoding settings. New qualification uses the revised budgets. Old showcase artifacts remain immutable and honestly labeled.
+
 title: Apply the three existing video profiles to all three approved sources
 date: 2026-10-05
 status: working
