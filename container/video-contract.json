@@ -1,0 +1,42 @@
+{
+  "recipe": "fia-video@2",
+  "source": {
+    "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
+    "sha256": "257f632552979b05716ca438ab654b7489229f34ca59c6bca22149d3b42f3718",
+    "bytes": 49851846,
+    "provenance": {
+      "publisher": "Word Collective",
+      "license": "CC BY-SA 4.0",
+      "assetId": "a13",
+      "assetVersion": "1.0.4",
+      "metadataRevision": "1c02713d022bd96a29c78f5b75455315d6d35a6e",
+      "transformation": "H.264/AAC MP4 re-encode, bounded to 1280x720"
+    }
+  },
+  "limits": {
+    "bytes": 62914560,
+    "requestBytes": 8192,
+    "sourceMs": 120000,
+    "encodeMs": 300000,
+    "jobMs": 600000,
+    "stderrBytes": 65536,
+    "passlogFileBytes": 33554432,
+    "passlogTotalBytes": 67108864
+  },
+  "encoding": {
+    "width": 1280,
+    "height": 720,
+    "fps": 50,
+    "preset": "medium",
+    "videoBps": 439024,
+    "classBps": 450000,
+    "maxrateBps": 900000,
+    "bufferBits": 1800000,
+    "keyint": 1500,
+    "minKeyint": 1,
+    "scenecut": 60,
+    "audioKbps": 96,
+    "passes": 2,
+    "qualificationRevision": "7fc5e54667fb4d7f9df16755172d6ffec8b3c52d"
+  }
+}

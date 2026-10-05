@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "status": "experimental-not-selected-for-delivery",
+  "method": "fia-video-matched-budget-A-correction@3",
+  "displayHeight": 480,
+  "audioKbps": 96,
+  "minKeyint": 1,
+  "preset": "medium",
+  "muxAllowance": 1.02,
+  "minimumBitrate": null,
+  "spatialSceneWindow": "not-mapped",
+  "limits": {
+    "benchmarkMs": 600000,
+    "candidateMs": 300000,
+    "passlogFileBytes": 33554432,
+    "passlogTotalBytes": 67108864,
+    "frameBytes": 2097152,
+    "frameCount": 36,
+    "metadataBytes": 8388608,
+    "totalBytes": 402653184
+  },
+  "recipeRevision": "84216f8711859c51f8910a18d3a8caa96451cf4e",
+  "ladder": [
+    240,
+    360,
+    480,
+    720,
+    1080
+  ],
+  "videoClassBps": 450000,
+  "encoderRequestBps": 439024,
+  "maxrateBps": 900000,
+  "bufferBits": 1800000,
+  "videoTolerance": 0.02,
+  "pairTolerance": 0.01,
+  "selectionHeadroom": 1.25,
+  "candidates": [
+    {
+      "id": "A",
+      "width": 640,
+      "height": 360,
+      "gopSeconds": 2,
+      "scenecut": 40,
+      "encoderRequestBps": 444000
+    },
+    {
+      "id": "B",
+      "width": 1280,
+      "height": 720,
+      "gopSeconds": 2,
+      "scenecut": 40
+    },
+    {
+      "id": "C",
+      "width": 1280,
+      "height": 720,
+      "gopSeconds": 30,
+      "scenecut": 60
+    }
+  ],
+  "reuse": {
+    "receiptSha256": "add833e6bb754fb1edbdf7019eebbd8fd54d50ec42aba1d5865775c665daf668",
+    "runId": 37253567874,
+    "artifactId": 11321498762,
+    "candidateIds": [
+      "B",
+      "C"
+    ]
+  }
+}

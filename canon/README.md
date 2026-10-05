@@ -40,6 +40,8 @@ This index is the human entry point into the canon. Six directories under `canon
 
 ## canon/planning/ — Dated Design Decisions
 
+**Current video precedence:** [Sovée video policy correction](planning/2026-10-04-sovee-video-policy-correction.md) supersedes the historical half-step ceiling for video and defines three separate axes. Read it before earlier video notes or the FIA baseline.
+
 | File | Status | Mode | Summary |
 | --- | --- | --- | --- |
 | `2026-05-26-url-vocabulary-and-presets.md` | working | planning | URL convention `/{media_type}/{options}/{source_url}`, image and audio option grammar, quality preset tables |

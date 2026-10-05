@@ -1,6 +1,6 @@
 ---
 title: Oddkit MCP Client Configuration
-date: 2026-05-27
+date: 2026-10-05
 status: stable
 governs: how agents connect oddkit to this repo's knowledge base
 complements:
@@ -12,6 +12,10 @@ complements:
 > Agents working on klappy/transcode-mcp should connect to the oddkit MCP server at `https://oddkit.klappy.dev/mcp` with `knowledge_base_url` set to `https://github.com/klappy/transcode-mcp`. With `knowledge_base_url` set, oddkit runs in strict mode — missing canon files fall through to the bundled governance tier rather than silently substituting from the parent canon at klappy.dev. This file is documentation; it is read by humans, not consumed as machine-readable config.
 
 ---
+
+## Restoration Status — Historical Docs Proxy Was Removed
+
+The `docs(query, audience?, depth?)` proxy described here existed at commitd7f5331 and was removed in92f8657 during the image-worker rewrite. On2026-10-05 the live transcode MCP tool list exposed only `generate_transcode_url`. Restoration is pending under [the live kitchen standard binding](../planning/2026-10-05-restore-standard-docs-tool.md); this document's code example is historical guidance, not proof the current endpoint serves docs. Keep the fixed repository/endpoint pattern and verify live retrieval before marking restored.
 
 ## Summary — Wire Agents to the Repo's Own Canon, Not the Parent's
 

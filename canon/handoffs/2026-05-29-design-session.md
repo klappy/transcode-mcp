@@ -8,6 +8,8 @@ derives_from: canon/planning/2026-05-26-url-vocabulary-and-presets.md
 
 # Design Session — Numeric Quality, Transparency Echo, Parked Video Model
 
+> **Dated precedence note:** Historical record preserved. Its carried-forward half-class interpretation is superseded for video by the operator’s 2026-10-04 [video policy correction](../planning/2026-10-04-sovee-video-policy-correction.md). Its historical parked status is not a reason to ignore the newly requested playback-selection policy; numeric selection thresholds remain unverified.
+
 > A design conversation that started from the homepage's "one URL, three
 > devices" promise and ended with three items encoded into canon: a numeric
 > override for the `q` knob, a transparency-echo response contract, and a
