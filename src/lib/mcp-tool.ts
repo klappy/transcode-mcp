@@ -3,6 +3,7 @@
 // MCP SDK or constructing a Request. The worker calls these and wraps the
 // result in the SDK's { content: [{ type, text }] } envelope.
 
+import { videoOptions, videoContract } from "./video";
 import { generateTranscodeUrl } from "./generate-transcode-url";
 
 export type Quality = "low" | "medium" | "high";
@@ -12,16 +13,16 @@ export type AudioCodec = "opus" | "aac" | "mp3";
 
 export interface ToolArgs {
   source_url: string;
-  media_type?: "image" | "audio";
+  media_type?: "image" | "audio" | "video";
   viewport?: number;
   q?: Quality;
   // f is image format when media_type=image, audio codec when media_type=audio.
   // The two vocabularies do not overlap so a single arg is unambiguous in
   // context. See canon/planning/2026-05-29-audio-worker-path.md.
-  f?: ImageFormat | AudioCodec;
+  f?: ImageFormat | AudioCodec | "mp4";
   w?: number;
   h?: number;
-  preset?: AudioPreset;
+  preset?: AudioPreset | "fia";
 }
 
 export interface ToolResponse {
@@ -29,11 +30,11 @@ export interface ToolResponse {
   full_url: string;
   embed: string;
   request: {
-    media_type: "image" | "audio";
+    media_type: "image" | "audio" | "video";
     source_url: string;
     viewport: number | null;
     q: Quality | "default";
-    f: ImageFormat | AudioCodec | "default";
+    f: ImageFormat | AudioCodec | "mp4" | "default";
   };
   guidance: string;
 }
@@ -64,7 +65,12 @@ export function buildToolResponse(args: ToolArgs, origin: string): ToolResponse 
   let proxyPath: string;
   let guidance: string;
 
-  if (mediaType === "audio") {
+  if (mediaType === "video") {
+    if(args.source_url!==videoContract.source.url || args.w!==undefined || args.h!==undefined || args.viewport!==undefined) throw Error("Video source or dimensions not supported");
+    const options=videoOptions({preset:args.preset??"fia",q:args.q??"medium",f:args.f??"mp4"});
+    proxyPath=generateTranscodeUrl({mediaType:"video",sourceUrl:args.source_url,options});
+    guidance="Approved FIA source only. H.264/AAC MP4 is encoded and verified before delivery; a cold miss may take minutes. Single byte ranges support browser seeking after cache publication. No passthrough fallback.";
+  } else if (mediaType === "audio") {
     // Emit the canonical defaults (preset=voice, q=medium, f=opus) when the
     // caller omits them so a minimal tool call still produces an option segment
     // and hits the worker's transcode path. A bare /audio/{source} URL would be
@@ -105,7 +111,9 @@ export function buildToolResponse(args: ToolArgs, origin: string): ToolResponse 
 
   const fullUrl = cleanOrigin + proxyPath;
   const embed =
-    mediaType === "audio"
+    mediaType === "video"
+      ? '<video src="' + fullUrl + '" controls preload="none"></video>'
+      : mediaType === "audio"
       ? '<audio src="' + fullUrl + '" controls></audio>'
       : '<img src="' + fullUrl + '" alt="" loading="lazy">';
 

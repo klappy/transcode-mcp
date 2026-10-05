@@ -7,6 +7,8 @@ mode: exploration
 
 # Session Journal — Media Transcoding Proxy, Exploration Session 1
 
+> **Dated precedence note:** Historical record preserved. The operator’s 2026-10-04 video correction supersedes this journal’s half-step ceiling/full-class rejection for new video work; see [current video policy](../planning/2026-10-04-sovee-video-policy-correction.md). The old text below records the earlier understanding, not current video precedence.
+
 > Exploration session that established the spine of transcode-mcp: the perceptual axes a transcoding proxy spends and starves, the half-class resolution overshoot, the per-axis perceptual leash, content-class triage, bounded two-pass VBR, the two-pass content-understanding architecture, the v1 scope (images + audio, video deferred), and the reference architecture (one thin Cloudflare Worker, one ffmpeg Container, R2 content-addressed storage, modeled on klappy/ptxprint-mcp). Also resolved the IP status (expired patent US9565430B1, public domain), the audio method (protect sample rate, spend bit budget), and the storage strategy (content hash as ground truth, ETag as fast-path). Every recipe is verify-then-adopt at planning time, not remember-and-implement.
 
 ---

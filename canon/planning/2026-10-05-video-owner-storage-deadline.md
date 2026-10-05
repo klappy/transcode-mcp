@@ -1,0 +1,15 @@
+# Video owner deadline and storage settlement clarification
+
+Private cookbook amendment to the accepted disconnect/cache ownership recipe. Scope is the existing bounded owner, not another service or a storage-cancellation mechanism.
+
+The600second execution deadline bounds each consumer's wait and stops the owner from initiating new work phases. Preserve the existing120second source-fetch and300second encode abort limits. Check the execution deadline before each new storage phase and particularly before canonical publication. Read operations that return after the deadline cannot cause a later encode or publication stage.
+
+R2 operations expose no caller cancellation/rollback guarantee. An operation issued before the deadline may settle after it. Do not claim the600second deadline guarantees completed R2 settlement or deletion, and do not free or reassign the owner slot merely because a deadline race returned a failure to a consumer. Retain the exact owner until all already-issued operations settle and required cleanup has been attempted. Other keys receive bounded busy failure during that interval; same-key consumers receive a deadline failure rather than restarting or overlapping work.
+
+If canonical PUT was issued before the deadline with fully verified bytes and exact metadata, its later successful completion is valid reusable cache, consistent with the user's request to finish accepted work after disconnect. Partial, oversized, or unverified bytes must never be canonical. If publication acknowledgement is uncertain, do not tell waiting consumers that cache is ready. A later independently verified cache lookup can establish readiness. Quarantine deletion is attempted after settlement; a failed or indefinitely stalled cleanup is a recorded limitation, not a false cleanup-success claim.
+
+Register the retained owner with DO waitUntil. The documented15minute pending-I/O eviction protection is a platform lifecycle allowance, not a hard storage-cancellation or rollback guarantee. Crashes, eviction, and permanently stalled storage remain outside an exactly-once/completion guarantee; retain this limitation explicitly. This amendment replaces the original wording that the entire encode/verification/publication/cleanup sequence necessarily completes within600seconds.
+
+Required regressions: a stalled initial R2 read produces a bounded consumer deadline failure while retaining the owner; a late read does not initiate encode/publication; a verified canonical PUT already issued before deadline may settle later and seed valid cache; no consumer receives premature success and no new owner overlaps that outstanding write; cleanup runs after settlement; exact-owner finalization cannot clear another owner. Existing corruption/hash/size tests and disconnect/join/range behavior remain mandatory. Use controlled clocks/deferred operations, not real ten-minute waits.
+
+No change to canonical identity, encoder settings, audio/image behavior, idle policy, or production readiness. No explicit cancellation endpoint is introduced.

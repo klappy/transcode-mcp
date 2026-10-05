@@ -1,6 +1,14 @@
 name: CI
 
 on:
+  workflow_dispatch:
+    inputs:
+      asset:
+        description: Reviewed source qualification target
+        required: true
+        type: choice
+        options: [a13, a184, a10]
+        default: a184
   push:
     branches: [main]
   pull_request:
@@ -33,93 +41,75 @@ jobs:
       - name: Run unit tests
         run: bun test
 
-  # Compute the per-branch Cloudflare preview URL once and share it with the
-  # smoke jobs. Per-branch previews are VERSIONS of the shared
-  # `transcode-mcp-preview` worker, created by that worker's Workers Builds
-  # project when non-production branch builds are enabled. Cloudflare aliases
-  # each branch to:
-  #   <branch-slug>-transcode-mcp-preview.<subdomain>.workers.dev   ('/' -> '-')
-  # Names that push the label past 63 chars hit CF's truncation+hash scheme,
-  # which we don't derive (rare for this repo). NOTE: this is a *preview* host,
-  # so it only exists for branches the preview project actually builds (PR
-  # branches). See canon/governance/deploy-architecture.md.
-  resolve-preview:
-    name: Resolve preview URL
+  # This Worker implements Durable Objects/Containers. Cloudflare does not
+  # generate version URLs for it, so a PR version cannot be a live smoke target.
+  # PRs retain unit/type checks (and the video container job when introduced).
+  # After Workers Builds deploys main, root verifies the exact successful build
+  # and runs smoke-test.ts plus smoke-mcp.ts on development before staging.
+
+  video-container:
+    name: Video — bounded Linux encode
     runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'pull_request'
-    outputs:
-      base_url: ${{ steps.url.outputs.base_url }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: true
+      max-parallel: 1
+      matrix:
+        asset: ${{ fromJSON(github.event_name == 'workflow_dispatch' && format('["{0}"]', inputs.asset) || '["a13","a184"]') }}
+    permissions:
+      contents: read
+      actions: read
     steps:
-      - name: Compute branch slug + URL
-        id: url
-        run: |
-          REF="${{ github.head_ref || github.ref_name }}"
-          # Cloudflare replaces '/' with '-'; leave the rest of the slug
-          # rules to CF (rare-case truncation handled by their hash scheme).
-          SLUG="${REF//\//-}"
-          BASE_URL="https://${SLUG}-transcode-mcp-preview.klappy.workers.dev"
-          echo "base_url=${BASE_URL}" >> "$GITHUB_OUTPUT"
-          echo "Branch: ${REF}"
-          echo "Preview: ${BASE_URL}"
-
-      # Cloudflare's auto-deploy runs in parallel with this workflow, so the
-      # preview may not be live yet when smoke jobs start. Wait (up to ~5 min)
-      # for the root path to return 200 before the smoke jobs assume it's up.
-      - name: Wait for preview deploy to be reachable
-        run: |
-          URL="${{ steps.url.outputs.base_url }}/"
-          echo "Polling ${URL}"
-          for i in $(seq 1 60); do
-            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")
-            if [ "$CODE" = "200" ]; then
-              echo "Preview is live (HTTP 200) after ${i} attempt(s)."
-              exit 0
-            fi
-            echo "  attempt ${i}: HTTP ${CODE} — waiting 5s"
-            sleep 5
-          done
-          echo "Preview did not become reachable in time."
-          exit 1
-
-  smoke-proxy:
-    name: Smoke — proxy (canon worked examples)
-    runs-on: ubuntu-latest
-    needs: resolve-preview
-    if: github.event_name == 'pull_request'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v4
         with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Run proxy smoke against preview
+          fetch-depth: 0
+      - name: Check video paths
+        id: paths
         env:
-          WORKER_BASE_URL: ${{ needs.resolve-preview.outputs.base_url }}
-        run: bun run smoke-test.ts
-
-  smoke-mcp:
-    name: Smoke — MCP protocol (JSON-RPC over /mcp)
-    runs-on: ubuntu-latest
-    needs: resolve-preview
-    if: github.event_name == 'pull_request'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ] && git diff --quiet "$BASE" "$HEAD" -- container src/lib/video.ts scripts/video-integration.mjs scripts/video-benchmark.mjs scripts/video-retained-source.mjs scripts/video-acquire-proof.mjs .github/workflows/ci.yml; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.paths.outputs.changed == 'true'
         with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Run MCP smoke against preview
-        run: bun smoke-mcp.ts "${{ needs.resolve-preview.outputs.base_url }}"
+          node-version: 22
+      - name: Acquire exact retained qualification artifact
+        if: steps.paths.outputs.changed == 'true' && matrix.asset == 'a13'
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 11321498762
+          run-id: 37253567874
+          github-token: ${{ github.token }}
+          path: prior-video-evidence
+          merge-multiple: true
+      - name: Prepare one verified qualification source
+        if: steps.paths.outputs.changed == 'true'
+        run: node scripts/video-acquire-proof.mjs '${{ matrix.asset }}' video-evidence prior-video-evidence
+      - name: Build actual encoder image
+        if: steps.paths.outputs.changed == 'true'
+        run: docker build -t fia-video-proof container
+      - name: Start isolated container
+        if: steps.paths.outputs.changed == 'true'
+        run: |
+          mkdir -p video-evidence
+          docker image inspect fia-video-proof > video-evidence/image.json
+          docker run -d --name fia-video-proof -e FIA_PROOF_ASSET='${{ matrix.asset }}' -p 127.0.0.1:8080:8080 -v "$PWD/video-evidence:/evidence" -v "$PWD:/proof:ro" -v "$PWD/prior-video-evidence:/prior:ro" fia-video-proof node --import /proof/scripts/video-retained-source.mjs /app/server.mjs
+      - name: Verify actual selected delivery runtime against retained source
+        if: steps.paths.outputs.changed == 'true'
+        run: node scripts/video-integration.mjs video-evidence '${{ matrix.asset }}'
+      - name: Preserve container logs and stop
+        if: always() && steps.paths.outputs.changed == 'true'
+        run: |
+          docker logs fia-video-proof > video-evidence/container.log 2>&1 || true
+          docker rm -f fia-video-proof || true
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.paths.outputs.changed == 'true'
+        with:
+          name: video-container-proof-${{ matrix.asset }}
+          path: video-evidence
+          retention-days: 7

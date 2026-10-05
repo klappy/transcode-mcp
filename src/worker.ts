@@ -1,3 +1,5 @@
+import { liveDocs, docsSchema } from "./lib/docs";
+import {handleVideoProxy, VideoOwner, videoSlot, videoOptions, selectVideoContract} from "./lib/video";
 // src/worker.ts
 // Proxy-first + lazy transcoding MCP server.
 //
@@ -17,6 +19,10 @@
 // extends it), so it stays eager.
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Container, getRandom } from "@cloudflare/containers";
+// Single source of truth for the version the MCP server reports. package.json
+// is the only place a release bump happens; a hardcoded copy here drifted
+// (0.1.0 vs 0.3.0) for a month before anyone noticed.
+import { version as PKG_VERSION } from "../package.json";
 import { z } from "zod";
 import { parseProxyPath, ProxyPathError } from "./lib/parse-proxy-path";
 import { encodeDimension, QUALITY_MAP, type Quality } from "./lib/encode-dimension";
@@ -43,12 +49,22 @@ interface Env {
   AUDIO_CONTAINER?: DurableObjectNamespace<AudioContainer>;
 }
 
-// Durable Object that fronts the audio transcode Container. It owns only
-// lifecycle (port + idle sleep); ffmpeg, the recipe table, and source fetching
+// Durable Object that fronts the transcode Container. It owns lifecycle and
+// bounded video cache publication; ffmpeg, the recipe table, and source fetching
 // all live INSIDE the container image (container/). The Worker never sees an
 // ffmpeg flag — that is the worker/container boundary
 // (canon/planning/2026-05-26-worker-container-boundary.md).
 export class AudioContainer extends Container<Env> {
+  private videoOwner = new VideoOwner(promise => this.ctx.waitUntil(promise));
+  override async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+    if (url.pathname === '/video-delivery') {
+      return handleVideoProxy(request, this.env.AUDIO_BUCKET,
+        async () => ({ fetch: (r: Request) => super.fetch(r) }),
+        url.searchParams.get('source') || '', {}, this.videoOwner);
+    }
+    return super.fetch(request);
+  }
   defaultPort = 8080; // the container HTTP server listens here
   sleepAfter = "10m"; // stop the instance after 10m idle to bound cost
 }
@@ -59,19 +75,20 @@ export class AudioContainer extends Container<Env> {
 // DURABLE_OBJECT_ALREADY_HAS_APPLICATION). Staging (wrangler.toml [env.staging])
 // binds its container + migration to this distinct class instead. Behavior is
 // identical to AudioContainer; only the class name differs so the platform sees
-// two separate applications. Branch previews bind NO container, so they need no
-// class of their own (audio falls back to passthrough on previews).
+// two separate applications. Each same-account tier (staging, development,
+// production) likewise binds its own distinct class against its own resources.
 export class AudioContainerStaging extends AudioContainer {}
 
-// Preview's container class. Same reasoning as staging — a container application is
-// keyed on the DO class name, so the shared preview worker needs its own class
-// distinct from prod and staging. Preview is the single shared preview backend:
-// every PR branch uploads a VERSION of transcode-mcp-preview (its own preview URL),
-// all sharing this one AudioContainerPreview + the preview bucket. Last-build-wins on
-// the shared DO state; code-only PRs are effectively parallel-safe (each version
-// previews its own code). A PR that changes the DO shape needs a new migration,
-// which `wrangler versions upload` rejects — the one known edge case.
-export class AudioContainerPreview extends AudioContainer {}
+// Development's container class -- the main-fed integration tier
+// (transcode-mcp-development), the lowest rung of development -> staging ->
+// production. Distinct DO class for the same account-scoped container-keying
+// reason as staging/production. The development CF project's production branch
+// is `main`, so a full `wrangler deploy --env development` runs only for main
+// and stands up this DO/container once; per-PR branch builds upload preview
+// VERSIONS that REUSE it. Last-build-wins on the shared DO state; code-only PRs
+// preview their own code. A PR that changes the DO shape needs a new migration,
+// which `wrangler versions upload` rejects -- promote that branch via staging.
+export class AudioContainerDevelopment extends AudioContainer {}
 
 // Production's container class — the additive primary prod instance
 // (transcode-mcp-production). Distinct DO class for the same account-scoped
@@ -155,13 +172,13 @@ function sourceBytesFromContentLength(headers: Headers): string | undefined {
 }
 
 function createServer(request: Request, McpServerCtor: typeof McpServer) {
-  const server = new McpServerCtor({ name: "transcode-mcp", version: "0.3.0" });
+  const server = new McpServerCtor({ name: "transcode-mcp", version: PKG_VERSION });
 
   server.tool(
     "generate_transcode_url",
     {
       source_url: z.string().url().describe("The image (or audio) URL to serve through the proxy."),
-      media_type: z.enum(["image", "audio"]).optional().describe("Defaults to image."),
+      media_type: z.enum(["image", "audio", "video"]).optional().describe("Defaults to image."),
       // Primary image input: the shortest-side display size. Stable across
       // phone rotation, which is why it's preferred over a literal width.
       viewport: z
@@ -177,7 +194,7 @@ function createServer(request: Request, McpServerCtor: typeof McpServer) {
         .optional()
         .describe("Quality preset: low=20, medium=50, high=80. With the half-class overshoot, even low looks good. Defaults to the proxy default (medium)."),
       f: z
-        .enum(["auto", "webp", "jpeg", "opus", "aac", "mp3"])
+        .enum(["auto", "webp", "jpeg", "opus", "aac", "mp3", "mp4"])
         .optional()
         .describe(
           "Output format. For images: auto|webp|jpeg (auto lets the proxy pick; webp is smallest; jpeg is universal). For audio: opus|aac|mp3 (codec selector; defaults to opus).",
@@ -185,7 +202,7 @@ function createServer(request: Request, McpServerCtor: typeof McpServer) {
       // Advanced escape hatch — raw pixel control. w wins over viewport.
       w: z.number().int().positive().optional().describe("ADVANCED: raw output width in px. Overrides viewport. Most callers should use viewport."),
       h: z.number().int().positive().optional().describe("ADVANCED: raw output height in px. Rarely needed."),
-      preset: z.enum(["voice", "music"]).optional().describe("Audio only: encoding preset."),
+      preset: z.enum(["voice", "music", "fia"]).optional().describe("Audio only: encoding preset."),
     },
     (args) => {
       // Cross-field check the per-field schema can't express: f's vocabulary
@@ -194,7 +211,7 @@ function createServer(request: Request, McpServerCtor: typeof McpServer) {
       const mediaType = args.media_type ?? "image";
       const IMAGE_F = ["auto", "webp", "jpeg"] as const;
       const AUDIO_F = ["opus", "aac", "mp3"] as const;
-      const allowed = mediaType === "audio" ? AUDIO_F : IMAGE_F;
+      const allowed = mediaType === "video" ? ["mp4"] : mediaType === "audio" ? AUDIO_F : IMAGE_F;
       if (args.f !== undefined && !(allowed as readonly string[]).includes(args.f)) {
         return {
           content: [
@@ -207,13 +224,16 @@ function createServer(request: Request, McpServerCtor: typeof McpServer) {
         };
       }
       const origin = new URL(request.url).origin;
-      const response = buildToolResponse(args, origin);
+      let response;
+      try { response = buildToolResponse(args, origin); }
+      catch(e) { return {content:[{type:"text",text:String(e)}],isError:true}; }
       return {
         content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
       };
     },
   );
 
+  server.tool("docs", docsSchema, liveDocs);
   return server;
 }
 
@@ -271,6 +291,20 @@ export default {
       return htmlResponse(ADMIN_PAGE_HTML);
     }
 
+    if (url.pathname.startsWith('/video/')) {
+      try {
+        const parsed = parseProxyPath(url.pathname, url.search);
+        if (parsed.mediaType !== 'video') return new Response('Invalid video route', {status:400});
+        videoOptions(parsed.options);
+        if (!selectVideoContract(parsed.sourceUrl)) return new Response('Video source not approved', {status:403});
+        if (!env.AUDIO_CONTAINER) return new Response('Video service unavailable', {status:503});
+        const slot = await videoSlot(parsed.sourceUrl, AUDIO_CONTAINER_INSTANCES);
+        const stub = env.AUDIO_CONTAINER.get(env.AUDIO_CONTAINER.idFromName(slot));
+        const target = new URL('https://audio-container/video-delivery');
+        target.searchParams.set('source', parsed.sourceUrl);
+        return stub.fetch(new Request(target, {method:request.method, headers:request.headers}));
+      } catch { return new Response('Invalid video request', {status:400}); }
+    }
     // Image proxy
     if (url.pathname.startsWith("/image/")) {
       return handleImageProxy(request, env, ctx);

@@ -9,6 +9,7 @@
 // (canon/planning/2026-05-26-worker-container-boundary.md).
 
 import http from "node:http";
+import {handleVideo} from "./video.mjs";
 import { spawn } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import dnsPromises from "node:dns/promises";
@@ -205,6 +206,7 @@ async function resolveAllowedUrl(raw, maxHops = 8) {
 }
 
 const server = http.createServer(async (req, res) => {
+  if(req.url === "/video-info" || req.url.startsWith("/video-info?") || req.url === "/video-transcode"){await handleVideo(req,res);return;}
   if (req.method !== "POST") {
     res.writeHead(405, { "Content-Type": "text/plain" }).end("POST only");
     return;

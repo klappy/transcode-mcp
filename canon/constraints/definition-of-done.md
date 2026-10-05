@@ -102,3 +102,9 @@ An audio recipe is done when it has:
 ## Constraints on This Document
 
 This document is subordinate to `canon/constraints/core-governance-baseline.md`. A category not listed here is a gap to be filled in this file before the change is evaluated, not a license to skip evidence. Adding a new category is itself a canon change subject to the canon-document section above.
+
+## For Video Recipes and Delivery
+
+A video adapter additionally requires an actual encode with the deployed container's ffmpeg build; verified source SHA and rights attribution; actual output codec/container, dimensions, source-preserving duration within the declared recipe tolerance, bytes and SHA; a valid-but-truncated output rejection test; independently inspected source/output frames; enforced input/output/time/process/concurrency limits; and tested cancellation/cleanup. Unsupported or failed video transforms must not be labeled optimized passthrough.
+
+Request-handling evidence includes cache MISS/HIT identity, GET/HEAD, exact single-byte-range206/416 behavior, CORS and browser advancing playback/seek. A consumer that replaces a historical low-resolution source binds the new upstream source identity explicitly rather than retaining the old source hash. Offline proof uses exactly the reviewed finalized derivative. Cold completed-object delivery is not progressive-encoding evidence; pipe-based streaming requires separate first-playable-before-EOF and backpressure/failure proof. Existing audio/image checks continue to pass.
