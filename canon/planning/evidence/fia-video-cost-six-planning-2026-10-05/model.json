@@ -165,14 +165,14 @@
       "fpsAssumption": 25,
       "videoBpsAssumption": 1481706,
       "classBpsAssumption": 1518750,
-      "audioBpsAssumption": 96000,
+      "audioBpsAssumption": 216000,
       "audioChannelsAssumption": 2,
-      "nominalMBPerMinuteBeforeMux": 11.832795,
-      "nominalMBPerMinuteWith5pctMux": 12.424434750000001,
+      "nominalMBPerMinuteBeforeMux": 12.732795,
+      "nominalMBPerMinuteWith5pctMux": 13.36943475,
       "observedBytes": null,
       "observedEncodeSeconds": null,
       "qualityScore": null,
-      "basis": "912 matches720 budget;1080 uses720 video bitrate multiplied by displayed-area ratio(1080/720)^2=2.25, an unapproved modeling assumption only",
+      "basis": "1080 planning scales both720 video658536bps andAAC96000bps by2.25; stereo retained. Explicit unapproved model, not an implemented or measured profile.",
       "computeScenarios": [
         {
           "name": "low",
@@ -207,22 +207,22 @@
     {
       "name": "low",
       "grossEncodeResourceProxyUSD": 2.0038669042128237,
-      "mixedMeasuredAndNominalOutputGB": 3.5890873277047906,
-      "grossR2MonthlyUSD": 0.05383630991557185,
+      "mixedMeasuredAndNominalOutputGB": 3.6968239982930258,
+      "grossR2MonthlyUSD": 0.055452359974395384,
       "limitations": "Encode-wall resource allocation only; startup/IO/idle/DO and billing allowances/rounding excluded. Decode penalty scenarios not observations."
     },
     {
       "name": "central",
       "grossEncodeResourceProxyUSD": 3.160295960108469,
-      "mixedMeasuredAndNominalOutputGB": 3.5890873277047906,
-      "grossR2MonthlyUSD": 0.05383630991557185,
+      "mixedMeasuredAndNominalOutputGB": 3.6968239982930258,
+      "grossR2MonthlyUSD": 0.055452359974395384,
       "limitations": "Encode-wall resource allocation only; startup/IO/idle/DO and billing allowances/rounding excluded. Decode penalty scenarios not observations."
     },
     {
       "name": "high",
       "grossEncodeResourceProxyUSD": 4.574381628830732,
-      "mixedMeasuredAndNominalOutputGB": 3.5890873277047906,
-      "grossR2MonthlyUSD": 0.05383630991557185,
+      "mixedMeasuredAndNominalOutputGB": 3.6968239982930258,
+      "grossR2MonthlyUSD": 0.055452359974395384,
       "limitations": "Encode-wall resource allocation only; startup/IO/idle/DO and billing allowances/rounding excluded. Decode penalty scenarios not observations."
     }
   ]

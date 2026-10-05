@@ -41,9 +41,9 @@ The comparison now plans for 320, 480, 540, 720, 912 and 1080 to cover phone, ta
 | Option | Evidence | Coded raster / SAR assumption | Video / audio kbps | Nominal MB/min before mux | With assumed 5% mux |
 |---|---|---|---:|---:|---:|
 | 912p | planning-only-unmeasured | 1616×912 / 304:303 | 658.536 / 96 | 5.659 | 5.942 |
-| 1080p | planning-only-not-implemented | 1920×1088 / 136:135 | 1481.706 / 96 | 11.833 | 12.424 |
+| 1080p | planning-only-not-implemented | 1920×1088 / 136:135 | 1481.706 / 216 | 12.733 | 13.370 |
 
-Both modeled options preserve 16:9 and assume 25 fps/AAC stereo.912 intentionally has the same bitrate as 720, so its nominal file size is the same; higher raster does not automatically add bytes. 1080 assumes the 720 video request multiplied by 2.25, the displayed-area ratio. This is an explicit unapproved planning assumption, not a selected production setting. The illustrative 1920×1088 raster and 136:135 SAR preserve 16:9 with 16-pixel alignment. No approved 1080 source, encoder output, browser proof or timing is claimed.
+Both modeled options preserve 16:9 and assume 25 fps/AAC stereo.912 intentionally has the same bitrate as 720, so its nominal file size is the same; higher raster does not automatically add bytes. 1080 assumes both the 720 video request and AAC bitrate multiplied by 2.25, the displayed-area ratio: 1,481,706bps video and 216,000bps stereo AAC. This keeps the planning audio allocation proportional rather than imposing an unapproved 96k cap. Existing measured audio choices and the required quality floor remain unchanged; no cross-codec quality equivalence is inferred. This is an explicit unapproved planning assumption, not a selected production setting. The illustrative 1920×1088 raster and 136:135 SAR preserve 16:9 with 16-pixel alignment. No approved 1080 source, encoder output, browser proof or timing is claimed.
 
 ### Transparent compute scenarios
 
@@ -58,8 +58,8 @@ For all 93 imputed 114.007 minutes, retaining all six:
 
 | Scenario | Gross encode-resource allocation | Mixed measured/nominal GB | Gross R2/month |
 |---|---:|---:|---:|
-| low | $2.004 | 3.589 | $0.0538 |
-| central | $3.160 | 3.589 | $0.0538 |
-| high | $4.574 | 3.589 | $0.0538 |
+| low | $2.004 | 3.697 | $0.0555 |
+| central | $3.160 | 3.697 | $0.0555 |
+| high | $4.574 | 3.697 | $0.0555 |
 
 These totals combine actual four-profile file-rate extrapolation with nominal 912/1080 sizes and explicit compute scenarios. Retain the overhead, shared-allowance, rounding, unknown-duration and English-catalog limitations above. No new encode, infrastructure or app-choice change follows from this model. [Six-option machine-readable model](evidence/fia-video-cost-six-planning-2026-10-05/model.json).
