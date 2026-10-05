@@ -1,4 +1,4 @@
-import { readFile, mkdtemp, rm, stat, open } from 'node:fs/promises';
+import { readFile, mkdtemp, rm, stat, open, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -57,6 +57,29 @@ export function validateOutput(source, result) {
     return { duration, width: o.width, height: o.height, videoCodec: o.codec_name, audioCodec: oa[0]?.codec_name || null };
 }
 async function probe(path, signal) { return JSON.parse((await runBounded('/usr/bin/ffprobe', ['-v', 'error', '-show_streams', '-show_format', '-of', 'json', path], { signal })).toString()); }
+export function deliveryPassArguments(input,output,prefix,pass){
+ const e=contract.encoding;if(![1,2].includes(pass))throw Error('Invalid pass');
+ const common=['-nostdin','-hide_banner','-y','-protocol_whitelist','file,pipe','-i',input,'-map','0:v:0','-vf',`scale=${e.width}:${e.height}:flags=lanczos`,'-c:v','libx264','-preset',e.preset,'-pix_fmt','yuv420p','-b:v',String(e.videoBps),'-maxrate',String(e.maxrateBps),'-bufsize',String(e.bufferBits),'-g',String(e.keyint),'-keyint_min',String(e.minKeyint),'-sc_threshold',String(e.scenecut),'-passlogfile',prefix];
+ return pass===1?[...common,'-pass','1','-an','-f','null','/dev/null']:[...common,'-map','0:a:0?','-pass','2','-c:a','aac','-b:a',`${e.audioKbps}k`,'-ac','2','-movflags','+faststart',output];
+}
+export async function encodeDelivery(input,output,dir,sourceProbe,signal){
+ const e=contract.encoding,v=sourceProbe.streams.find(s=>s.codec_type==='video');
+ if(v?.width!==e.width||v?.height!==e.height||v?.avg_frame_rate!=='50/1')throw Error('Unqualified source geometry/cadence');
+ const prefix=join(dir,'pass'),start=Date.now(),passes=[],statistics=[];
+ const local=AbortSignal.any([signal,AbortSignal.timeout(contract.limits.encodeMs)]);
+ try{
+  for(const pass of [1,2]){
+   const remaining=contract.limits.encodeMs-(Date.now()-start);if(remaining<=0)throw Error('Combined encode deadline');let log='';const began=Date.now();
+   await runBounded('/usr/bin/ffmpeg',deliveryPassArguments(input,output,prefix,pass),{timeout:remaining,signal:local,outputPath:pass===1?'/dev/null':output,limit:pass===1?contract.limits.passlogFileBytes:contract.limits.bytes,onStderr:b=>{log=(log+b.toString()).slice(-contract.limits.stderrBytes);}});
+   const settings=pass===1?(await readFile(prefix+'-0.log','utf8')).split('\n')[0]:log;
+   for(const token of [`bitrate=${Math.floor(e.videoBps/1000)}`,`vbv_maxrate=${e.maxrateBps/1000}`,`vbv_bufsize=${e.bufferBits/1000}`,`keyint=${e.keyint}`,`scenecut=${e.scenecut}`,pass===1?'rc=abr':'rc=2pass'])if(!settings.includes(token))throw Error('Unconfirmed encoder setting '+token);
+   let total=0;for(const name of (await readdir(dir)).filter(n=>n.startsWith('pass'))){if(!/^pass-0\.log(?:\.mbtree)?(?:\.temp)?$/.test(name))throw Error('Unexpected statistics file');const length=(await stat(join(dir,name))).size;if(length>contract.limits.passlogFileBytes)throw Error('Statistics file ceiling');total+=length;}if(total>contract.limits.passlogTotalBytes)throw Error('Statistics aggregate ceiling');
+   passes.push({pass,elapsedMs:Date.now()-began,settingsSha256:hash(settings),appliedSettings:pass===1?settings:undefined});
+  }
+  for(const name of (await readdir(dir)).filter(n=>n.startsWith('pass'))){const bytes=await readFile(join(dir,name));statistics.push({name,bytes:bytes.length,sha256:hash(bytes)});}
+  local.throwIfAborted();return {passes,statistics,elapsedMs:Date.now()-start};
+ }finally{for(const name of (await readdir(dir)).filter(n=>n.startsWith('pass')))await rm(join(dir,name),{force:true});}
+}
 export async function handleVideo(req, res) {
     if (req.url === '/video-info') {
         if(req.method !== 'GET'){res.writeHead(405).end('GET only');return true;}
@@ -130,7 +153,7 @@ export async function handleVideo(req, res) {
         if (size !== contract.source.bytes || digest.digest('hex') !== contract.source.sha256)
             throw Error('Source identity mismatch');
         const sourceProbe = await probe(input, controller.signal);
-        await runBounded('/usr/bin/ffmpeg', ['-nostdin', '-hide_banner', '-y', '-protocol_whitelist', 'file,pipe', '-i', input, ...contract.args, output], { timeout: contract.limits.encodeMs, signal: controller.signal, outputPath: output });
+        const encoding=await encodeDelivery(input,output,dir,sourceProbe,controller.signal);
         const outputProbe = await probe(output, controller.signal), metadata = validateOutput(sourceProbe, outputProbe);
         const length = (await stat(output)).size;
         if (!length || length > contract.limits.bytes)
@@ -138,7 +161,7 @@ export async function handleVideo(req, res) {
         const body = await readFile(output);
         if (controller.signal.aborted)
             throw Error('Cancelled');
-        res.writeHead(200, { 'Content-Type': 'video/mp4', 'Content-Length': String(body.length), 'X-Video-Metadata': JSON.stringify({ ...metadata, sourceSha256: contract.source.sha256, sourceBytes: size, sha256: hash(body), bytes: body.length, encoderRevision: encoder.revision, recipe: contract.recipe, rights: contract.source.provenance }) });
+        res.writeHead(200, { 'Content-Type': 'video/mp4', 'Content-Length': String(body.length), 'X-Video-Metadata': JSON.stringify({ ...metadata, encoding, sourceSha256: contract.source.sha256, sourceBytes: size, sha256: hash(body), bytes: body.length, encoderRevision: encoder.revision, recipe: contract.recipe, rights: contract.source.provenance }) });
         res.end(body);
     }
     catch (e) {

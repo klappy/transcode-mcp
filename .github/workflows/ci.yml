@@ -56,7 +56,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD: ${{ github.sha }}
         run: |
-          if git diff --quiet "$BASE" "$HEAD" -- container src/lib/video.ts scripts/video-integration.mjs scripts/video-benchmark.mjs .github/workflows/ci.yml; then
+          if git diff --quiet "$BASE" "$HEAD" -- container src/lib/video.ts scripts/video-integration.mjs scripts/video-benchmark.mjs scripts/video-retained-source.mjs .github/workflows/ci.yml; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -82,10 +82,10 @@ jobs:
         run: |
           mkdir -p video-evidence
           docker image inspect fia-video-proof > video-evidence/image.json
-          docker run -d --name fia-video-proof -p 127.0.0.1:8080:8080 -v "$PWD/video-evidence:/evidence" -v "$PWD:/proof:ro" -v "$PWD/prior-video-evidence:/prior:ro" fia-video-proof
-      - name: Qualify one corrected A encode against exact retained B/C
+          docker run -d --name fia-video-proof -p 127.0.0.1:8080:8080 -v "$PWD/video-evidence:/evidence" -v "$PWD:/proof:ro" -v "$PWD/prior-video-evidence:/prior:ro" fia-video-proof node --import /proof/scripts/video-retained-source.mjs /app/server.mjs
+      - name: Verify actual selected delivery runtime against retained source
         if: steps.paths.outputs.changed == 'true'
-        run: docker exec fia-video-proof node /proof/scripts/video-benchmark.mjs /evidence /prior
+        run: node scripts/video-integration.mjs video-evidence
       - name: Preserve container logs and stop
         if: always() && steps.paths.outputs.changed == 'true'
         run: |

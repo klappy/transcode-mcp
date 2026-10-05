@@ -10,3 +10,8 @@ test('video-info rejects unsupported methods without hanging',async()=>{
  await handleVideo({url:'/video-info',method:'POST'},{writeHead(code){status=code;return this;},end(){ended=true;}});
  expect(status).toBe(405);expect(ended).toBe(true);
 });
+
+test('selected runtime uses identical C geometry/rate/GOP settings in both passes',async()=>{
+ const {deliveryPassArguments,contract}=await import('./video.mjs');const first=deliveryPassArguments('in','out','stats',1),second=deliveryPassArguments('in','out','stats',2);const value=(a,k)=>a[a.indexOf(k)+1];
+ for(const key of ['-vf','-b:v','-maxrate','-bufsize','-g','-keyint_min','-sc_threshold','-passlogfile'])expect(value(first,key)).toBe(value(second,key));expect(value(first,'-b:v')).toBe('439024');expect(value(first,'-g')).toBe('1500');expect(value(first,'-sc_threshold')).toBe('60');expect(first).toContain('-an');expect(value(second,'-pass')).toBe('2');expect(second).not.toContain('-crf');expect(contract.recipe).toBe('fia-video@2');expect(()=>deliveryPassArguments('i','o','p',3)).toThrow();
+});
