@@ -9,7 +9,7 @@ let busy = false;
 export function runBounded(command, args, { timeout = 30000, signal, outputPath, limit = contract.limits.bytes } = {}) {
     return new Promise((resolve, reject) => {
         let failure, stdout = Buffer.alloc(0), stderr = '';
-        const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+        const child = spawn(outputPath ? '/usr/bin/prlimit' : command, outputPath ? [`--fsize=${limit}:${limit}`, '--', command, ...args] : args, { stdio: ['ignore', 'pipe', 'pipe'] });
         const fail = e => { failure ??= e; child.kill('SIGKILL'); };
         const abort = () => fail(new Error('Video job cancelled'));
         signal?.addEventListener('abort', abort, { once: true });
@@ -37,8 +37,12 @@ export function runBounded(command, args, { timeout = 30000, signal, outputPath,
 export async function encoderIdentity(signal) {
     const version = (await runBounded('/usr/bin/ffmpeg', ['-version'], { signal })).toString();
     const executableSha256=hash(await readFile('/usr/bin/ffmpeg'));
+    const linkage=(await runBounded('/usr/bin/ldd',['/usr/bin/ffmpeg'],{signal})).toString();
+    const paths=[...new Set(linkage.split('\n').flatMap(line=>line.match(/\/[^\s]+/g)||[]))].sort();
+    if(!paths.length||linkage.includes('not found'))throw Error('Encoder linkage unavailable');
+    const libraries={};for(const path of paths)libraries[path]=hash(await readFile(path));
     const adapterSha256=hash(await readFile(new URL('./video.mjs',import.meta.url)));
-    return { revision:hash(JSON.stringify({contract,version,executableSha256,adapterSha256})), version, executableSha256, adapterSha256 };
+    return { revision:hash(JSON.stringify({contract,version,executableSha256,adapterSha256,libraries})), version, executableSha256, adapterSha256, libraries };
 }
 export function validateOutput(source, result) {
     const v = source.streams?.find(s => s.codec_type === 'video'), o = result.streams?.find(s => s.codec_type === 'video');

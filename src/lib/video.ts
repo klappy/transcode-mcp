@@ -1,3 +1,4 @@
+import {createHash} from "node:crypto";
 import contract from '../../container/video-contract.json';
 export { contract as videoContract };
 export function videoOptions(raw: Record<string, string>) { for (const [k, v] of Object.entries(raw))
@@ -53,8 +54,9 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
         return fail(403, 'Video source not approved');
     if (!bucket)
         return fail(503, 'Video storage unavailable');
+    const signal=AbortSignal.any([request.signal,AbortSignal.timeout(contract.limits.jobMs)]);
     try {
-        const worker = await instance(), info = await worker.fetch(new Request('https://audio-container/video-info', { signal: request.signal }));
+        const worker = await instance(), info = await worker.fetch(new Request('https://audio-container/video-info', { signal }));
         if (info.status !== 200)
             return fail(503, 'Video encoder unavailable');
         const encoder = await info.json() as {
@@ -64,7 +66,7 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
         let object = await bucket.head(key), cache = 'HIT';
         if (!object) {
             cache = 'MISS';
-            const encoded = await worker.fetch(new Request('https://audio-container/video-transcode', { method: 'POST', signal: request.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source_url: source, recipe: contract.recipe, encoderRevision: encoder.revision }) }));
+            const encoded = await worker.fetch(new Request('https://audio-container/video-transcode', { method: 'POST', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source_url: source, recipe: contract.recipe, encoderRevision: encoder.revision }) }));
             if (encoded.status === 503)
                 return fail(503, 'Video capacity busy');
             if (encoded.status !== 200 || !encoded.body)
@@ -72,31 +74,36 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
             const meta = JSON.parse(encoded.headers.get('X-Video-Metadata') || '{}');
             if (meta.encoderRevision !== encoder.revision || meta.sourceSha256 !== contract.source.sha256 || meta.sourceBytes !== contract.source.bytes || meta.recipe !== contract.recipe || !Number.isSafeInteger(meta.bytes) || meta.bytes <= 0 || meta.bytes > contract.limits.bytes || !/^[a-f0-9]{64}$/.test(meta.sha256))
                 return fail(502, 'Video metadata invalid');
-            const reader = encoded.body.getReader(), chunks: Uint8Array[] = [];
-            let size = 0;
-            for (;;) {
-                const { done, value } = await reader.read();
-                if (done)
-                    break;
-                size += value.length;
-                if (size > meta.bytes) {
-                    await reader.cancel();
-                    return fail(502, 'Video bytes exceed bound');
-                }
-                chunks.push(value);
-            }
-            if (size !== meta.bytes)
-                return fail(502, 'Video truncated');
-            const bytes = new Uint8Array(size);
-            let at = 0;
-            for (const c of chunks) {
-                bytes.set(c, at);
-                at += c.length;
-            }
-            const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), x => x.toString(16).padStart(2, '0')).join('');
-            if (digest !== meta.sha256)
-                return fail(502, 'Video hash mismatch');
-            await bucket.put(key, bytes, { httpMetadata: { contentType: 'video/mp4' }, customMetadata: { ...Object.fromEntries(Object.entries(meta).map(([k, v]) => [k, typeof v === 'object' ? JSON.stringify(v) : String(v)])), sourceUrl: source } });
+            // Quarantine bytes under an unaddressable temporary key. Only a verified
+            // completed artifact is copied to the canonical delivery key.
+            const pending='video-pending/'+crypto.randomUUID();
+            const reader=encoded.body.getReader(), digest=createHash('sha256');
+            let size=0;
+            try {
+                const checked=new ReadableStream<Uint8Array>({
+                    async pull(controller){
+                        try {
+                            if(signal.aborted)throw Error('Cancelled');
+                            const {done,value}=await reader.read();
+                            if(done){controller.close();return;}
+                            size+=value.length;
+                            if(size>meta.bytes)throw Error('Video bytes exceed bound');
+                            digest.update(value);controller.enqueue(value);
+                        }catch(error){await reader.cancel(error);controller.error(error);}
+                    },
+                    cancel(reason){return reader.cancel(reason);}
+                });
+                const lengthBound=new FixedLengthStream(meta.bytes);
+                const transferAbort=new AbortController();
+                const pumping=checked.pipeTo(lengthBound.writable,{signal:AbortSignal.any([signal,transferAbort.signal])});
+                const storing=bucket.put(pending,lengthBound.readable).catch(error=>{transferAbort.abort(error);throw error;});
+                const settled=await Promise.allSettled([pumping,storing]);
+                for(const outcome of settled)if(outcome.status==='rejected')throw outcome.reason;
+                if(size!==meta.bytes||digest.digest('hex')!==meta.sha256)throw Error('Video byte identity mismatch');
+                const staged=await bucket.get(pending);
+                if(!staged||signal.aborted)throw Error('Video staging unavailable');
+                await bucket.put(key,staged.body,{httpMetadata:{contentType:'video/mp4'},customMetadata:{...Object.fromEntries(Object.entries(meta).map(([k,v])=>[k,typeof v==='object'?JSON.stringify(v):String(v)])),sourceUrl:source}});
+            } finally { await reader.cancel().catch(()=>{});await bucket.delete(pending); }
             object = await bucket.head(key);
             if (!object)
                 return fail(502, 'Video publication failed');
@@ -113,7 +120,7 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
             return fail(416, 'Range unsatisfiable');
         }
         headers.set('Content-Type', 'video/mp4');
-        headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+        headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
         headers.set('ETag', '"' + object.customMetadata?.sha256 + '"');
         headers.set('X-Transcode-Cache', cache);
         headers.set('X-Transcode-Encode', 'h264');

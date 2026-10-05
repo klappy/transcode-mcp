@@ -123,3 +123,50 @@ jobs:
 
       - name: Run MCP smoke against preview
         run: bun smoke-mcp.ts "${{ needs.resolve-preview.outputs.base_url }}"
+
+  video-container:
+    name: Video — bounded Linux encode
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check video paths
+        id: paths
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          if git diff --quiet "$BASE" "$HEAD" -- container src/lib/video.ts scripts/video-integration.mjs .github/workflows/ci.yml; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.paths.outputs.changed == 'true'
+        with:
+          node-version: 22
+      - name: Build actual encoder image
+        if: steps.paths.outputs.changed == 'true'
+        run: docker build -t fia-video-proof container
+      - name: Start isolated container
+        if: steps.paths.outputs.changed == 'true'
+        run: |
+          mkdir -p video-evidence
+          docker image inspect fia-video-proof > video-evidence/image.json
+          docker run -d --name fia-video-proof -p 127.0.0.1:8080:8080 -v "$PWD/video-evidence:/evidence" fia-video-proof
+      - name: Encode the single verified source
+        if: steps.paths.outputs.changed == 'true'
+        run: node scripts/video-integration.mjs video-evidence
+      - name: Preserve container logs and stop
+        if: always() && steps.paths.outputs.changed == 'true'
+        run: |
+          docker logs fia-video-proof > video-evidence/container.log 2>&1 || true
+          docker rm -f fia-video-proof || true
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.paths.outputs.changed == 'true'
+        with:
+          name: video-container-proof
+          path: video-evidence
+          retention-days: 7

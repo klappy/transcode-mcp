@@ -1,3 +1,5 @@
+// Bun lacks the Workers FixedLengthStream primitive; byte/hash checks remain real.
+(globalThis as any).FixedLengthStream=class extends TransformStream {constructor(_size:number){super();}};
 import { test, expect } from 'bun:test';
 import { byteRange, videoKey, videoOptions, videoContract, handleVideoProxy } from './video';
 import { parseProxyPath } from './parse-proxy-path';
@@ -26,8 +28,8 @@ test('verified transform publishes once; ranges and HEAD use cache, corrupted me
     const bytes = new Uint8Array([1, 2, 3, 4, 5]);
     const sha = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), x => x.toString(16).padStart(2, '0')).join('');
     const revision = 'a'.repeat(64);
-    let object: any = null, transforms = 0;
-    const bucket = { head: async () => object, put: async (_key: string, body: Uint8Array, options: any) => { object = { size: body.length, customMetadata: options.customMetadata }; }, get: async (_key: string, options: any) => ({ body: new Response(options?.range ? bytes.slice(options.range.offset, options.range.offset + options.range.length) : bytes).body }) } as unknown as R2Bucket;
+    let object: any = null, transforms = 0; const staged=new Map<string,Uint8Array>();
+    const bucket = { head: async () => object, put: async (key: string, body: any, options: any) => {const data=new Uint8Array(await new Response(body).arrayBuffer());staged.set(key,data);if(options)object={size:data.length,customMetadata:options.customMetadata};}, delete:async(key:string)=>{staged.delete(key);}, get: async (key: string, options: any) => ({ body: new Response(options?.range ? bytes.slice(options.range.offset, options.range.offset + options.range.length) : staged.get(key)||bytes).body }) } as unknown as R2Bucket;
     const instance = async () => ({ fetch: async (req: Request) => { if (new URL(req.url).pathname === '/video-info')
             return Response.json({ revision }); transforms++; return new Response(bytes, { headers: { 'X-Video-Metadata': JSON.stringify({ encoderRevision: revision, sourceSha256: videoContract.source.sha256, sourceBytes: videoContract.source.bytes, recipe: videoContract.recipe, bytes: 5, sha256: sha }) } }); } });
     const get = (headers?: Record<string, string>, method = 'GET') => handleVideoProxy(new Request('https://proxy/video', { headers, method }), bucket, instance, videoContract.source.url, {});
@@ -45,4 +47,4 @@ test('verified transform publishes once; ranges and HEAD use cache, corrupted me
     object.customMetadata.encoderRevision = 'b'.repeat(64);
     expect((await get()).status).toBe(502);
 });
-test('hash mismatch is never published', async () => { let writes = 0; const revision = 'a'.repeat(64); const bucket = { head: async () => null, put: async () => writes++ } as unknown as R2Bucket; const instance = async () => ({ fetch: async (req: Request) => new URL(req.url).pathname === '/video-info' ? Response.json({ revision }) : new Response(new Uint8Array([1]), { headers: { 'X-Video-Metadata': JSON.stringify({ encoderRevision: revision, sourceSha256: videoContract.source.sha256, sourceBytes: videoContract.source.bytes, recipe: videoContract.recipe, bytes: 1, sha256: '0'.repeat(64) }) } }) }); expect((await handleVideoProxy(new Request('https://proxy/video'), bucket, instance, videoContract.source.url, {})).status).toBe(502); expect(writes).toBe(0); });
+test('hash mismatch is never published', async () => { let writes = 0; const revision = 'a'.repeat(64); const bucket = { head: async () => null, put: async (_key:string,body:any) => {await new Response(body).arrayBuffer();if(!_key.startsWith("video-pending/"))writes++;}, delete:async()=>{} } as unknown as R2Bucket; const instance = async () => ({ fetch: async (req: Request) => new URL(req.url).pathname === '/video-info' ? Response.json({ revision }) : new Response(new Uint8Array([1]), { headers: { 'X-Video-Metadata': JSON.stringify({ encoderRevision: revision, sourceSha256: videoContract.source.sha256, sourceBytes: videoContract.source.bytes, recipe: videoContract.recipe, bytes: 1, sha256: '0'.repeat(64) }) } }) }); expect((await handleVideoProxy(new Request('https://proxy/video'), bucket, instance, videoContract.source.url, {})).status).toBe(502); expect(writes).toBe(0); });
