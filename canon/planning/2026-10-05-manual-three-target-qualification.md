@@ -34,7 +34,7 @@ Limit the retained qualification working directory to768MiB, counting source/art
 
 Extend `scripts/video-integration.mjs` with an explicit closed size argument; select the exact source-bound contract rather than duplicate target constants. Send size consistently to identity and encode calls. Bind each receipt to reviewed Git commit, target contract, canonical recipe revision, executable/libraries/adapter identity, retained source and measured output SHA/bytes. Large omitted/explicit-size canonicalization remains covered by unit tests; the controlled run needs only one Large output.
 
-Probe exact target width/height/SAR,50fps,H.264/yuv420p,AAC channels and48kHz sample rate; retain full duration and actual packet/mux accounting. Small SAR is1280:1281; Medium/Large are1:1. Compute video payload rate against the contract's nominal class and measured video timeline. A deviation above5% is recorded as a rejected budget qualification, not hidden by widening tolerances. Record actual AAC rates independently; changed proportional audio does not have to hash-match across targets. Preserve all measured data even when qualification fails. Listening, teaching-detail assessment, decoded matched frames/motion and browser playback are separate review gates, not inferred from container success.
+Probe exact target width/height/SAR,50fps,H.264/yuv420p,AAC channels and48kHz sample rate (subject to the explicitly bounded Large unspecified-SAR clarification below); retain full duration and actual packet/mux accounting. Small SAR is1280:1281; Medium/Large are1:1. Compute video payload rate against the contract's nominal class and measured video timeline. A deviation above5% is recorded as a rejected budget qualification, not hidden by widening tolerances. Record actual AAC rates independently; changed proportional audio does not have to hash-match across targets. Preserve all measured data even when qualification fails. Listening, teaching-detail assessment, decoded matched frames/motion and browser playback are separate review gates, not inferred from container success.
 
 The CI job reports measured targets awaiting independent acceptance, never product readiness. It uploads retained evidence on failure as well as success. The one comparison artifact can support subsequent review, but it cannot replace actual deployed HTTP/range/cache/ownership/browser evidence.
 
@@ -47,3 +47,30 @@ Owned implementation: CI workflow, the existing retained-source integration proo
 ## Checks and failure modes
 
 Verify push/pull-request cannot schedule an encode; dispatch cannot select extra assets/targets; wrong commit/source identity or unavailable retained artifact fails before encode; targets carry distinct contracts; shared deadlines and directory limits stop further work; partial/failed evidence remains; main merges do not duplicate encodes. Review exact workflow and helper source before the one root-owned dispatch. A skipped manual job on ordinary CI is not a measured encode PASS.
+
+
+## Measured run and Large verifier clarification — 2026-10-05
+
+[Run37273700278](https://github.com/klappy/transcode-mcp/actions/runs/37273700278) checked out exact runtime `411b136dfd43481318bfc2fdc9aa4d19da5e87ae`. Its artifact `fia-three-target-measurements` (ID11329531889) is233,388,440bytes, ZIP SHA256 `46308cdd43649cbe1efc49c65f89b444d29ce13d5e75a8e2bde022a821e5589a`. Retention expires2026-10-12; the run link and recorded hashes identify the evidence but do not promise indefinite artifact availability.
+
+All three actual two-pass encodes completed. This is not an assertion that the original qualification job passed: Large's verifier failed on `undefined !== '1:1'` before completing later checks. Preserve that failed receipt and the aggregate failure unchanged. Do not re-encode these outputs to repair a metadata assertion.
+
+| Target | Actual bytes | Pass1 / pass2 | Encode/mux | Original receipt status |
+| --- | ---: | --- | --- | --- |
+| Small480 mono | 2,563,758 | 15.692s /23.462s |39.163s | measured-review-pending |
+| Medium540 stereo | 3,203,033 |18.497s /28.466s |46.973s | measured-review-pending |
+| Large720 stereo |5,509,499 |21.345s /36.826s |58.189s | failed: SAR assertion |
+
+All measured durations are79.168seconds. These are Linux CI measurements, not Cloudflare container timings, first-request delivery, cached transfer or streaming time-to-first-frame. Production0.4 observations remain separate historical evidence; do not assign their bytes or transfer timings to these outputs.
+
+Artifact-relative receipt and output identities:
+
+- `small/receipt.json` SHA256 `011571f10845455850c34c8d1ea8a683b1322117fce0f2b7f16a5ad975921644`; `small/output.mp4` SHA256 `57e11c11a9a0435d698e519d60d59857f0fb65bfe6f98014dfadb2d42c596409`.
+- `medium/receipt.json` SHA256 `94ed5916ea46c91b9f5c3babbdc9f7d3abf700c0c36a3819a0644d014784c795`; `medium/output.mp4` SHA256 `9b9dfa7fe6f62b69ba7feb8a7e65536cc6ca396f1b3f62324ad449965223e6f6`.
+- `large/receipt.json` SHA256 `92faff4d7c21e20a6988eaa9afbdb76caded98ec9b37ca03e4763faa1fb22162`; `large/output.mp4` SHA256 `868834a83e24973b3a2642698b9c936b74fab9acb7d0ad7e0753cf11af3dd279`.
+
+Offline supplemental verification of the retained Large bytes fully decoded3,957 video frames and3,711 audio frames, confirmed H.264/yuv420p50fps, AAC stereo48kHz,79.168seconds, and MP4 track display dimensions1280×720. ffprobe omitted SAR and PyAV reported unspecified `0/1`; neither is evidence of an explicit square-pixel declaration. Retained container events show both passes succeeded and cleanup-complete; this is not a new live filesystem inspection. The supplemental record SHA256 is `3a058b791670f9a3c4c51a2a5f0586bbea505fbe2eaf1d4c5e8f12d623a3dc7c`, bound to the original failed receipt above. It supplements, never rewrites, the CI result. Its publication/custody remains separate from the uploaded run artifact; it is not claimed to be inside that ZIP.
+
+Future verifier repair is limited to representation handling: preserve the raw SAR value, accept equivalent rational spellings, and accept absent/unspecified SAR **only for Large**, only with independently parsed exact1280×720 MP4 track display dimensions **and actual browser display/aspect verification before final acceptance**. Explicit non-square Large SAR still fails. Small must retain exact1280:1281; Medium must retain explicit1:1. Do not globally default missing SAR to1:1. Full decode, source/output hashes, duration, packet/budget accounting and remaining gates still apply. Missing later proof must be recovered from retained evidence or separately verified offline/browser-side; an assertion repair alone is not qualification.
+
+The showcase continues to offer only Small480, Medium540 and Large720, alongside the two fixed source references. Preserve the user's paired comparison layout: HQ720 beside Large720, old224 beside Small480, with Medium540 separately visible. Measured CI sizes may be displayed with clear scope while playback remains gated. Actual tier bytes, encode timing, R2/cache/range delivery, browser playback and perceptual acceptance must be qualified separately; no CI-to-production byte identity is assumed. No encoder, source, codec, target count or automatic workflow change is authorized by this clarification.
