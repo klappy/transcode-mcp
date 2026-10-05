@@ -133,14 +133,24 @@ async function main() {
 
   const docsTool = tools.find(t => t.name === "docs");
   assert(!!docsTool, "docs is advertised");
-  assert("query" in (docsTool!.inputSchema?.properties ?? {}), "docs query schema restored");
-  for (const depth of ["1", "2", "3"]) {
-    const response = await rpc("tools/call", { name: "docs", arguments: { query: "video", depth } }, { sessionId });
-    const payload = response.result as { isError?: boolean; content?: Array<{type?:string;text?:string}> };
-    assert(!response.error && !payload.isError, `docs depth ${depth} succeeds`);
-    const body = JSON.parse(payload.content!.find(c => c.type === "text")!.text!);
-    assert(body.answer !== null && body.sources.length > 0, `docs depth ${depth} has live sources`);
-    assert(Array.isArray(body.deeper) && typeof body.governance_source === "string", "docs canonical envelope");
+  const docsProps = docsTool!.inputSchema?.properties ?? {};
+  assert(["query", "action", "disclosure", "limit", "offset"].every(k => k in docsProps), "docs progressive schema");
+  async function callDocs(args: Record<string, unknown>) {
+    const response = await rpc("tools/call", { name: "docs", arguments: args }, { sessionId });
+    assert(!response.error, "docs has no JSON-RPC error");
+    const payload = response.result as { isError?: boolean; content: Array<{type?:string;text?:string}> };
+    return { payload, body: JSON.parse(payload.content.find(c => c.type === "text")!.text!) };
+  }
+  const found = await callDocs({ query: "video", limit: 3 });
+  assert(!found.payload.isError && found.body.result.data.length > 0, "live docs search succeeds");
+  assert(found.body.result.data.every((d: any) => !('body' in d)), "search contains no document bodies");
+  assert(Array.isArray(found.body.result.disclosure_applied) && found.body.result.disclosure_applied.length === 0, "default search floor");
+  assert(typeof found.body.result.total === "number", "upstream total retained");
+  const fetched = await callDocs({ query: found.body.result.data[0].uri, action: "get" });
+  assert(!fetched.payload.isError && typeof fetched.body.result.data.body === "string", "one URI get returns body");
+  for (const depth of ["2", "3"]) {
+    const migrated = await callDocs({ query: "video", depth });
+    assert(migrated.payload.isError && migrated.body.result.error_code === "DEPTH_MIGRATION_REQUIRED", "deprecated body fanout rejected explicitly");
   }
 
   // 3. tools/call — image, viewport-primary

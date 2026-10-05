@@ -15,8 +15,10 @@ Earlier granularity lives in `canon/handoffs/` and the PR record.
 
 ### Fixed
 - Restore the removed live `docs(query, audience?, depth?)` MCP tool using the
-  existing Oddkit canon proxy standard, current response envelopes, bounded
-  retrieval, and explicit unavailable responses. No bundled knowledge snapshot.
+  existing Oddkit canon proxy and progressive disclosure standards, bounded
+  retrieval, explicit single-URI get and legacy depth 2/3 migration errors.
+  Search defaults to the minimal disclosure floor; filters, pagination and
+  upstream echoes are preserved. No bundled knowledge snapshot.
 
 ### Release scope
 - This version identifies the development candidate; it does not claim staging

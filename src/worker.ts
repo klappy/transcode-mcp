@@ -1,4 +1,4 @@
-import { liveDocs } from "./lib/docs";
+import { liveDocs, docsSchema } from "./lib/docs";
 import {handleVideoProxy, VideoOwner, videoSlot, videoOptions, selectVideoContract} from "./lib/video";
 // src/worker.ts
 // Proxy-first + lazy transcoding MCP server.
@@ -233,11 +233,7 @@ function createServer(request: Request, McpServerCtor: typeof McpServer) {
     },
   );
 
-  server.tool("docs", {
-    query: z.string().min(1).max(4096),
-    audience: z.string().min(1).max(128).optional(),
-    depth: z.enum(["1", "2", "3"]).optional(),
-  }, liveDocs);
+  server.tool("docs", docsSchema, liveDocs);
   return server;
 }
 

@@ -1,26 +1,45 @@
 import { test, expect } from "bun:test";
-import { docs, DOCS_REPOSITORY } from "./docs";
-const wrap=(data:any,status="FOUND")=>({content:[{type:"text",text:JSON.stringify({result:{status,data}})}]});
-const hits=[1,2,3,4].map(n=>({uri:`klappy://docs/${n}`,title:`Title ${n}`,snippet:`Snippet ${n}`}));
-const result=(r:any)=>JSON.parse(r.content[0].text);
-for(const depth of ["1","2","3"] as const) test(`depth ${depth} preserves upstream order and content`,async()=>{
- const calls:any[]=[];
- const r=await docs({query:"video",audience:"headless",depth},async a=>{calls.push(a);return a.action==="search"?wrap(hits):wrap({uri:a.input,body:`Body ${a.input}`,content_hash:"opaque"});});
- expect(r.isError).toBeUndefined();expect(calls.length).toBe(depth==="1"?1:depth==="2"?2:4);
- expect(calls.every(a=>a.knowledge_base_url===DOCS_REPOSITORY)).toBe(true);expect(calls[0].audience).toBe("headless");
- expect(result(r).governance_source).toBe("undeclared");expect(result(r).deeper.length).toBe(depth==="3"?2:0);
+import { docs, docsSchema, DOCS_REPOSITORY } from "./docs";
+import {z} from "zod";
+const wrap=(result:any)=>({content:[{type:"text",text:JSON.stringify({result})}]});
+const hit={uri:"klappy://docs/one",title:"Title",score:1,snippet:"Match"};
+const search={status:"FOUND",data:[hit],total:23,limit:1,offset:2,disclosure_applied:[],filters_applied:{include:["canon"]}};
+const output=(r:any)=>JSON.parse(r.content[0].text);
+test("default search is floor only and preserves totals/echoes/order",async()=>{
+ let request:any;const r=await docs({query:"video"},async a=>{request=a;return wrap(search)});
+ expect(request).toEqual({action:"search",input:"video",knowledge_base_url:DOCS_REPOSITORY,disclosure:[],result_grouping:"overlay_first"});
+ expect(output(r).result).toEqual(search);expect(output(r).answer).toBeUndefined();expect(output(r).governance_source).toBe("undeclared");
 });
-test("empty results differ from unreachable",async()=>{
- expect(result(await docs({query:"x"},async()=>wrap([],"NOT_FOUND"))).status).toBe("no_hits");
+test("forwards structural filters and independent flags without local ranking",async()=>{
+ let request:any;await docs({query:"x",disclosure:["metadata","blockquote"],audience:["canon","public"],include:["journals"],limit:20,offset:40,public:false},async a=>{request=a;return wrap(search)});
+ expect(request.disclosure).toEqual(["metadata","blockquote"]);expect(request.audience).toEqual(["canon","public"]);expect(request.offset).toBe(40);expect(request.public).toBe(false);expect(request.include).toEqual(["journals"]);
+});
+test("single URI get defaults body; explicit narrower disclosure preserved",async()=>{
+ for(const disclosure of [undefined,[]] as any[]){let calls=0;await docs({query:hit.uri,action:"get",disclosure},async a=>{calls++;expect(a.disclosure).toEqual(disclosure??["body"]);return wrap({status:"FOUND",data:{...hit,body:"Full",content_hash:"opaque"}})});expect(calls).toBe(1);}
+});
+test("upstream cap and forbidden disclosure errors remain structured",async()=>{
+ const error={status:"ERROR",error_code:"DISCLOSURE_FLAG_NOT_PERMITTED",requested_flag:"body"};
+ const r=await docs({query:"x",disclosure:["body"]},async()=>wrap(error));expect(r.isError).toBe(true);expect(output(r).result).toEqual(error);
+});
+test("legacy depth2/3 never calls upstream; depth1 remains floor",async()=>{
+ for(const depth of ["2","3"] as const){const r=await docs({query:"x",depth},async()=>{throw Error("must not call")});expect(output(r).result.error_code).toBe("DEPTH_MIGRATION_REQUIRED");}
+ expect(output(await docs({query:"x",depth:"1"},async()=>wrap(search))).result).toEqual(search);
+ expect(output(await docs({query:"x",depth:"1",disclosure:["metadata"]},async()=>wrap(search))).result.error_code).toBe("DEPTH_CONFLICT");
+});
+test("get rejects multiple URIs and search-only filters",async()=>{
+ for(const args of [{query:hit.uri+" "+hit.uri,action:"get" as const},{query:hit.uri,action:"get" as const,limit:2}])expect((await docs(args,async()=>{throw Error("no call")})).isError).toBe(true);
+});
+test("no hits differ from failure; opt-in aliases retain canonical data",async()=>{
+ expect(output(await docs({query:"x"},async()=>wrap({...search,data:[],total:0}))).result.total).toBe(0);
  expect((await docs({query:"x"},async()=>{throw Error("secret")})).isError).toBe(true);
+ const r=output(await docs({query:"x",include_legacy_envelope:true},async()=>wrap(search)));expect(r.answer).toBe("Match");expect(r.result).toEqual(search);expect(r.deeper).toEqual([]);
 });
-test("malformed and oversized envelopes fail closed",async()=>{
- for(const raw of [wrap({hits:[]}),{content:[{type:"text",text:"bad"}]},wrap([{uri:"x",title:"y",snippet:"x".repeat(300000)}])])expect((await docs({query:"x"},async()=>raw)).isError).toBe(true);
+test("malformed and oversized responses fail closed",async()=>{
+ for(const raw of [wrap({status:"FOUND",data:{}}),{content:[{type:"text",text:"bad"}]},wrap({...search,data:[{...hit,snippet:"x".repeat(300000)}]})])expect((await docs({query:"x"},async()=>raw)).isError).toBe(true);
 });
-test("shared deadline aborts a hanging upstream",async()=>{
- let signal:AbortSignal|undefined;const r=await docs({query:"x"},async(_,s)=>{signal=s;return new Promise(()=>{});},5);
- expect(r.isError).toBe(true);expect(signal!.aborted).toBe(true);
+test("shared deadline aborts hanging upstream",async()=>{
+ let signal:AbortSignal|undefined;const r=await docs({query:"x"},async(_,s)=>{signal=s;return new Promise(()=>{});},5);expect(r.isError).toBe(true);expect(signal!.aborted).toBe(true);
 });
-test("failed top get cannot masquerade as a complete result",async()=>{
- expect((await docs({query:"x",depth:"2"},async a=>a.action==="search"?wrap(hits):wrap({uri:"wrong",body:"text"}))).isError).toBe(true);
+test("public schema exposes progressive controls and rejects invalid arguments",()=>{
+ const schema=z.object(docsSchema);expect(schema.parse({query:"x"}).action).toBe("search");expect(schema.safeParse({query:"x",disclosure:["full"]}).success).toBe(false);expect(schema.safeParse({query:"x",limit:501}).success).toBe(false);
 });
