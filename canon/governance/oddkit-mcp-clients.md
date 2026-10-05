@@ -13,6 +13,10 @@ complements:
 
 ---
 
+## Restoration Status — Historical Docs Proxy Was Removed
+
+The `docs(query, audience?, depth?)` proxy described here existed at commitd7f5331 and was removed in92f8657 during the image-worker rewrite. On2026-10-05 the live transcode MCP tool list exposed only `generate_transcode_url`. Restoration is pending under [the live kitchen standard binding](../planning/2026-10-05-restore-standard-docs-tool.md); this document's code example is historical guidance, not proof the current endpoint serves docs. Keep the fixed repository/endpoint pattern and verify live retrieval before marking restored.
+
 ## Summary — Wire Agents to the Repo's Own Canon, Not the Parent's
 
 When an agent calls `oddkit_search`, `oddkit_get`, `oddkit_preflight`, or any other oddkit action with no `knowledge_base_url`, oddkit reads from the default parent canon at `klappy.dev`. For work on this repo, that means the agent gets the parent canon's writing conventions, its definition of done, and its constraints — not transcode-mcp's. The fix is to pass `knowledge_base_url: "https://github.com/klappy/transcode-mcp"` on every oddkit call (or to configure the MCP client so the URL is set automatically). Strict mode protects against silent fallthrough: if a doc is missing from this repo's canon, the response declares `governance_source: bundled` instead of stitching in the parent's version.
