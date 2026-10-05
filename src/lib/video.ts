@@ -4,16 +4,18 @@ import a184 from '../../container/video-contract-a184.json';
 import a10 from '../../container/video-contract-a10.json';
 import xsmall from '../../container/video-contract-xsmall.json';
 import small from '../../container/video-contract-small.json';
+import compositeSmall from '../../container/video-contract-4k-small.json';
+import compositeLarge from '../../container/video-contract-4k-xlarge.json';
 import medium from '../../container/video-contract-medium.json';
 import extension from '../../container/video-source-extension.json';
 import {createVideoCatalog} from '../../container/video-catalog.mjs';
 export { contract as videoContract };
-export type VideoSize='xsmall'|'small'|'medium'|'large';
+export type VideoSize='xsmall'|'small'|'medium'|'large'|'xlarge';
 export const videoContracts=[contract,a184,a10];
-export const selectVideoContract=createVideoCatalog(videoContracts,{xsmall,small,medium},extension.recipeRevision).select;
+export const selectVideoContract=createVideoCatalog(videoContracts,{xsmall,small,medium},extension.recipeRevision,[{size:'small',contract:compositeSmall},{size:'xlarge',contract:compositeLarge}]).select;
 export function videoOptions(raw: Record<string, string>) {
     for (const [key,value] of Object.entries(raw)) {
-        if(key==='size'){if(!['xsmall','small','medium','large'].includes(value))throw Error('Unsupported video size');}
+        if(key==='size'){if(!['xsmall','small','medium','large','xlarge'].includes(value))throw Error('Unsupported video size');}
         else if(({preset:'fia',q:'medium',f:'mp4'} as Record<string,string>)[key]!==value)throw Error('Unsupported video option');
     }
     return {preset:'fia',q:'medium',f:'mp4',...(raw.size&&raw.size!=='large'?{size:raw.size as VideoSize}:{})} as const;
@@ -120,7 +122,7 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
         signal.throwIfAborted();
         const worker = await instance();
         signal.throwIfAborted();
-        const info = await worker.fetch(new Request('https://audio-container/video-info?assetId='+contract.source.provenance.assetId+'&size='+(options.size||'large'), { signal }));
+        const info = await worker.fetch(new Request('https://audio-container/video-info?source_url='+encodeURIComponent(contract.source.url)+'&size='+(options.size||'large'), { signal }));
         if (info.status !== 200)
             return fail(503, 'Video encoder unavailable');
         const encoder = await info.json() as {

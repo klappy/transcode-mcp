@@ -1,0 +1,54 @@
+{
+  "status": "passed",
+  "accepted": true,
+  "container": "mp4",
+  "operation": "packet stream-copy; no encode/resample",
+  "deadlineSeconds": 120,
+  "output": {
+    "file": "jordan-4k-approved-audio.mp4",
+    "bytes": 225659075,
+    "sha256": "c7feeb3988378d759ed82a13e801ad77db7e3e09df2a121ea70ebecaa192a9b4",
+    "mime": "video/mp4"
+  },
+  "packetChecks": {
+    "video": {
+      "packets": 3957,
+      "payloadSha256": "19bee9a196a9f92e4b351cf11c571568fd6302c595b2ed1150d971b02d4c4e7f",
+      "maximumTimestampDeltaSeconds": 0.0,
+      "outputTickSeconds": 6.25e-05
+    },
+    "audio": {
+      "packets": 3712,
+      "payloadSha256": "77680a2088ce6842aeead932ef0255074ff59cf15cff90fca4f84bb6dbaf8121",
+      "maximumTimestampDeltaSeconds": 0.0,
+      "outputTickSeconds": 2.0833333333333333e-05
+    }
+  },
+  "fullDecode": {
+    "video": {
+      "frames": 3957,
+      "audioSamples": 0
+    },
+    "audio": {
+      "frames": 3711,
+      "audioSamples": 3799344
+    }
+  },
+  "elapsedSeconds": 23.469317500013858,
+  "description": "Jordan composite: publisher 4K picture with approved narration, not the original YouTube audiovisual edition.",
+  "videoSource": {
+    "publisher": "Video Bible Dictionary / Word Collective",
+    "url": "https://www.youtube.com/watch?v=AmunLtggLUI",
+    "format": "315 video-only VP9 3840x2160 50fps",
+    "sha256": "53bc189e7e1815efd18b1ba017da3df5a0ee8b0d03ec7bfd85c9b1b41b94857b"
+  },
+  "audioSource": {
+    "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
+    "license": "CC BY-SA 4.0",
+    "sourceFileSha256": "257f632552979b05716ca438ab654b7489229f34ca59c6bca22149d3b42f3718"
+  },
+  "delivery": {
+    "url": "https://pub-27b708e1b3d94fe2ac53247a87bb142a.r2.dev/sha256/c7feeb3988378d759ed82a13e801ad77db7e3e09df2a121ea70ebecaa192a9b4.mp4",
+    "fullR2ReadbackSha256Verified": true
+  }
+}
