@@ -61,7 +61,7 @@ export class AudioContainer extends Container<Env> {
     if (url.pathname === '/video-delivery') {
       return handleVideoProxy(request, this.env.AUDIO_BUCKET,
         async () => ({ fetch: (r: Request) => super.fetch(r) }),
-        url.searchParams.get('source') || '', {}, this.videoOwner);
+        url.searchParams.get('source') || '', {size:url.searchParams.get('size')||'large'}, this.videoOwner);
     }
     return super.fetch(request);
   }
@@ -178,6 +178,7 @@ function createServer(request: Request, McpServerCtor: typeof McpServer) {
     "generate_transcode_url",
     {
       source_url: z.string().url().describe("The image (or audio) URL to serve through the proxy."),
+      size: z.enum(["small", "medium", "large"]).optional().describe("Video delivery size only: 480p mono, 540p stereo, or 720p stereo. Default large; separate from quality."),
       media_type: z.enum(["image", "audio", "video"]).optional().describe("Defaults to image."),
       // Primary image input: the shortest-side display size. Stable across
       // phone rotation, which is why it's preferred over a literal width.
@@ -296,12 +297,13 @@ export default {
         const parsed = parseProxyPath(url.pathname, url.search);
         if (parsed.mediaType !== 'video') return new Response('Invalid video route', {status:400});
         videoOptions(parsed.options);
-        if (!selectVideoContract(parsed.sourceUrl)) return new Response('Video source not approved', {status:403});
+        if (!selectVideoContract(parsed.sourceUrl,parsed.options.size)) return new Response('Video source not approved', {status:403});
         if (!env.AUDIO_CONTAINER) return new Response('Video service unavailable', {status:503});
-        const slot = await videoSlot(parsed.sourceUrl, AUDIO_CONTAINER_INSTANCES);
+        const slot = await videoSlot(parsed.sourceUrl, AUDIO_CONTAINER_INSTANCES,parsed.options.size);
         const stub = env.AUDIO_CONTAINER.get(env.AUDIO_CONTAINER.idFromName(slot));
         const target = new URL('https://audio-container/video-delivery');
         target.searchParams.set('source', parsed.sourceUrl);
+        target.searchParams.set('size', parsed.options.size||'large');
         return stub.fetch(new Request(target, {method:request.method, headers:request.headers}));
       } catch { return new Response('Invalid video request', {status:400}); }
     }

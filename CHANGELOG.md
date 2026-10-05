@@ -11,6 +11,15 @@ Earlier granularity lives in `canon/handoffs/` and the PR record.
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-10-05
+
+### Added
+- Explicit FIA video size targets: Small 480p mono and Medium 540p stereo for the approved a13 source; Large 720p stereo remains the omitted-size default. Quality remains independent of delivery size. Target-specific contracts bind cache and admission identity.
+- Lower targets derive proportional AAC rates and preserve source cadence. Unknown sizes and arbitrary video dimensions are rejected.
+
+### Qualification scope
+- Runtime preparation only. New target outputs still require measured encode, quality/listening, HTTP/cache, browser and sequential deployment acceptance. Adapter changes advance the actual encoder identity; no historical cache identity is fabricated.
+
 ## [0.4.0] — 2026-10-05
 
 ### Fixed
