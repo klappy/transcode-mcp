@@ -38,3 +38,62 @@ jobs:
   # PRs retain unit/type checks (and the video container job when introduced).
   # After Workers Builds deploys main, root verifies the exact successful build
   # and runs smoke-test.ts plus smoke-mcp.ts on development before staging.
+
+  video-container:
+    name: Video — bounded Linux encode
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check video paths
+        id: paths
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          if git diff --quiet "$BASE" "$HEAD" -- container src/lib/video.ts scripts/video-integration.mjs scripts/video-benchmark.mjs scripts/video-retained-source.mjs .github/workflows/ci.yml; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.paths.outputs.changed == 'true'
+        with:
+          node-version: 22
+      - name: Acquire exact retained qualification artifact
+        if: steps.paths.outputs.changed == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 11321498762
+          run-id: 37253567874
+          github-token: ${{ github.token }}
+          path: prior-video-evidence
+          merge-multiple: true
+      - name: Build actual encoder image
+        if: steps.paths.outputs.changed == 'true'
+        run: docker build -t fia-video-proof container
+      - name: Start isolated container
+        if: steps.paths.outputs.changed == 'true'
+        run: |
+          mkdir -p video-evidence
+          docker image inspect fia-video-proof > video-evidence/image.json
+          docker run -d --name fia-video-proof -p 127.0.0.1:8080:8080 -v "$PWD/video-evidence:/evidence" -v "$PWD:/proof:ro" -v "$PWD/prior-video-evidence:/prior:ro" fia-video-proof node --import /proof/scripts/video-retained-source.mjs /app/server.mjs
+      - name: Verify actual selected delivery runtime against retained source
+        if: steps.paths.outputs.changed == 'true'
+        run: node scripts/video-integration.mjs video-evidence
+      - name: Preserve container logs and stop
+        if: always() && steps.paths.outputs.changed == 'true'
+        run: |
+          docker logs fia-video-proof > video-evidence/container.log 2>&1 || true
+          docker rm -f fia-video-proof || true
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.paths.outputs.changed == 'true'
+        with:
+          name: video-container-proof
+          path: video-evidence
+          retention-days: 7

@@ -122,7 +122,7 @@ describe("parseProxyPath — errors", () => {
   });
 
   test("rejects unknown media_type", () => {
-    expect(() => parseProxyPath("/video/https://example.com/v.mp4")).toThrow(
+    expect(() => parseProxyPath("/unknown/https://example.com/v.mp4")).toThrow(
       ProxyPathError,
     );
   });

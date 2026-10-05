@@ -1,3 +1,4 @@
+import {handleVideoProxy} from "./lib/video";
 // src/worker.ts
 // Proxy-first + lazy transcoding MCP server.
 //
@@ -166,7 +167,7 @@ function createServer(request: Request, McpServerCtor: typeof McpServer) {
     "generate_transcode_url",
     {
       source_url: z.string().url().describe("The image (or audio) URL to serve through the proxy."),
-      media_type: z.enum(["image", "audio"]).optional().describe("Defaults to image."),
+      media_type: z.enum(["image", "audio", "video"]).optional().describe("Defaults to image."),
       // Primary image input: the shortest-side display size. Stable across
       // phone rotation, which is why it's preferred over a literal width.
       viewport: z
@@ -182,7 +183,7 @@ function createServer(request: Request, McpServerCtor: typeof McpServer) {
         .optional()
         .describe("Quality preset: low=20, medium=50, high=80. With the half-class overshoot, even low looks good. Defaults to the proxy default (medium)."),
       f: z
-        .enum(["auto", "webp", "jpeg", "opus", "aac", "mp3"])
+        .enum(["auto", "webp", "jpeg", "opus", "aac", "mp3", "mp4"])
         .optional()
         .describe(
           "Output format. For images: auto|webp|jpeg (auto lets the proxy pick; webp is smallest; jpeg is universal). For audio: opus|aac|mp3 (codec selector; defaults to opus).",
@@ -190,7 +191,7 @@ function createServer(request: Request, McpServerCtor: typeof McpServer) {
       // Advanced escape hatch — raw pixel control. w wins over viewport.
       w: z.number().int().positive().optional().describe("ADVANCED: raw output width in px. Overrides viewport. Most callers should use viewport."),
       h: z.number().int().positive().optional().describe("ADVANCED: raw output height in px. Rarely needed."),
-      preset: z.enum(["voice", "music"]).optional().describe("Audio only: encoding preset."),
+      preset: z.enum(["voice", "music", "fia"]).optional().describe("Audio only: encoding preset."),
     },
     (args) => {
       // Cross-field check the per-field schema can't express: f's vocabulary
@@ -199,7 +200,7 @@ function createServer(request: Request, McpServerCtor: typeof McpServer) {
       const mediaType = args.media_type ?? "image";
       const IMAGE_F = ["auto", "webp", "jpeg"] as const;
       const AUDIO_F = ["opus", "aac", "mp3"] as const;
-      const allowed = mediaType === "audio" ? AUDIO_F : IMAGE_F;
+      const allowed = mediaType === "video" ? ["mp4"] : mediaType === "audio" ? AUDIO_F : IMAGE_F;
       if (args.f !== undefined && !(allowed as readonly string[]).includes(args.f)) {
         return {
           content: [
@@ -212,7 +213,9 @@ function createServer(request: Request, McpServerCtor: typeof McpServer) {
         };
       }
       const origin = new URL(request.url).origin;
-      const response = buildToolResponse(args, origin);
+      let response;
+      try { response = buildToolResponse(args, origin); }
+      catch(e) { return {content:[{type:"text",text:String(e)}],isError:true}; }
       return {
         content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
       };
@@ -276,6 +279,7 @@ export default {
       return htmlResponse(ADMIN_PAGE_HTML);
     }
 
+    if(url.pathname.startsWith('/video/')){try{const parsed=parseProxyPath(url.pathname,url.search);if(parsed.mediaType!=='video')return new Response('Invalid route',{status:400});return handleVideoProxy(request,env.AUDIO_BUCKET,async()=>{if(!env.AUDIO_CONTAINER)throw Error('No container');return getRandom(env.AUDIO_CONTAINER,AUDIO_CONTAINER_INSTANCES);},parsed.sourceUrl,parsed.options);}catch{return new Response('Invalid video request',{status:400});}}
     // Image proxy
     if (url.pathname.startsWith("/image/")) {
       return handleImageProxy(request, env, ctx);

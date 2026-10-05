@@ -1,0 +1,8 @@
+import {test,expect} from 'bun:test';import {readFileSync} from 'node:fs';import {twoPassArguments} from './video-two-pass.mjs';
+const plan=JSON.parse(readFileSync(new URL('./video-benchmark-recipes.json',import.meta.url)));
+test('A-only compensation preserves B/C requests and the controlled GOP policies',()=>{
+ const args=(id,pass)=>twoPassArguments(plan,{source:'source',output:'output',prefix:'stats',id,fps:50,pass});const value=(a,k)=>a[a.indexOf(k)+1];
+ for(const id of ['A','B','C']){const first=args(id,1),second=args(id,2);for(const flag of ['-vf','-b:v','-maxrate','-bufsize','-g','-sc_threshold','-keyint_min','-passlogfile'])expect(value(first,flag)).toBe(value(second,flag));expect(value(second,'-b:v')).toBe(id==='A'?'444000':'439024');expect(value(second,'-maxrate')).toBe('900000');expect(value(second,'-bufsize')).toBe('1800000');expect(value(first,'-pass')).toBe('1');expect(value(second,'-pass')).toBe('2');for(const flag of ['-crf','-minrate','-me_range'])expect(second).not.toContain(flag);}
+ expect(value(args('A',1),'-vf')).toBe('scale=640:360:flags=lanczos');expect(value(args('B',1),'-vf')).toBe('scale=1280:720:flags=lanczos');expect(value(args('A',1),'-g')).toBe('100');expect(value(args('B',1),'-g')).toBe('100');expect(value(args('C',1),'-g')).toBe('1500');expect(value(args('B',1),'-sc_threshold')).toBe('40');expect(value(args('C',1),'-sc_threshold')).toBe('60');
+});
+test('unknown candidate or invalid pass/cadence fails closed',()=>{for(const x of [{id:'D',fps:50,pass:1},{id:'A',fps:0,pass:1},{id:'A',fps:50,pass:3}])expect(()=>twoPassArguments(plan,{source:'s',output:'o',prefix:'p',...x})).toThrow();});
