@@ -82,10 +82,12 @@ describe("shared cross-page nav", () => {
 });
 
 describe('embedded FIA video previews',()=>{
- test('uses visible native controls and preload none without a covering Play button',()=>{
+ test('uses visible native controls and normal metadata preload without a covering Play button',()=>{
   expect(DEMO_VIDEO_HTML).toContain('video{display:block;');
-  expect(DEMO_VIDEO_HTML).toContain('<video controls playsinline preload="none"');
+  expect(DEMO_VIDEO_HTML).toContain('<video controls playsinline preload="metadata"');
   expect(DEMO_VIDEO_HTML).not.toContain('class="play"');
+  expect(DEMO_VIDEO_HTML).not.toMatch(/<video[^>]*autoplay/);
+  expect(DEMO_VIDEO_HTML).not.toContain('Nothing downloads until you press Play');
   expect(DEMO_VIDEO_HTML).not.toContain('video{display:none');
   expect(DEMO_VIDEO_HTML).toContain('video.poster=posters[item.id]');
   expect(DEMO_VIDEO_HTML).toContain('if(publication.ready&&item.url)video.src=item.url');
