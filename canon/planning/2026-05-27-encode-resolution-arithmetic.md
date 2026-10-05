@@ -15,6 +15,8 @@ revision_reason: Prior version's prose contradicted canon on the overshoot mecha
 
 # Encode Resolution Arithmetic — A Candidate Technique Under the Multi-Objective Frame
 
+> **Dated precedence note:** Scope clarification, 2026-10-04: this document governs the existing image path. Do not apply its formula or half-class framing as the current video policy. The operator’s [video correction](2026-10-04-sovee-video-policy-correction.md) separately governs encoded canvas, a budget two steps lower, and conditional playback one step above player fit. Image runtime remains unchanged.
+
 > The encode dimension is governed by the display target, not by the source. The rule: encode at half-class above the display target (`target × 1.5`, mod-16 ceil), with a guard against runaway upscaling on tiny sources (`min(target × 1.5, source × 1.5)`). The byte budget constrains the encode quality; the display downscale provides artifact filtering and zoom headroom. This is one candidate technique scored against the six quality attributes in `canon/values/project-goal.md`. It is not a standalone law. "No pixel averaging" is a narrow-case target ideal for pixel-art-like content, not the primary mechanism — for the dominant traffic (photographs, scripture-reading screenshots), the display downscale IS the intended averaging step and we want it.
 
 ---

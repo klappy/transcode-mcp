@@ -11,6 +11,8 @@ complements:
 
 # One source-bound FIA video adapter in the existing proxy
 
+> **Dated precedence note:** 2026-10-04 optimization hold: [the operator’s video policy correction](2026-10-04-sovee-video-policy-correction.md) takes precedence over this baseline’s generic CRF/no-upscale720 recipe as a claim of intended optimization. Preserve the baseline’s bounded service evidence; do not promote it or the same-resolution450/750/1000 trials as proof of the clarified method. Source/provenance, bounds and deployment requirements remain applicable.
+
 > Add one real H.264/AAC MP4 recipe for the verified Jordan River source, using the existing Worker, ffmpeg container and tier-isolated R2. Bound source fetching and encoding, fail closed instead of passing video through, and prove exact cache/range/browser behavior before FIA consumes it. Cold conversion waits for a completed artifact; the shared progressive-pipe extension remains separate. This is a proposed contract, not deployment evidence.
 
 ## Summary — One video, one recipe, existing service
