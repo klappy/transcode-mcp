@@ -69,6 +69,7 @@ port = 8787
 # One-time: wrangler r2 bucket create transcode-mcp-audio-staging
 [env.staging]
 name = "transcode-mcp-staging"
+compatibility_flags = [ "nodejs_compat", "enable_request_signal", "durable_object_io_tasks_prevent_eviction" ]
 
 [env.staging.vars]
 
@@ -83,6 +84,7 @@ bucket_name = "transcode-mcp-audio-staging"
 class_name = "AudioContainerStaging"
 image = "./container/Dockerfile"
 max_instances = 5
+instance_type = "standard-4"
 
 [[env.staging.durable_objects.bindings]]
 class_name = "AudioContainerStaging"
@@ -151,6 +153,7 @@ tag = "v1"
 # One-time: wrangler r2 bucket create transcode-mcp-audio-production
 [env.production]
 name = "transcode-mcp-production"
+compatibility_flags = [ "nodejs_compat", "enable_request_signal", "durable_object_io_tasks_prevent_eviction" ]
 
 [env.production.vars]
 
@@ -165,6 +168,7 @@ bucket_name = "transcode-mcp-audio-production"
 class_name = "AudioContainerProduction"
 image = "./container/Dockerfile"
 max_instances = 5
+instance_type = "standard-4"
 
 [[env.production.durable_objects.bindings]]
 class_name = "AudioContainerProduction"
