@@ -1,7 +1,7 @@
 ---
 title: FIA video showcase — useful detail at field-friendly download sizes
 date: 2026-10-05
-status: proposed
+status: working
 mode: planning
 derives_from: canon/planning/2026-10-05-video-single-baseline.md
 ---
