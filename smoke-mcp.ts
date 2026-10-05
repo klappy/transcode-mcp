@@ -131,6 +131,18 @@ async function main() {
   assert("f" in props, "schema has f");
   assert("w" in props && "h" in props, "schema has w/h escape hatches");
 
+  const docsTool = tools.find(t => t.name === "docs");
+  assert(!!docsTool, "docs is advertised");
+  assert("query" in (docsTool!.inputSchema?.properties ?? {}), "docs query schema restored");
+  for (const depth of ["1", "2", "3"]) {
+    const response = await rpc("tools/call", { name: "docs", arguments: { query: "video", depth } }, { sessionId });
+    const payload = response.result as { isError?: boolean; content?: Array<{type?:string;text?:string}> };
+    assert(!response.error && !payload.isError, `docs depth ${depth} succeeds`);
+    const body = JSON.parse(payload.content!.find(c => c.type === "text")!.text!);
+    assert(body.answer !== null && body.sources.length > 0, `docs depth ${depth} has live sources`);
+    assert(Array.isArray(body.deeper) && typeof body.governance_source === "string", "docs canonical envelope");
+  }
+
   // 3. tools/call — image, viewport-primary
   console.log("\n3. tools/call generate_transcode_url (image, viewport=720)");
   const img = await rpc(

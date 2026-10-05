@@ -11,6 +11,20 @@ Earlier granularity lives in `canon/handoffs/` and the PR record.
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-10-05
+
+### Fixed
+- Restore the removed live `docs(query, audience?, depth?)` MCP tool using the
+  existing Oddkit canon proxy standard, current response envelopes, bounded
+  retrieval, and explicit unavailable responses. No bundled knowledge snapshot.
+
+### Release scope
+- This version identifies the development candidate; it does not claim staging
+  or production promotion. Video ownership and DEV-only capacity/lifecycle
+  configuration require their existing environment gates before promotion.
+
+## Historical unversioned changes
+
 Shipped to production without a version bump (production still reports 0.3.0);
 cutting the next version is an operator call.
 
