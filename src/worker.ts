@@ -1,7 +1,7 @@
 import { DEMO_VIDEO_HTML } from "./demo-video";
 import { handleVideoReference } from "./lib/video-reference";
 import { liveDocs, docsSchema } from "./lib/docs";
-import {handleVideoProxy, VideoOwner, videoSlot, videoOptions, selectVideoContract} from "./lib/video";
+import {handleVideoProxy, VideoOwner, videoSlot, videoOptions, selectVideoContract, VIDEO_SOURCE_REJECTION} from "./lib/video";
 // src/worker.ts
 // Proxy-first + lazy transcoding MCP server.
 //
@@ -303,7 +303,7 @@ export default {
         const parsed = parseProxyPath(url.pathname, url.search);
         if (parsed.mediaType !== 'video') return new Response('Invalid video route', {status:400});
         videoOptions(parsed.options);
-        if (!selectVideoContract(parsed.sourceUrl,parsed.options.size)) return new Response('Video source not approved', {status:403});
+        if (!selectVideoContract(parsed.sourceUrl,parsed.options.size)) return new Response(VIDEO_SOURCE_REJECTION, {status:403});
         if (!env.AUDIO_CONTAINER) return new Response('Video service unavailable', {status:503});
         const slot = await videoSlot(parsed.sourceUrl, AUDIO_CONTAINER_INSTANCES,parsed.options.size);
         const stub = env.AUDIO_CONTAINER.get(env.AUDIO_CONTAINER.idFromName(slot));
