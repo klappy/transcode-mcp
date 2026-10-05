@@ -28,4 +28,4 @@ try{
  }
  assert.equal(expired,false);assert.equal(receipt.targets.length,3);receipt.status=receipt.targets.some(t=>t.status==='measured-budget-rejected')?'measured-budget-rejected':'measured-independent-review-required';
 }catch(e){receipt.status='failed-no-retry';receipt.error=String(e);process.exitCode=1;}
-finally{clearTimeout(timer);clearInterval(monitor);while(checking)await new Promise(r=>setTimeout(r,10));if(expired){receipt.status='failed-no-retry';receipt.error=receipt.error||'Shared deadline or disk ceiling';process.exitCode=1;stop();}receipt.finishedAt=new Date().toISOString();receipt.elapsedMs=Date.now()-started;await save();}
+finally{clearTimeout(timer);clearInterval(monitor);while(checking)await new Promise(r=>setTimeout(r,10));try{stop(true);}catch(e){receipt.status='failed-no-retry';receipt.error=receipt.error||String(e);process.exitCode=1;}if(expired){receipt.status='failed-no-retry';receipt.error=receipt.error||'Shared deadline or disk ceiling';process.exitCode=1;stop();}receipt.finishedAt=new Date().toISOString();receipt.elapsedMs=Date.now()-started;await save();}
