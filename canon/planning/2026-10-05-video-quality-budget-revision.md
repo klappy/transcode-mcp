@@ -43,3 +43,7 @@ The user’s quality criterion includes continuous motion when displayed one res
 This canonical planning record is intended to become discoverable after publication through the existing docs search tool by the title and terms `video quality budget`, `fifty percent`, and `motion acceptance`; retrieve its single URI for the full body. No bundled catalog or additional docs tool is introduced.
 
 Decisions are locked for this revision: only the declared three video rates change; audio, cadence and safety bounds remain fixed. Local implementation is reversible through Git and preserves all old immutable outputs. Definition of done is exact argument/identity tests plus independently reviewed bounded output and continuous-motion evidence before deployment. Failure to earn the added bytes or remaining distracting motion artifacts withholds output acceptance; it does not authorize automatic tuning or retries. Search discovery must be verified against the published repository after merge.
+
+## Measured sampling-first checkpoint
+
+See [the sampled 320p results](2026-10-05-320-sampled-results.md) for the actual 39.6-second measurement, matched still and geometry review, and remaining motion/listening limits. This evidence does not qualify the complete source or change production availability.
