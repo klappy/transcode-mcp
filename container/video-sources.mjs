@@ -44,14 +44,42 @@ export function createLazyVideoSelect(profiles) {
 }
 
 const gcd = (a, b) => (b ? gcd(b, a % b) : a);
-// No upscale (flagged default): a target taller than the source is encoded at the
-// source's coded height, aligned down to the container's 16-pixel raster rule,
-// with a 16:9 display aspect carried by SAR. Taller-or-equal sources keep the target.
-export function noUpscaleRaster(encoding, sourceHeight) {
-  if (!Number.isSafeInteger(sourceHeight) || sourceHeight < 16) throw Error('Invalid source height');
-  if (sourceHeight >= encoding.height) return { width: encoding.width, height: encoding.height, sar: encoding.sar, dar: encoding.dar };
-  const height = Math.floor(sourceHeight / 16) * 16;
-  const width = Math.max(16, Math.round(height * 16 / 9 / 16) * 16);
-  const n = height * 16, d = width * 9, g = gcd(n, d);
-  return { width, height, sar: `${n / g}:${d / g}`, dar: '16:9' };
+// A source the lazy path cannot encode (no video, variable frame rate, degenerate
+// raster). Carries 422 so the job fails before any encode, not as a 502 after it.
+export const unqualifiedSource = message => Object.assign(Error(message), { status: 422 });
+const sarOf = sar => { const m = /^([1-9]\d*):([1-9]\d*)$/.exec(sar || ''); return m ? [Number(m[1]), Number(m[2])] : [1, 1]; };
+
+// One raster rule for every lazy source (any display aspect, any pixel aspect):
+// display aspect DAR = (width * SAR) / height. The output fits inside the size
+// profile's box (profile width x height) preserving DAR, never exceeds the
+// source's display dimensions (no upscale), uses square pixels (SAR 1:1) and
+// even dimensions (libx264 yuv420p needs only even). 16-pixel alignment is the
+// catalog's raster rule for its fixed 16:9 profiles; it is kept exactly where
+// that profile applies — an exact 16:9 source at least as large as the profile's
+// display size gets the profile raster itself (e.g. 864x480 SAR 80:81) — and is
+// not imposed on any other aspect, where it could not hold together with an
+// exact square-pixel aspect.
+export function fitLazyRaster(profile, source) {
+  const w = source?.width, h = source?.height;
+  if (!Number.isSafeInteger(w) || !Number.isSafeInteger(h) || w < 2 || h < 2) throw unqualifiedSource(`Unqualified source geometry ${w}x${h}`);
+  const [sn, sd] = sarOf(source.sar), [pn, pd] = sarOf(profile.sar);
+  const { width: pw, height: ph } = profile;
+  if (w * sn * 9 === h * sd * 16 && w * sn * pd >= pw * pn * sd && h >= ph) return { width: pw, height: ph, sar: profile.sar, dar: profile.dar };
+  let W, H; // display-pixel target before even rounding
+  if (w * sn <= pw * sd && h <= ph) { W = (w * sn) / sd; H = h; }
+  else if (pw * h * sd <= ph * w * sn) { W = pw; H = (pw * h * sd) / (w * sn); }
+  else { H = ph; W = (ph * w * sn) / (h * sd); }
+  const width = Math.floor(W / 2) * 2, height = Math.floor(H / 2) * 2;
+  if (width < 2 || height < 2) throw unqualifiedSource(`Unqualified source geometry ${w}x${h} SAR ${sn}:${sd}`);
+  const g = gcd(width, height);
+  return { width, height, sar: '1:1', dar: `${width / g}:${height / g}` };
+}
+
+// Geometry check for lazy rasters (even, SAR x width : height === DAR). The
+// catalog check (video.mjs validateGeometryContract) stays 16-aligned 16:9.
+export function validateLazyGeometry(e) {
+  const ratio = x => { if (typeof x !== 'string' || !/^[1-9]\d*:[1-9]\d*$/.test(x)) throw Error('Explicit SAR/DAR required'); return x.split(':').map(BigInt); };
+  if (!Number.isSafeInteger(e.width) || !Number.isSafeInteger(e.height) || e.width < 2 || e.height < 2 || e.width % 2 || e.height % 2) throw Error('Unaligned raster');
+  const [sn, sd] = ratio(e.sar), [dn, dd] = ratio(e.dar);
+  if (BigInt(e.width) * sn * dd !== BigInt(e.height) * sd * dn) throw Error('Raster SAR DAR mismatch');
 }

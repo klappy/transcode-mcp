@@ -154,6 +154,9 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
             const encoded = await worker.fetch(new Request('https://audio-container/'+(lazy?'video-lazy-transcode':'video-transcode'), { method: 'POST', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source_url: source, size: options.size||'large', recipe: contract.recipe, encoderRevision: encoder.revision }) }));
             if (encoded.status === 503)
                 return fail(503, 'Video capacity busy');
+            // Lazy source the encoder cannot take (e.g. variable frame rate): rejected before encoding.
+            if (lazy && encoded.status === 422)
+                return fail(422, 'Video source unsupported: ' + (await encoded.text()).slice(0, 300));
             if (encoded.status !== 200 || !encoded.body)
                 return fail(502, 'Video transform failed');
             if (signal.aborted) { await encoded.body.cancel().catch(() => {}); signal.throwIfAborted(); }

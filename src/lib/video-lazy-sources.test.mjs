@@ -2,8 +2,8 @@
 globalThis.FixedLengthStream=class extends TransformStream {constructor(_size){super();}};
 import {test,expect} from 'bun:test';
 import {selectVideoContract,selectCatalogVideoContract,videoKey,videoContracts,handleVideoProxy,VIDEO_SOURCE_ALLOWED_PREFIXES} from './video.ts';
-import {selectLazyVideoContract as containerLazySelect,deriveLazyContract} from '../../container/video-lazy.mjs';
-import {noUpscaleRaster} from '../../container/video-sources.mjs';
+import {selectLazyVideoContract as containerLazySelect,deriveLazyContract,lazyPassArguments,validateLazyOutput} from '../../container/video-lazy.mjs';
+import {fitLazyRaster,validateLazyGeometry} from '../../container/video-sources.mjs';
 import {validateGeometryContract,validateCadenceContract,deliveryPassArguments} from '../../container/video.mjs';
 import {parseProxyPath} from './parse-proxy-path.ts';
 import {buildToolResponse} from './mcp-tool.ts';
@@ -49,19 +49,78 @@ test('(c) existing catalog rows keep identical contracts and cache keys',async()
  for(const size of ['small','xlarge'])expect(selectVideoContract(jordan,size)).toBe(selectCatalogVideoContract(jordan,size));
 });
 
-test('(d) no upscale: shorter source encodes at its own aligned height with 16:9 DAR',()=>{
- const xl=selectVideoContract(a11,'xlarge').encoding;
- expect(noUpscaleRaster(xl,720)).toEqual({width:1280,height:720,sar:'1:1',dar:'16:9'});
- expect(noUpscaleRaster(xl,2160)).toEqual({width:1616,height:912,sar:'304:303',dar:'16:9'});
- expect(noUpscaleRaster(selectVideoContract(a11,'medium').encoding,480)).toMatchObject({height:480,width:848});
- for(const h of [360,480,540,720,1080]){const r=noUpscaleRaster(xl,h);expect(r.height).toBeLessThanOrEqual(h);expect(r.height%2+r.width%2).toBe(0);expect(()=>validateGeometryContract({...xl,...r})).not.toThrow();}
+const probe=(width,height,sample_aspect_ratio,rate='25/1')=>({width,height,sample_aspect_ratio,avg_frame_rate:rate,r_frame_rate:rate});
+const display=(w,h,sar='1:1')=>{const [n,d]=/^[1-9]\d*:[1-9]\d*$/.test(sar)?sar.split(':').map(Number):[1,1];return {w:w*n/d,h};};
+// Every lazy raster: inside the profile box, no upscale of source display size, even, DAR preserved (±rounding), SAR/DAR consistent.
+function expectFit(size,src){
+ const profile=selectVideoContract(a11,size).encoding,c=deriveLazyContract(containerLazySelect(a11,size),src),e=c.encoding;
+ const s=display(src.width,src.height,src.sample_aspect_ratio||'1:1'),o=display(e.width,e.height,e.sar);
+ expect(e.width).toBeLessThanOrEqual(profile.width);expect(e.height).toBeLessThanOrEqual(profile.height);
+ expect(o.w).toBeLessThanOrEqual(s.w+1e-9);expect(o.h).toBeLessThanOrEqual(s.h);
+ expect(e.width%2+e.height%2).toBe(0);expect(()=>validateLazyGeometry(e)).not.toThrow();
+ expect(Math.abs((o.w/o.h)/(s.w/s.h)-1)).toBeLessThan(0.01);
+ // the encoder argv carries exactly this raster and SAR
+ const args=lazyPassArguments('i','o','p',2,c);expect(args[args.indexOf('-vf')+1]).toEndWith(`scale=${e.width}:${e.height}:flags=lanczos,setsar=${e.sar.replace(':','/')}:max=65535`);
+ return e;
+}
+
+test('(d) no upscale: a source smaller than the profile keeps its own display size, square pixels',()=>{
+ expect(fitLazyRaster(selectVideoContract(a11,'xlarge').encoding,{width:1280,height:720,sar:'1:1'})).toEqual({width:1280,height:720,sar:'1:1',dar:'16:9'});
+ expect(fitLazyRaster(selectVideoContract(a11,'xlarge').encoding,{width:3840,height:2160})).toEqual({width:1616,height:912,sar:'304:303',dar:'16:9'});
+ expect(fitLazyRaster(selectVideoContract(a11,'medium').encoding,{width:854,height:480,sar:'1:1'})).toEqual({width:854,height:480,sar:'1:1',dar:'427:240'});
+ for(const size of sizes)for(const [w,h] of [[640,360],[854,480],[960,540],[1280,720],[1920,1080],[3840,2160]])expectFit(size,probe(w,h,'1:1'));
  // Container binds probed geometry and cadence; a 720p/50fps source at xlarge encodes 1280x720@25.
- const derived=deriveLazyContract(containerLazySelect(a11,'xlarge'),{width:1280,height:720,avg_frame_rate:'50/1',r_frame_rate:'50/1',sample_aspect_ratio:'1:1'});
- expect(derived.encoding).toMatchObject({width:1280,height:720,sar:'1:1',outputFrameRate:'25/1',fps:25,keyint:750});
- const args=deliveryPassArguments('i','o','p',2,derived);expect(args[args.indexOf('-vf')+1]).toBe('fps=fps=25/1:round=near,scale=1280:720:flags=lanczos,setsar=1/1:max=65535');
+ const derived=deriveLazyContract(containerLazySelect(a11,'xlarge'),probe(1280,720,'1:1','50/1'));
+ expect(derived.encoding).toMatchObject({width:1280,height:720,sar:'1:1',dar:'16:9',outputFrameRate:'25/1',fps:25,keyint:750});
+ const args=lazyPassArguments('i','o','p',2,derived);expect(args[args.indexOf('-vf')+1]).toBe('fps=fps=25/1:round=near,scale=1280:720:flags=lanczos,setsar=1/1:max=65535');
+ // the lazy argv is the catalog argv except the raster filter
+ const catalogArgs=deliveryPassArguments('i','o','p',2,{...derived,encoding:{...derived.encoding,width:1280,height:720,sar:'1:1',dar:'16:9'}});
+ // plus 48 kHz resampling where the profile does not pin it (44.1 kHz sources)
+ const ar=args.indexOf('-ar');expect(args.slice(ar,ar+2)).toEqual(['-ar','48000']);expect([...args.slice(0,ar),...args.slice(ar+2)]).toEqual(catalogArgs);
+ for(const size of sizes){const a=lazyPassArguments('i','o','p',2,deriveLazyContract(containerLazySelect(a11,size),probe(1920,1080,'1:1')));expect(a.filter(x=>x==='-ar').length).toBe(1);expect(a[a.indexOf('-ar')+1]).toBe('48000');}
  const ntsc=deriveLazyContract(containerLazySelect(a11,'medium'),{width:1920,height:1080,avg_frame_rate:'30000/1001',r_frame_rate:'30000/1001'});
- expect(ntsc.encoding).toMatchObject({width:960,height:544,outputFrameRate:'30000/1001'});expect(()=>validateCadenceContract(ntsc.encoding)).not.toThrow();
- for(const bad of [{width:1280,height:720,avg_frame_rate:'50/1',r_frame_rate:'25/1'},{width:960,height:720,avg_frame_rate:'25/1',r_frame_rate:'25/1'}])expect(()=>deriveLazyContract(containerLazySelect(a11,'small'),bad)).toThrow();
+ expect(ntsc.encoding).toMatchObject({width:960,height:544,sar:'136:135',outputFrameRate:'30000/1001'});expect(()=>validateCadenceContract(ntsc.encoding)).not.toThrow();
+});
+
+test('(e) anamorphic sources fit by display aspect, never wider than the source display (review HOLD finding 1)',()=>{
+ // 1440x1080 SAR 4:3 = 1920x1080 display: xlarge profile raster, not 1616 coded > 1440 rejected after encode
+ expect(expectFit('xlarge',probe(1440,1080,'4:3'))).toMatchObject({width:1616,height:912,sar:'304:303',dar:'16:9'});
+ // 720x480 SAR 32:27 = 853.3x480 display, exactly the small profile's display size
+ expect(expectFit('small',probe(720,480,'32:27'))).toMatchObject({width:864,height:480,sar:'80:81',dar:'16:9'});
+ // 960x720 SAR 4:3 = 1280x720 display: the large profile raster
+ expect(expectFit('large',probe(960,720,'4:3'))).toMatchObject({width:1280,height:720,sar:'1:1',dar:'16:9'});
+ // and at every size for each of them
+ for(const size of sizes)for(const src of [probe(1440,1080,'4:3'),probe(720,480,'32:27'),probe(960,720,'4:3'),probe(720,576,'64:45'),probe(720,480,'8:9')])expectFit(size,src);
+ // an anamorphic source with a smaller display than the profile: square-pixel, its own display size
+ expect(expectFit('xlarge',probe(720,480,'32:27'))).toMatchObject({width:852,height:480,sar:'1:1'});
+});
+
+test('(f) non-16:9 sources are served, not rejected (operator ruling: no such thing as unavailable)',()=>{
+ // 4:3 square pixel
+ expect(expectFit('large',probe(1440,1080,'1:1'))).toMatchObject({width:960,height:720,sar:'1:1',dar:'4:3'});
+ expect(expectFit('large',probe(640,480,'1:1'))).toMatchObject({width:640,height:480,sar:'1:1',dar:'4:3'});
+ expect(expectFit('small',probe(1440,1080,'1:1'))).toMatchObject({width:640,height:480,sar:'1:1',dar:'4:3'});
+ // portrait
+ expect(expectFit('large',probe(1080,1920,'1:1'))).toMatchObject({width:404,height:720,sar:'1:1',dar:'101:180'});
+ expect(expectFit('xsmall',probe(720,1280,'1:1'))).toMatchObject({width:180,height:320,sar:'1:1',dar:'9:16'});
+ for(const size of sizes)for(const src of [probe(1440,1080,'1:1'),probe(1080,1920,'1:1'),probe(1080,1080,'1:1'),probe(2560,1080,'1:1'),probe(1920,1088,'1:1'),probe(1920,1080,'0:1'),probe(176,144)])expectFit(size,src);
+});
+
+test('(g) unqualified sources fail as 422 before the encode with a clear message',()=>{
+ const cases=[[{width:1280,height:720,avg_frame_rate:'50/1',r_frame_rate:'25/1'},/Variable frame rate/],[{width:1280,height:720,avg_frame_rate:'0/0',r_frame_rate:'0/0'},/cadence/],[undefined,/no video stream/],[{width:1,height:720,avg_frame_rate:'25/1',r_frame_rate:'25/1'},/geometry/]];
+ for(const [v,message] of cases){let error;try{deriveLazyContract(containerLazySelect(a11,'small'),v);}catch(e){error=e;}expect(error?.status).toBe(422);expect(error?.message).toMatch(message);}
+});
+
+test('(h) output check holds the fitted raster and the no-upscale display bound',()=>{
+ const src={streams:[{codec_type:'video',width:1440,height:1080,sample_aspect_ratio:'4:3'},{codec_type:'audio'}],format:{duration:'10'}};
+ const c=deriveLazyContract(containerLazySelect(a11,'xlarge'),{...src.streams[0],avg_frame_rate:'25/1',r_frame_rate:'25/1'});
+ const out=(o)=>({streams:[{codec_type:'video',codec_name:'h264',pix_fmt:'yuv420p',width:1616,height:912,avg_frame_rate:'25/1',r_frame_rate:'25/1',sample_aspect_ratio:'304:303',display_aspect_ratio:'16:9',...o},{codec_type:'audio',codec_name:'aac',channels:2,sample_rate:'48000'}],format:{duration:'10'}});
+ expect(validateLazyOutput(src,out({}),c)).toMatchObject({width:1616,height:912});
+ for(const o of [{width:1600},{sample_aspect_ratio:'1:1'},{display_aspect_ratio:'4:3'},{r_frame_rate:'50/1'}])expect(()=>validateLazyOutput(src,out(o),c)).toThrow();
+ // a raster wider than the source display is refused even if the contract asked for it
+ expect(()=>validateLazyOutput(src,out({}),{...c,encoding:{...c.encoding,width:1928,height:1080,sar:'1:1',dar:'241:135'}})).toThrow('Invalid output dimensions');
+ // silent sources are fine
+ const silent={...src,streams:[src.streams[0]]},silentOut=out({});silentOut.streams.pop();expect(validateLazyOutput(silent,silentOut,c).audioCodec).toBeNull();
 });
 
 test('lazy miss routes to lazy container endpoints, records fetched source identity, and exposes actual height',async()=>{
@@ -77,4 +136,10 @@ test('lazy miss routes to lazy container endpoints, records fetched source ident
  expect(r.headers.get('Access-Control-Expose-Headers')).toContain('X-Transcode-Video-Height');expect(new Uint8Array(await r.arrayBuffer())).toEqual(bytes);
  expect(paths).toEqual(['/video-lazy-info','/video-lazy-info','/video-lazy-transcode']);expect(object.customMetadata.sourceSha256).toBe(sourceSha);
  const hit=await handleVideoProxy(new Request('https://proxy/video'),bucket,instance,a11,{size:'xlarge'});expect(hit.headers.get('X-Transcode-Cache')).toBe('HIT');
+});
+
+test('lazy 422 from the encoder (unqualified source) reaches the client as 422, not 502',async()=>{
+ const instance=async()=>({fetch:async(r)=>{const u=new URL(r.url);if(u.pathname==='/video-lazy-info')return Response.json({revision:'c'.repeat(64)});return new Response('Variable frame rate source not supported',{status:422});}});
+ const r=await handleVideoProxy(new Request('https://proxy/video'),{head:async()=>null},instance,a11,{size:'small'});
+ expect(r.status).toBe(422);expect(await r.text()).toContain('Variable frame rate');
 });
