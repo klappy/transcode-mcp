@@ -87,20 +87,41 @@ export async function docs(args: Args, call: Caller, timeoutMs = DOCS_TIMEOUT_MS
   } catch { return failure("DOCS_UNAVAILABLE", "Documentation temporarily unavailable; retry explicitly later."); }
   finally { clearTimeout(timer!); controller.abort(); }
 }
+type DocsClient = {
+  connect(signal: AbortSignal): Promise<unknown>;
+  call(arguments_: Record<string, unknown>, signal: AbortSignal): Promise<unknown>;
+  close(): Promise<unknown>;
+};
+export async function docsWithClient(args: Args, client: DocsClient, timeoutMs = DOCS_TIMEOUT_MS) {
+  let connected = false;
+  const close = () => { try { void client.close().catch(() => {}); } catch {} };
+  try {
+    return await docs(args, async (arguments_, signal) => {
+      if (!connected) {
+        try {
+          await client.connect(signal);
+          signal.throwIfAborted();
+          connected = true;
+        } catch (error) {
+          // A transport may finish connecting after the consumer deadline.
+          // Close again then; the earlier outer finally cannot close future state.
+          close();
+          throw error;
+        }
+      }
+      signal.throwIfAborted();
+      return client.call(arguments_, signal);
+    }, timeoutMs);
+  } finally { close(); }
+}
 export async function liveDocs(args: Args) {
   // Lazy SDK loading preserves the worker's existing test-runtime boundary.
   const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
   const { StreamableHTTPClientTransport } = await import("@modelcontextprotocol/sdk/client/streamableHttp.js");
   const client = new Client({ name: "transcode-mcp-docs", version });
-  let connected = false;
-  try {
-    return await docs(args, async (arguments_, signal) => {
-      if (!connected) {
-        await client.connect(new StreamableHTTPClientTransport(new URL(DOCS_ENDPOINT), { requestInit: { signal } }));
-        signal.throwIfAborted();
-        connected = true;
-      }
-      return client.callTool({ name: "oddkit", arguments: arguments_ }, undefined, { signal, timeout: DOCS_TIMEOUT_MS });
-    });
-  } finally { void client.close().catch(() => {}); }
+  return docsWithClient(args, {
+    connect: signal => client.connect(new StreamableHTTPClientTransport(new URL(DOCS_ENDPOINT), { requestInit: { signal } })),
+    call: (arguments_, signal) => client.callTool({ name: "oddkit", arguments: arguments_ }, undefined, { signal, timeout: DOCS_TIMEOUT_MS }),
+    close: () => client.close(),
+  });
 }

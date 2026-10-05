@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { docs, docsSchema, DOCS_REPOSITORY } from "./docs";
+import { docs, docsWithClient, docsSchema, DOCS_REPOSITORY } from "./docs";
 import {z} from "zod";
 const wrap=(result:any)=>({content:[{type:"text",text:JSON.stringify({result})}]});
 const hit={uri:"klappy://docs/one",title:"Title",score:1,snippet:"Match"};
@@ -54,4 +54,18 @@ test("invalid identities and unrequested disclosure fail closed",async()=>{
  for(const entry of [{title:"missing URI"},{uri:"x"},{...hit,body:"forbidden"},{...hit,metadata:{hidden:true}},{...hit,summary:"unrequested"}]) {
   expect((await docs({query:"x"},async()=>wrap({...search,data:[entry]}))).isError).toBe(true);
  }
+});
+
+test("late successful connection is closed again without tool dispatch",async()=>{
+ let release!:()=>void;let calls=0;let closes=0;let connected=false;
+ const client={connect:async()=>{await new Promise<void>(resolve=>{release=resolve});connected=true},call:async()=>{calls++;return wrap(search)},close:async()=>{closes++;connected=false}};
+ const r=await docsWithClient({query:"x"},client,5);
+ expect(r.isError).toBe(true);expect(closes).toBe(1);expect(calls).toBe(0);
+ release();await new Promise(resolve=>setTimeout(resolve,1));
+ expect(closes).toBe(2);expect(connected).toBe(false);expect(calls).toBe(0);
+});
+test("normal connection closes after response and cleanup cannot delay consumer",async()=>{
+ let closes=0;
+ const r=await docsWithClient({query:"x"},{connect:async()=>{},call:async()=>wrap(search),close:()=>{closes++;return new Promise(()=>{})}},5);
+ expect(r.isError).toBeUndefined();expect(closes).toBe(1);
 });
