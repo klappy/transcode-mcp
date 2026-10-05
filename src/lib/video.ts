@@ -2,17 +2,18 @@ import {createHash} from "node:crypto";
 import contract from '../../container/video-contract.json';
 import a184 from '../../container/video-contract-a184.json';
 import a10 from '../../container/video-contract-a10.json';
+import xsmall from '../../container/video-contract-xsmall.json';
 import small from '../../container/video-contract-small.json';
 import medium from '../../container/video-contract-medium.json';
 import extension from '../../container/video-source-extension.json';
 import {createVideoCatalog} from '../../container/video-catalog.mjs';
 export { contract as videoContract };
-export type VideoSize='small'|'medium'|'large';
+export type VideoSize='xsmall'|'small'|'medium'|'large';
 export const videoContracts=[contract,a184,a10];
-export const selectVideoContract=createVideoCatalog(videoContracts,{small,medium},extension.recipeRevision).select;
+export const selectVideoContract=createVideoCatalog(videoContracts,{xsmall,small,medium},extension.recipeRevision).select;
 export function videoOptions(raw: Record<string, string>) {
     for (const [key,value] of Object.entries(raw)) {
-        if(key==='size'){if(!['small','medium','large'].includes(value))throw Error('Unsupported video size');}
+        if(key==='size'){if(!['xsmall','small','medium','large'].includes(value))throw Error('Unsupported video size');}
         else if(({preset:'fia',q:'medium',f:'mp4'} as Record<string,string>)[key]!==value)throw Error('Unsupported video option');
     }
     return {preset:'fia',q:'medium',f:'mp4',...(raw.size&&raw.size!=='large'?{size:raw.size as VideoSize}:{})} as const;

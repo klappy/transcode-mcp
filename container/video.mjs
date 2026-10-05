@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import {createVideoCatalog} from './video-catalog.mjs';
 export const contract = JSON.parse(await readFile(new URL('./video-contract.json', import.meta.url), 'utf8'));
 export const videoContracts=[contract,...await Promise.all(['a184','a10'].map(async id=>JSON.parse(await readFile(new URL(`./video-contract-${id}.json`,import.meta.url),'utf8'))))];
-const targetContracts=Object.fromEntries(await Promise.all(['small','medium'].map(async size=>[size,JSON.parse(await readFile(new URL(`./video-contract-${size}.json`,import.meta.url),'utf8'))])));
+const targetContracts=Object.fromEntries(await Promise.all(['xsmall','small','medium'].map(async size=>[size,JSON.parse(await readFile(new URL(`./video-contract-${size}.json`,import.meta.url),'utf8'))])));
 const extension=JSON.parse(await readFile(new URL('./video-source-extension.json',import.meta.url),'utf8'));
 export const selectVideoContract=createVideoCatalog(videoContracts,targetContracts,extension.recipeRevision).select;
 const hash = b => createHash('sha256').update(b).digest('hex');

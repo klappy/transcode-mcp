@@ -180,7 +180,7 @@ function createServer(request: Request, McpServerCtor: typeof McpServer) {
     "generate_transcode_url",
     {
       source_url: z.string().url().describe("The image (or audio) URL to serve through the proxy."),
-      size: z.enum(["small", "medium", "large"]).optional().describe("Video delivery size only: 480p mono, 540p stereo, or 720p stereo. Default large; separate from quality."),
+      size: z.enum(["xsmall", "small", "medium", "large"]).optional().describe("Video delivery size only: 320p mono, 480p mono, 540p stereo, or 720p stereo. Default large; separate from quality."),
       media_type: z.enum(["image", "audio", "video"]).optional().describe("Defaults to image."),
       // Primary image input: the shortest-side display size. Stable across
       // phone rotation, which is why it's preferred over a literal width.
