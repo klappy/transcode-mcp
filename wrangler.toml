@@ -110,6 +110,7 @@ tag = "v1"
 # One-time: wrangler r2 bucket create transcode-mcp-audio-development
 [env.development]
 name = "transcode-mcp-development"
+preview_urls = true
 
 [env.development.vars]
 
