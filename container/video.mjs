@@ -81,7 +81,7 @@ export function validateOutput(source, result, selected=contract) {
         throw Error('Invalid output dimensions');
     const e=selected.encoding;validateGeometryContract(e);validateCadenceContract(e);
     const a=result.streams.find(s=>s.codec_type==='audio');
-    if(o.width!==e.width||o.height!==e.height||o.avg_frame_rate!==e.outputFrameRate||o.sample_aspect_ratio!==e.sar||o.display_aspect_ratio!==e.dar||a?.channels!==(e.audioChannels||2)||Number(a.sample_rate)!==48000)throw Error('Target raster/aspect/cadence/audio mismatch');
+    if(o.width!==e.width||o.height!==e.height||o.avg_frame_rate!==e.outputFrameRate||o.r_frame_rate!==e.outputFrameRate||o.sample_aspect_ratio!==e.sar||o.display_aspect_ratio!==e.dar||a?.channels!==(e.audioChannels||2)||Number(a.sample_rate)!==48000)throw Error('Target raster/aspect/cadence/audio mismatch');
     const sa = source.streams.some(s => s.codec_type === 'audio'), oa = result.streams.filter(s => s.codec_type === 'audio');
     if (sa ? (oa.length !== 1 || oa[0].codec_name !== 'aac') : oa.length !== 0)
         throw Error('Audio stream mismatch');
@@ -95,7 +95,7 @@ export function videoPhaseLogger(sink=line=>console.log(line),clock=()=>Date.now
 }
 export function deliveryPassArguments(input,output,prefix,pass,contract=videoContracts[0]){
  const e=contract.encoding;validateGeometryContract(e);const cadence=validateCadenceContract(e);if(![1,2].includes(pass))throw Error('Invalid pass');
- const common=['-nostdin','-hide_banner','-y','-protocol_whitelist','file,pipe','-i',input,'-map','0:v:0','-vf',`${cadence.divisor>1?'select=not(mod(n\\,'+cadence.divisor+')),':''}scale=${e.width}:${e.height}:flags=lanczos${e.sar?',setsar='+e.sar.replace(':','/')+':max=65535':''}`,'-fps_mode','passthrough','-c:v','libx264','-preset',e.preset,'-pix_fmt','yuv420p','-b:v',String(e.videoBps),'-maxrate',String(e.maxrateBps),'-bufsize',String(e.bufferBits),'-g',String(e.keyint),'-keyint_min',String(e.minKeyint),'-sc_threshold',String(e.scenecut),'-passlogfile',prefix];
+ const common=['-nostdin','-hide_banner','-y','-protocol_whitelist','file,pipe','-i',input,'-map','0:v:0','-vf',`${cadence.divisor>1?'fps=fps='+cadence.rate+':round=near,':''}scale=${e.width}:${e.height}:flags=lanczos${e.sar?',setsar='+e.sar.replace(':','/')+':max=65535':''}`,'-fps_mode','passthrough','-c:v','libx264','-preset',e.preset,'-pix_fmt','yuv420p','-b:v',String(e.videoBps),'-maxrate',String(e.maxrateBps),'-bufsize',String(e.bufferBits),'-g',String(e.keyint),'-keyint_min',String(e.minKeyint),'-sc_threshold',String(e.scenecut),'-passlogfile',prefix];
  return pass===1?[...common,'-pass','1','-an','-f','null','/dev/null']:[...common,'-map','0:a:0?','-pass','2','-c:a','aac','-b:a',e.audioBps?String(e.audioBps):`${e.audioKbps}k`,'-ac',String(e.audioChannels||2),...(e.audioBps?['-ar','48000']:[]),'-movflags','+faststart',output];
 }
 export async function encodeDelivery(input,output,dir,sourceProbe,signal,phase=()=>{},contract=videoContracts[0]){
@@ -108,7 +108,7 @@ export async function encodeDelivery(input,output,dir,sourceProbe,signal,phase=(
    const remaining=contract.limits.encodeMs-(Date.now()-start);if(remaining<=0)throw Error('Combined encode deadline');let log='',spawned=false,reported=false;const began=Date.now();
    await runBounded('/usr/bin/ffmpeg',deliveryPassArguments(input,output,prefix,pass,contract),{timeout:remaining,signal:local,outputPath:pass===1?'/dev/null':output,limit:pass===1?contract.limits.passlogFileBytes:contract.limits.bytes,onSpawn:()=>{spawned=true;},onClose:({outcome})=>phase('encode-exited',{pass,outcome}),onStderr:b=>{log=(log+b.toString()).slice(-contract.limits.stderrBytes);if(spawned&&!reported&&/frame=\s*[1-9]\d*/.test(log)){reported=true;phase('encode-spawned',{pass});}}});
    const settings=pass===1?(await readFile(prefix+'-0.log','utf8')).split('\n')[0]:log;
-   for(const token of [`bitrate=${Math.floor(e.videoBps/1000)}`,`vbv_maxrate=${Math.floor(e.maxrateBps/1000)}`,`vbv_bufsize=${Math.floor(e.bufferBits/1000)}`,`keyint=${e.keyint}`,`scenecut=${e.scenecut}`,pass===1?'rc=abr':'rc=2pass'])if(!settings.includes(token))throw Error('Unconfirmed encoder setting '+token);
+   for(const token of [`fps=${e.outputFrameRate}`,`bitrate=${Math.floor(e.videoBps/1000)}`,`vbv_maxrate=${Math.floor(e.maxrateBps/1000)}`,`vbv_bufsize=${Math.floor(e.bufferBits/1000)}`,`keyint=${e.keyint}`,`scenecut=${e.scenecut}`,pass===1?'rc=abr':'rc=2pass'])if(!settings.includes(token))throw Error('Unconfirmed encoder setting '+token);
    let total=0;for(const name of (await readdir(dir)).filter(n=>n.startsWith('pass'))){if(!/^pass-0\.log(?:\.mbtree)?(?:\.temp)?$/.test(name))throw Error('Unexpected statistics file');const length=(await stat(join(dir,name))).size;if(length>contract.limits.passlogFileBytes)throw Error('Statistics file ceiling');total+=length;}if(total>contract.limits.passlogTotalBytes)throw Error('Statistics aggregate ceiling');
    passes.push({pass,elapsedMs:Date.now()-began,settingsSha256:hash(settings),appliedSettings:pass===1?settings:undefined});
   }
