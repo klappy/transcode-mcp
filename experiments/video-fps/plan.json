@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "recipeRevision": "bb2edd892d04a9c21d5f43c06c932bc50d188c5a",
+  "artifactId": "11324160558",
+  "runId": "37258408345",
+  "receiptSha256": "c5705e220ff63d19286771b8b0e3dae35acd6de980858a5493efc57a91bf1b7c",
+  "baselineSha256": "b48729c4de2bbea42ad0efab778ae758381bc135ead32cc1bed9573837b0808e",
+  "baselineBytes": 5509355,
+  "encoderRevision": "20e65c8cab8171722b5e0505f91e4d8ed3609982aa7af54ccffdf5efaddad29d",
+  "limits": {"jobMs":300000,"windowMs":1800000,"cleanupMs":30000,"diskBytes":805306368,"fileBytes":62914560,"passlogFileBytes":33554432,"passlogTotalBytes":67108864},
+  "scope":"720p25fps at unchanged439024bit/s only; optional one matched50fps control; lower-rate candidate remains gated"
+}
