@@ -49,3 +49,23 @@ test('complete-transfer deadline aborts a stalled body after valid headers',asyn
  }) as ReferenceFetcher,{headersMs:5,totalMs:15});
  expect(response.status).toBe(200);await expect(response.arrayBuffer()).rejects.toThrow('origin body aborted');expect(signal!.aborted).toBe(true);expect(aborted).toBe(true);
 });
+test('fixed bundled full-origin adaptation slices prefix middle and suffix across chunks',async()=>{
+ for(const [range,expected] of [['bytes=0-0',[1]],['bytes=1-2',[2,3]],['bytes=-2',[3,4]]] as const){
+  let cancelled=false,signal:AbortSignal|undefined;
+  const r=await streamVideoReference(req('GET',range),{...ref,sliceFullRange:true},(async(_,o)=>{
+   signal=o!.signal as AbortSignal;let index=0;
+   return upstream(new ReadableStream({pull(c){if(index<4)c.enqueue(bytes.slice(index,index+1));else c.close();index++},cancel(){cancelled=true}}),{'Content-Length':'4'});
+  }) as ReferenceFetcher);
+  expect(r.status).toBe(206);expect(r.headers.get('x-reference-range-mode')).toBe('full-origin-slice');expect([...new Uint8Array(await r.arrayBuffer())]).toEqual([...expected]);expect(signal!.aborted).toBe(true);
+ }
+});
+test('range adaptation is opt-in with full length/validator checks and HEAD metadata only',async()=>{
+ expect((await streamVideoReference(req('GET','bytes=0-1'),ref,(async()=>upstream(bytes,{'Content-Length':'4'})) as ReferenceFetcher)).status).toBe(502);
+ for(const headers of [{},{'Content-Length':'3'},{'Content-Length':'4',ETag:'"changed"'}] as Record<string,string>[])expect((await streamVideoReference(req('GET','bytes=0-1'),{...ref,sliceFullRange:true},(async()=>upstream(bytes,headers)) as ReferenceFetcher)).status).toBe(502);
+ const h=await streamVideoReference(req('HEAD','bytes=-2'),{...ref,sliceFullRange:true},(async()=>upstream(null)) as ReferenceFetcher);expect(h.status).toBe(206);expect(h.headers.get('content-length')).toBe('2');expect(h.headers.get('content-range')).toBe('bytes 2-3/4');
+});
+test('adapted ranges reject truncated or excessive upstream bytes',async()=>{
+ for(const b of [new Uint8Array([1,2]),new Uint8Array([1,2,3,4,5])]){
+  const r=await streamVideoReference(req('GET','bytes=2-3'),{...ref,sliceFullRange:true},(async()=>upstream(b,{'Content-Length':'4'})) as ReferenceFetcher);await expect(r.arrayBuffer()).rejects.toThrow();
+ }
+});
