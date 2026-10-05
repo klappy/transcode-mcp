@@ -10,7 +10,7 @@ status: working
 
 ## Summary
 
-Two actual DEV native-player runs at main2bf1e5 returned503 for Medium while Small played. Both responses had19-byte bodies, consistent with `Video capacity busy`; the exact body is still a live diagnostic gate. Deterministic local routing confirms Small and Medium both use instance-0, while Large uses instance-3. Current `VideoOwner.run` rejects different keys even when preparation only reads already verified R2 objects. This is a concrete scoped explanation to reproduce with a controlled concurrent HIT regression, not a general reliability claim.
+Two actual DEV native-player runs at main2bf1e5 returned503 for Medium while Small played. A subsequent parallel cached-range diagnostic returned the exact19-byte body `Video capacity busy` for Medium, while Small/Large returned206HIT. Deterministic local routing confirms Small and Medium both use instance-0, while Large uses instance-3. Current `VideoOwner.run` rejects different keys even when preparation only reads already verified R2 objects. This is a concrete scoped explanation to reproduce with a controlled concurrent HIT regression, not a general reliability claim.
 
 ## Decision and boundaries
 
@@ -18,7 +18,7 @@ Perform one read-only preparation outside encode admission. It still obtains cur
 
 A valid HIT goes directly to the existing per-consumer range/body acquisition. A missing object enters the retained owner, repeats identity/storage preparation, and only then may encode. Concurrent misses for the same contract join existing work; different missing contracts retain bounded503. Do not bypass metadata validation, substitute stale identity, share response bodies or alter cache keys. If an object disappears after lookup, fail as the existing read path does; do not start an unowned encode.
 
-Bound the read-only lookup by the original consumer deadline, including R2 reads that cannot be cancelled. Late lookup completion must never proceed into encode admission. A stalled read-only lookup does not hold the encode slot because no mutation or encode was started. Retained cold jobs retain the original owner lifecycle through publication and cleanup, including late uncancellable storage settlement. The final consumer body read continues to use remaining original time. No new endpoint, preset, tool, environment setting or encoder change.
+Bound the read-only lookup by the original consumer deadline, including R2 reads that cannot be cancelled. Late lookup completion must never proceed into encode admission. A stalled read-only lookup does not hold the encode slot because no mutation or encode was started. A newly admitted cold job receives only the remaining original budget; joining callers do not reset its timer. Retained cold jobs retain the original owner lifecycle through publication and cleanup, including late uncancellable storage settlement. The final consumer body read continues to use remaining original time. No new endpoint, preset, tool, environment setting or encoder change.
 
 ## Evidence and alternatives
 
