@@ -8,7 +8,8 @@ export const contract = JSON.parse(await readFile(new URL('./video-contract.json
 export const videoContracts=[contract,...await Promise.all(['a184','a10'].map(async id=>JSON.parse(await readFile(new URL(`./video-contract-${id}.json`,import.meta.url),'utf8'))))];
 const targetContracts=Object.fromEntries(await Promise.all(['xsmall','small','medium'].map(async size=>[size,JSON.parse(await readFile(new URL(`./video-contract-${size}.json`,import.meta.url),'utf8'))])));
 const extension=JSON.parse(await readFile(new URL('./video-source-extension.json',import.meta.url),'utf8'));
-export const selectVideoContract=createVideoCatalog(videoContracts,targetContracts,extension.recipeRevision).select;
+const exactContracts=await Promise.all(['small','xlarge'].map(async size=>({size,contract:JSON.parse(await readFile(new URL(`./video-contract-4k-${size}.json`,import.meta.url),'utf8'))})));
+export const selectVideoContract=createVideoCatalog(videoContracts,targetContracts,extension.recipeRevision,exactContracts).select;
 const hash = b => createHash('sha256').update(b).digest('hex');
 let busy = false;
 export function runBounded(command, args, { timeout = 30000, signal, outputPath, limit = contract.limits.bytes, onStderr, onSpawn, onClose } = {}) {
@@ -98,9 +99,13 @@ export function deliveryPassArguments(input,output,prefix,pass,contract=videoCon
  const common=['-nostdin','-hide_banner','-y','-protocol_whitelist','file,pipe','-i',input,'-map','0:v:0','-vf',`${cadence.divisor>1?'fps=fps='+cadence.rate+':round=near,':''}scale=${e.width}:${e.height}:flags=lanczos${e.sar?',setsar='+e.sar.replace(':','/')+':max=65535':''}`,'-fps_mode','passthrough','-c:v','libx264','-preset',e.preset,'-pix_fmt','yuv420p','-b:v',String(e.videoBps),'-maxrate',String(e.maxrateBps),'-bufsize',String(e.bufferBits),'-g',String(e.keyint),'-keyint_min',String(e.minKeyint),'-sc_threshold',String(e.scenecut),'-passlogfile',prefix];
  return pass===1?[...common,'-pass','1','-an','-f','null','/dev/null']:[...common,'-map','0:a:0?','-pass','2','-c:a','aac','-b:a',e.audioBps?String(e.audioBps):`${e.audioKbps}k`,'-ac',String(e.audioChannels||2),...(e.audioBps?['-ar','48000']:[]),'-movflags','+faststart',output];
 }
+export function validateSourceGeometry(v,contract) {
+ validateSourceCadence(v,contract.encoding);if(v?.width!==(contract.source.geometry?.width||1280)||v?.height!==(contract.source.geometry?.height||720))throw Error('Unqualified source geometry');
+}
+export function sourceByteCeiling(contract) {return contract.limits.sourceBytes||contract.limits.bytes;}
 export async function encodeDelivery(input,output,dir,sourceProbe,signal,phase=()=>{},contract=videoContracts[0]){
  const e=contract.encoding,v=sourceProbe.streams.find(s=>s.codec_type==='video');
- validateSourceCadence(v,e);if(v?.width!==1280||v?.height!==720)throw Error('Unqualified source geometry');
+ validateSourceGeometry(v,contract);
  const prefix=join(dir,'pass'),start=Date.now(),passes=[],statistics=[];
  const local=AbortSignal.any([signal,AbortSignal.timeout(contract.limits.encodeMs)]);
  try{
@@ -119,9 +124,9 @@ export async function encodeDelivery(input,output,dir,sourceProbe,signal,phase=(
 export async function handleVideo(req, res) {
     const infoUrl=new URL(req.url,'http://container');
     if (infoUrl.pathname === '/video-info') {
-        if([...infoUrl.searchParams.keys()].some(k=>!['assetId','size'].includes(k))||infoUrl.searchParams.getAll('size').length>1){res.writeHead(400).end('Unsupported video info option');return true;}
+        if([...infoUrl.searchParams.keys()].some(k=>!['assetId','size','source_url'].includes(k))||['size','assetId','source_url'].some(k=>infoUrl.searchParams.getAll(k).length>1)||(infoUrl.searchParams.has('assetId')&&infoUrl.searchParams.has('source_url'))){res.writeHead(400).end('Unsupported video info option');return true;}
         if(req.method !== 'GET'){res.writeHead(405).end('GET only');return true;}
-        const sourceContract=videoContracts.find(c=>c.source.provenance.assetId===(infoUrl.searchParams.get('assetId')||'a13'));const selected=sourceContract&&selectVideoContract(sourceContract.source.url,infoUrl.searchParams.get('size')||'large');if(!selected){res.writeHead(400).end('Unapproved asset');return true;}
+        const sourceContract=videoContracts.find(c=>c.source.provenance.assetId===(infoUrl.searchParams.get('assetId')||'a13'));const selected=selectVideoContract(infoUrl.searchParams.get('source_url')||sourceContract?.source.url,infoUrl.searchParams.get('size')||'large');if(!selected){res.writeHead(400).end('Unapproved asset');return true;}
         try {
             res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(await encoderIdentity(undefined,selected)));
         }
@@ -174,11 +179,11 @@ export async function handleVideo(req, res) {
             const response = await fetch(contract.source.url, { redirect: 'error', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(contract.limits.sourceMs)]) });
             if (response.status !== 200 || !response.body)
                 throw Error('Source unavailable');
-            if (Number(response.headers.get('content-length') || 0) > contract.limits.bytes)
+            if (Number(response.headers.get('content-length') || 0) > sourceByteCeiling(contract))
                 throw Error('Source too large');
             for await (const chunk of response.body) {
                 size += chunk.length;
-                if (size > contract.limits.bytes)
+                if (size > sourceByteCeiling(contract))
                     throw Error('Source exceeds ceiling');
                 digest.update(chunk);
                 let offset = 0;
