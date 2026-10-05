@@ -55,3 +55,7 @@ Compare source, prior same-size artifact and revised artifact during continuous 
 ## Discovery and reversal
 
 This document is intended for the existing repository-backed docs search and single-URI retrieval. Verify live discovery after canonical publication. No additional tool, service, binding or bundled catalog is introduced. Git reversal and immutable retained artifacts preserve the prior behavior; new output publication and app catalog binding remain separate reviewed actions.
+
+## Measured sampling-first checkpoint
+
+See [the sampled 320p results](2026-10-05-320-sampled-results.md) for the actual 39.6-second measurement, matched still and geometry review, and remaining motion/listening limits. This evidence does not qualify the complete source or change production availability.
