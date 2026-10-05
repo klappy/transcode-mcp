@@ -6,7 +6,7 @@ import { join } from 'node:path';
 export const contract = JSON.parse(await readFile(new URL('./video-contract.json', import.meta.url), 'utf8'));
 const hash = b => createHash('sha256').update(b).digest('hex');
 let busy = false;
-export function runBounded(command, args, { timeout = 30000, signal, outputPath, limit = contract.limits.bytes } = {}) {
+export function runBounded(command, args, { timeout = 30000, signal, outputPath, limit = contract.limits.bytes, onStderr } = {}) {
     return new Promise((resolve, reject) => {
         let failure, stdout = Buffer.alloc(0), stderr = '';
         const child = spawn(outputPath ? '/usr/bin/prlimit' : command, outputPath ? [`--fsize=${limit}:${limit}`, '--', command, ...args] : args, { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -25,7 +25,7 @@ export function runBounded(command, args, { timeout = 30000, signal, outputPath,
             fail(new Error('Probe output exceeds ceiling'));
         else
             stdout = Buffer.concat([stdout, b]); });
-        child.stderr.on('data', b => stderr = (stderr + b.toString()).slice(-contract.limits.stderrBytes));
+        child.stderr.on('data', b => {stderr = (stderr + b.toString()).slice(-contract.limits.stderrBytes);onStderr?.(b);});
         child.on('error', e => { failure = e; });
         child.on('close', code => { clearTimeout(timer); if (monitor)
             clearInterval(monitor); signal?.removeEventListener('abort', abort); if (failure || code !== 0)

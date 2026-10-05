@@ -53,7 +53,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD: ${{ github.sha }}
         run: |
-          if git diff --quiet "$BASE" "$HEAD" -- container src/lib/video.ts scripts/video-integration.mjs .github/workflows/ci.yml; then
+          if git diff --quiet "$BASE" "$HEAD" -- container src/lib/video.ts scripts/video-integration.mjs scripts/video-benchmark.mjs .github/workflows/ci.yml; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -70,10 +70,10 @@ jobs:
         run: |
           mkdir -p video-evidence
           docker image inspect fia-video-proof > video-evidence/image.json
-          docker run -d --name fia-video-proof -p 127.0.0.1:8080:8080 -v "$PWD/video-evidence:/evidence" fia-video-proof
-      - name: Encode the single verified source
+          docker run -d --name fia-video-proof -p 127.0.0.1:8080:8080 -v "$PWD/video-evidence:/evidence" -v "$PWD:/proof:ro" fia-video-proof
+      - name: Compare bounded two-pass candidates from one source
         if: steps.paths.outputs.changed == 'true'
-        run: node scripts/video-integration.mjs video-evidence
+        run: docker exec fia-video-proof node /proof/scripts/video-benchmark.mjs /evidence
       - name: Preserve container logs and stop
         if: always() && steps.paths.outputs.changed == 'true'
         run: |

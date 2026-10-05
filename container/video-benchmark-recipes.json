@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "status": "experimental-not-selected-for-delivery",
+  "method": "fia-video-two-pass-qualification@1",
+  "displayHeight": 480,
+  "encodeHeight": 720,
+  "videoKbps": [450,750,1000],
+  "audioKbps": 96,
+  "maxrateMultiplier": 2,
+  "bufferSeconds": 2,
+  "gopSeconds": 30,
+  "minKeyint": 1,
+  "scenecut": 60,
+  "preset": "medium",
+  "muxAllowance": 1.02,
+  "minimumBitrate": null,
+  "spatialSceneWindow": "not-mapped",
+  "limits": {"benchmarkMs":600000,"candidateMs":300000,"passlogFileBytes":8388608,"passlogTotalBytes":16777216,"frameBytes":2097152,"frameCount":36,"metadataBytes":8388608,"totalBytes":352321536}
+}

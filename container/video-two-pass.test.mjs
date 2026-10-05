@@ -1,0 +1,6 @@
+import {test,expect} from 'bun:test';import {readFileSync} from 'node:fs';import {twoPassArguments} from './video-two-pass.mjs';
+const plan=JSON.parse(readFileSync(new URL('./video-benchmark-recipes.json',import.meta.url)));
+test('two passes share exact resolution/rate/GOP constraints and job-local stats without invented controls',()=>{
+ for(const kbps of plan.videoKbps){const args=pass=>twoPassArguments(plan,{source:'/tmp/source.mp4',output:'/tmp/output.mp4',prefix:'/tmp/owned/stats',kbps,fps:30000/1001,pass});const first=args(1),second=args(2);for(const flag of ['-vf','-b:v','-maxrate','-bufsize','-g','-sc_threshold','-keyint_min','-passlogfile'])expect(first[first.indexOf(flag)+1]).toBe(second[second.indexOf(flag)+1]);expect(first[first.indexOf('-g')+1]).toBe('899');expect(first[first.indexOf('-pass')+1]).toBe('1');expect(second[second.indexOf('-pass')+1]).toBe('2');expect(first).toContain('-an');expect(second).toContain('96k');for(const flag of ['-crf','-minrate','-me_range'])expect(second).not.toContain(flag);}
+});
+test('unmeasured budget or invalid cadence/pass fails closed',()=>{for(const options of [{kbps:123,fps:30,pass:1},{kbps:450,fps:0,pass:1},{kbps:450,fps:30,pass:3}])expect(()=>twoPassArguments(plan,{source:'s',output:'o',prefix:'p',...options})).toThrow();});
