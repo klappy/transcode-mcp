@@ -41,3 +41,11 @@ test('consumer cancellation aborts origin and cancels its reader',async()=>{
 test('header deadline aborts an outstanding actual-style fetch',async()=>{
  const r=await streamVideoReference(req(),ref,((_,o)=>new Promise((_,reject)=>o!.signal!.addEventListener('abort',()=>reject(Error('aborted'))))) as ReferenceFetcher,{headersMs:5,totalMs:20});expect(r.status).toBe(502);
 });
+test('complete-transfer deadline aborts a stalled body after valid headers',async()=>{
+ let signal:AbortSignal|undefined,aborted=false;
+ const response=await streamVideoReference(req(),ref,(async(_,options)=>{
+  signal=options!.signal as AbortSignal;
+  return upstream(new ReadableStream({start(output){signal!.addEventListener('abort',()=>{aborted=true;output.error(Error('origin body aborted'))},{once:true})},pull(){}}));
+ }) as ReferenceFetcher,{headersMs:5,totalMs:15});
+ expect(response.status).toBe(200);await expect(response.arrayBuffer()).rejects.toThrow('origin body aborted');expect(signal!.aborted).toBe(true);expect(aborted).toBe(true);
+});
