@@ -1,0 +1,4 @@
+export const TARGETS=Object.freeze(['small','medium','large']);
+export const LIMIT=768*1024*1024;
+export function admit({now,deadline,used,reserve=180*1024*1024}){if(deadline-now<330000)throw Error('Insufficient shared deadline for next target');if(!Number.isSafeInteger(used)||used<0||used+reserve>LIMIT)throw Error('Insufficient qualification disk reservation');}
+export function measuredRates(measurement,nominal){const video=measurement.tracks.find(t=>t.type==='vide'),audio=measurement.tracks.find(t=>t.type==='soun');if(!video||!audio||video.duration<=0||audio.duration<=0)throw Error('Missing measured tracks');const actualVideoBps=video.bytes*8/video.duration,actualAudioBps=audio.bytes*8/audio.duration,relativeVideoDeviation=Math.abs(actualVideoBps/nominal-1);return {actualVideoBps,actualAudioBps,relativeVideoDeviation,accepted:relativeVideoDeviation<=.05};}
