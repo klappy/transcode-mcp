@@ -96,7 +96,7 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
                 const lengthBound=new FixedLengthStream(meta.bytes);
                 const transferAbort=new AbortController();
                 const pumping=checked.pipeTo(lengthBound.writable,{signal:AbortSignal.any([signal,transferAbort.signal])});
-                const storing=bucket.put(pending,lengthBound.readable).catch(error=>{transferAbort.abort(error);throw error;});
+                const storing=bucket.put(pending,lengthBound.readable).catch(async error=>{transferAbort.abort(error);await lengthBound.readable.cancel(error).catch(()=>{});throw error;});
                 const settled=await Promise.allSettled([pumping,storing]);
                 for(const outcome of settled)if(outcome.status==='rejected')throw outcome.reason;
                 if(size!==meta.bytes||digest.digest('hex')!==meta.sha256)throw Error('Video byte identity mismatch');
