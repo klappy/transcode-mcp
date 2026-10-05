@@ -23,6 +23,6 @@ Every lazy source is served, whatever its shape (operator ruling: no source is u
 
 ## Other bounds carried, not new policy
 
-- The cadence comes from the probed source using the existing integer-divisor ≤30 fps policy. Variable frame rate sources (avg ≠ r frame rate), sources with no video stream and degenerate rasters are refused with **422** and a clear message. This happens after the probe and before any encode.
+- The cadence comes from the probed source using the existing integer-divisor ≤30 fps policy. Variable frame rate sources (avg ≠ r frame rate, or no usable rate) are normalized, not refused. The nominal rate is the average rate (r_frame_rate if the average is unusable, 30/1 if neither is usable). It is snapped to the nearest broadcast rate within 1%, or else rounded to whole fps. The same ≤30 fps rule picks the output rate, and an fps filter makes the encoder input constant-rate in both passes. The contract records `cadenceNormalization`. Only undecodable input (no video stream, no raster size) is refused, with **422** after the probe and before any encode.
 - Output audio is resampled to 48 kHz on every lazy size, so 44.1 kHz sources pass the existing 48 kHz output check.
 - The source byte ceiling for lazy rows is the largest existing qualified source ceiling (the composite rows' `sourceBytes`, 256 MiB). Output, time and encode limits are the profile's own.

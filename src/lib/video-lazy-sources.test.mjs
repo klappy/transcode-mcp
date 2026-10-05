@@ -1,8 +1,12 @@
 // Bun lacks the Workers FixedLengthStream primitive; byte/hash checks remain real.
 globalThis.FixedLengthStream=class extends TransformStream {constructor(_size){super();}};
 import {test,expect} from 'bun:test';
+import {existsSync} from 'node:fs';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import {selectVideoContract,selectCatalogVideoContract,videoKey,videoContracts,handleVideoProxy,VIDEO_SOURCE_ALLOWED_PREFIXES} from './video.ts';
-import {selectLazyVideoContract as containerLazySelect,deriveLazyContract,lazyPassArguments,validateLazyOutput} from '../../container/video-lazy.mjs';
+import {selectLazyVideoContract as containerLazySelect,deriveLazyContract,lazyPassArguments,validateLazyOutput,lazyEncode} from '../../container/video-lazy.mjs';
 import {fitLazyRaster,validateLazyGeometry} from '../../container/video-sources.mjs';
 import {validateGeometryContract,validateCadenceContract,deliveryPassArguments} from '../../container/video.mjs';
 import {parseProxyPath} from './parse-proxy-path.ts';
@@ -106,9 +110,22 @@ test('(f) non-16:9 sources are served, not rejected (operator ruling: no such th
  for(const size of sizes)for(const src of [probe(1440,1080,'1:1'),probe(1080,1920,'1:1'),probe(1080,1080,'1:1'),probe(2560,1080,'1:1'),probe(1920,1088,'1:1'),probe(1920,1080,'0:1'),probe(176,144)])expectFit(size,src);
 });
 
-test('(g) unqualified sources fail as 422 before the encode with a clear message',()=>{
- const cases=[[{width:1280,height:720,avg_frame_rate:'50/1',r_frame_rate:'25/1'},/Variable frame rate/],[{width:1280,height:720,avg_frame_rate:'0/0',r_frame_rate:'0/0'},/cadence/],[undefined,/no video stream/],[{width:1,height:720,avg_frame_rate:'25/1',r_frame_rate:'25/1'},/geometry/]];
- for(const [v,message] of cases){let error;try{deriveLazyContract(containerLazySelect(a11,'small'),v);}catch(e){error=e;}expect(error?.status).toBe(422);expect(error?.message).toMatch(message);}
+test('(g) only undecodable input is 422; VFR and odd cadences are normalized before the encode',()=>{
+ for(const [v,message] of [[undefined,/no video stream/],[{height:720,avg_frame_rate:'25/1',r_frame_rate:'25/1'},/Undecodable/]]){let error;try{deriveLazyContract(containerLazySelect(a11,'small'),v);}catch(e){error=e;}expect(error?.status).toBe(422);expect(error?.message).toMatch(message);}
+ const vfr=(avg,r)=>deriveLazyContract(containerLazySelect(a11,'small'),{width:1280,height:720,avg_frame_rate:avg,r_frame_rate:r}).encoding;
+ expect(vfr('525/22','30/1')).toMatchObject({sourceFrameRate:'24000/1001',outputFrameRate:'24000/1001',cadenceNormalization:{policy:'vfr-nominal-v1',avgFrameRate:'525/22',rFrameRate:'30/1'}});
+ expect(vfr('50/1','25/1')).toMatchObject({sourceFrameRate:'50/1',outputFrameRate:'25/1'});
+ expect(vfr('1350000/45047','90000/1')).toMatchObject({sourceFrameRate:'30000/1001',outputFrameRate:'30000/1001'});
+ expect(vfr('0/0','60/1')).toMatchObject({sourceFrameRate:'60/1',outputFrameRate:'30/1'});
+ expect(vfr('0/0','0/0')).toMatchObject({sourceFrameRate:'30/1',outputFrameRate:'30/1'});
+ expect(vfr('1000/1','1000/1')).toMatchObject({outputFrameRate:'500/17'});
+ expect(vfr('17/1','90000/1')).toMatchObject({sourceFrameRate:'17/1',outputFrameRate:'17/1'});
+ for(const [avg,r] of [['525/22','30/1'],['0/0','0/0'],['24/1','24/1']]){const c=deriveLazyContract(containerLazySelect(a11,'small'),{width:1280,height:720,avg_frame_rate:avg,r_frame_rate:r}),e=c.encoding;
+  expect(e.fps).toBeLessThanOrEqual(30);expect(()=>validateCadenceContract(e)).not.toThrow();
+  // the fps filter is forced in both passes for normalized sources; CFR sources keep the catalog filter
+  for(const pass of [1,2]){const args=lazyPassArguments('i','o','p',pass,c),vf=args[args.indexOf('-vf')+1];expect(vf.startsWith('fps=fps='+e.outputFrameRate+':round=near,')).toBe(Boolean(e.cadenceNormalization)||e.outputFrameRate!==e.sourceFrameRate);}}
+ // a 1-pixel source is still served at the smallest yuv420p raster
+ expect(fitLazyRaster(selectVideoContract(a11,'small').encoding,{width:1,height:720})).toMatchObject({width:2,height:480});
 });
 
 test('(h) output check holds the fitted raster and the no-upscale display bound',()=>{
@@ -143,3 +160,25 @@ test('lazy 422 from the encoder (unqualified source) reaches the client as 422, 
  const r=await handleVideoProxy(new Request('https://proxy/video'),{head:async()=>null},instance,a11,{size:'small'});
  expect(r.status).toBe(422);expect(await r.text()).toContain('Variable frame rate');
 });
+
+// Real encode: a variable-frame-rate fixture (30 fps with every third frame dropped
+// after 1 s) goes through the lazy two-pass encode and output check as CFR.
+const hasEncoder=['/usr/bin/ffmpeg','/usr/bin/ffprobe','/usr/bin/prlimit'].every(p=>existsSync(p));
+test.skipIf(!hasEncoder)('VFR fixture encodes to constant frame rate through the lazy encoder (real ffmpeg)',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'lazy-vfr-test-'));
+ try{
+  const run=args=>{const r=Bun.spawnSync(args);if(r.exitCode)throw Error(r.stderr.toString().slice(-400));return r.stdout.toString();};
+  const probe=p=>JSON.parse(run(['/usr/bin/ffprobe','-v','error','-show_streams','-show_format','-of','json',p]));
+  const input=join(dir,'vfr.mp4'),output=join(dir,'out.mp4');
+  run(['/usr/bin/ffmpeg','-v','error','-y','-f','lavfi','-i','testsrc2=size=640x360:rate=30','-f','lavfi','-i','sine=r=44100','-t','3','-vf',"select='not(eq(mod(n\\,3)\\,2))+lt(n\\,30)'",'-fps_mode','vfr','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac',input]);
+  const source=probe(input),v=source.streams.find(s=>s.codec_type==='video');
+  expect(v.avg_frame_rate).not.toBe(v.r_frame_rate); // genuinely VFR
+  const contract=deriveLazyContract(containerLazySelect(a11,'small'),v);
+  expect(contract.encoding).toMatchObject({outputFrameRate:'24000/1001',width:640,height:360,sar:'1:1'});
+  const encoding=await lazyEncode(input,output,dir,source,AbortSignal.timeout(60000),()=>{},contract);
+  expect(encoding.passes.map(p=>p.pass)).toEqual([1,2]);
+  const result=probe(output),o=result.streams.find(s=>s.codec_type==='video');
+  expect(o.avg_frame_rate).toBe('24000/1001');expect(o.r_frame_rate).toBe('24000/1001');
+  expect(validateLazyOutput(source,result,contract)).toMatchObject({width:640,height:360,audioCodec:'aac'});
+ }finally{await rm(dir,{recursive:true,force:true});}
+},90000);

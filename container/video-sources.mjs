@@ -44,8 +44,7 @@ export function createLazyVideoSelect(profiles) {
 }
 
 const gcd = (a, b) => (b ? gcd(b, a % b) : a);
-// A source the lazy path cannot encode (no video, variable frame rate, degenerate
-// raster). Carries 422 so the job fails before any encode, not as a 502 after it.
+// A source the lazy path cannot decode (no video stream, no raster size). Carries 422 so the job fails before any encode, not as a 502 after it.
 export const unqualifiedSource = message => Object.assign(Error(message), { status: 422 });
 const sarOf = sar => { const m = /^([1-9]\d*):([1-9]\d*)$/.exec(sar || ''); return m ? [Number(m[1]), Number(m[2])] : [1, 1]; };
 
@@ -61,7 +60,7 @@ const sarOf = sar => { const m = /^([1-9]\d*):([1-9]\d*)$/.exec(sar || ''); retu
 // exact square-pixel aspect.
 export function fitLazyRaster(profile, source) {
   const w = source?.width, h = source?.height;
-  if (!Number.isSafeInteger(w) || !Number.isSafeInteger(h) || w < 2 || h < 2) throw unqualifiedSource(`Unqualified source geometry ${w}x${h}`);
+  if (!Number.isSafeInteger(w) || !Number.isSafeInteger(h) || w < 1 || h < 1) throw unqualifiedSource(`Undecodable source geometry ${w}x${h}`);
   const [sn, sd] = sarOf(source.sar), [pn, pd] = sarOf(profile.sar);
   const { width: pw, height: ph } = profile;
   if (w * sn * 9 === h * sd * 16 && w * sn * pd >= pw * pn * sd && h >= ph) return { width: pw, height: ph, sar: profile.sar, dar: profile.dar };
@@ -69,8 +68,8 @@ export function fitLazyRaster(profile, source) {
   if (w * sn <= pw * sd && h <= ph) { W = (w * sn) / sd; H = h; }
   else if (pw * h * sd <= ph * w * sn) { W = pw; H = (pw * h * sd) / (w * sn); }
   else { H = ph; W = (ph * w * sn) / (h * sd); }
-  const width = Math.floor(W / 2) * 2, height = Math.floor(H / 2) * 2;
-  if (width < 2 || height < 2) throw unqualifiedSource(`Unqualified source geometry ${w}x${h} SAR ${sn}:${sd}`);
+  // 2x2 is the smallest yuv420p raster; a thinner source is padded up to it, not refused.
+  const width = Math.max(2, Math.floor(W / 2) * 2), height = Math.max(2, Math.floor(H / 2) * 2);
   const g = gcd(width, height);
   return { width, height, sar: '1:1', dar: `${width / g}:${height / g}` };
 }

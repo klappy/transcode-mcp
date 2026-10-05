@@ -13,19 +13,37 @@ export const selectLazyVideoContract = createLazyVideoSelect({ xsmall, small, me
 const hash = b => createHash('sha256').update(b).digest('hex');
 let busy = false;
 
+// Variable frame rate sources are normalized, not refused (operator ruling: no
+// source is unavailable). The nominal rate is the source's average rate (its
+// r_frame_rate when the average is unusable), snapped to the nearest broadcast
+// rate within 1% or else rounded to whole frames per second. The existing
+// integer-divisor <=30 fps cadence rule then picks the output rate, and an fps
+// filter makes the encoder input constant-rate in both passes.
+const NOMINAL_RATES = ['24000/1001', '24/1', '25/1', '30000/1001', '30/1', '48/1', '50/1', '60000/1001', '60/1', '120/1'];
+const rateValue = r => { const m = /^([1-9]\d*)\/([1-9]\d*)$/.exec(r || ''); return m ? Number(m[1]) / Number(m[2]) : 0; };
+export function nominalRate(v) {
+  const value = rateValue(v.avg_frame_rate) || rateValue(v.r_frame_rate);
+  if (!value) return '30/1'; // no usable rate at all: the profile cap
+  let best;
+  for (const r of NOMINAL_RATES) { const off = Math.abs(value / rateValue(r) - 1); if (off <= 0.01 && (!best || off < best.off)) best = { r, off }; }
+  return best ? best.r : `${Math.max(1, Math.round(value))}/1`;
+}
+
 // Bind the probed source cadence and fitted raster into the job contract. Runs
-// right after the probe and before any encode, so an unqualified source is a
-// cheap 422 instead of a 502 after a two-pass encode.
+// right after the probe and before any encode, so an unusable source is a cheap
+// 422 instead of a 502 after a two-pass encode. Only a missing video stream is
+// refused; geometry and cadence are always fitted.
 export function deriveLazyContract(contract, v) {
   if (!v) throw unqualifiedSource('Source has no video stream');
-  const rate = v.avg_frame_rate;
-  if (typeof rate !== 'string' || rate !== v.r_frame_rate) throw unqualifiedSource(`Variable frame rate source not supported: avg_frame_rate ${rate} differs from r_frame_rate ${v.r_frame_rate}; a constant frame rate source is required`);
-  let cadence;
-  try { cadence = selectCadence(rate); } catch (e) { throw unqualifiedSource(`Unqualified source cadence ${rate}: ${e.message}`); }
-  const [n, d] = cadence.rate.split('/').map(Number), fps = n / d;
+  const cfr = typeof v.avg_frame_rate === 'string' && v.avg_frame_rate === v.r_frame_rate && rateValue(v.avg_frame_rate) > 0;
+  const rate = cfr ? v.avg_frame_rate : nominalRate(v);
+  const cadence = selectCadence(rate), [n, d] = cadence.rate.split('/').map(Number), fps = n / d;
   const raster = fitLazyRaster(contract.encoding, { width: v.width, height: v.height, sar: v.sample_aspect_ratio });
+  // sourceCadence stays 'qualified-cfr' (the shared cadence check requires it):
+  // with cadenceNormalization set, it describes the fps-filtered encoder input.
   const derived = { ...contract, source: { ...contract.source, geometry: { width: v.width, height: v.height } },
-    encoding: { ...contract.encoding, ...raster, sourceFrameRate: rate, outputFrameRate: cadence.rate, fps, keyint: Math.floor(fps * 30) } };
+    encoding: { ...contract.encoding, ...raster, sourceFrameRate: rate, outputFrameRate: cadence.rate, fps, keyint: Math.floor(fps * 30),
+      ...(cfr ? {} : { cadenceNormalization: { policy: 'vfr-nominal-v1', avgFrameRate: String(v.avg_frame_rate), rFrameRate: String(v.r_frame_rate) } }) } };
   validateLazyGeometry(derived.encoding); validateCadenceContract(derived.encoding);
   return derived;
 }
@@ -40,6 +58,8 @@ export function lazyPassArguments(input, output, prefix, pass, contract) {
   const i = args.indexOf('-vf'), from = 'scale=256:144:flags=lanczos,setsar=1/1:max=65535';
   if (i < 0 || !args[i + 1].endsWith(from)) throw Error('Unexpected encoder filter');
   args[i + 1] = args[i + 1].slice(0, -from.length) + `scale=${e.width}:${e.height}:flags=lanczos,setsar=${e.sar.replace(':', '/')}:max=65535`;
+  // A normalized VFR source always goes through the fps filter (both passes).
+  if (e.cadenceNormalization && !args[i + 1].startsWith('fps=')) args[i + 1] = `fps=fps=${e.outputFrameRate}:round=near,` + args[i + 1];
   // Output audio is checked at 48 kHz; the large/xlarge profiles only pin it via
   // their catalog sources, so an arbitrary (e.g. 44.1 kHz) source is resampled.
   if (pass === 2 && !args.includes('-ar')) args.splice(args.indexOf('-movflags'), 0, '-ar', '48000');
@@ -47,9 +67,10 @@ export function lazyPassArguments(input, output, prefix, pass, contract) {
 }
 
 // encodeDelivery (video.mjs) with the lazy argv; the loop and its checks are the same.
-async function lazyEncode(input, output, dir, sourceProbe, signal, phase, contract) {
+export async function lazyEncode(input, output, dir, sourceProbe, signal, phase, contract) {
   const e = contract.encoding, v = sourceProbe.streams.find(s => s.codec_type === 'video');
-  validateSourceCadence(v, e);
+  if (!e.cadenceNormalization) validateSourceCadence(v, e);
+  else if (v?.avg_frame_rate !== e.cadenceNormalization.avgFrameRate || v?.r_frame_rate !== e.cadenceNormalization.rFrameRate) throw Error('Unqualified source cadence');
   if (v?.width !== contract.source.geometry.width || v?.height !== contract.source.geometry.height) throw Error('Unqualified source geometry');
   const prefix = join(dir, 'pass'), start = Date.now(), passes = [], statistics = [];
   const local = AbortSignal.any([signal, AbortSignal.timeout(contract.limits.encodeMs)]);
@@ -78,7 +99,7 @@ export function validateLazyOutput(source, result, contract) {
   if (!v || !o || o.codec_name !== 'h264' || o.pix_fmt !== 'yuv420p' || !(duration > 0) || !(sourceDuration > 0) || Math.abs(duration - sourceDuration) > .25) throw Error('Invalid or truncated video output');
   const e = contract.encoding; validateLazyGeometry(e); validateCadenceContract(e);
   const [sn, sd] = /^[1-9]\d*:[1-9]\d*$/.test(v.sample_aspect_ratio || '') ? v.sample_aspect_ratio.split(':').map(Number) : [1, 1], [en, ed] = e.sar.split(':').map(Number);
-  if (o.width !== e.width || o.height !== e.height || o.height > v.height || o.width * en * sd > v.width * sn * ed) throw Error('Invalid output dimensions');
+  if (o.width !== e.width || o.height !== e.height || (o.height > v.height && o.height > 2) || (o.width * en * sd > v.width * sn * ed && o.width > 2)) throw Error('Invalid output dimensions');
   const a = result.streams.find(s => s.codec_type === 'audio');
   if (o.avg_frame_rate !== e.outputFrameRate || o.r_frame_rate !== e.outputFrameRate || o.sample_aspect_ratio !== e.sar || o.display_aspect_ratio !== e.dar || (a && (a.channels !== (e.audioChannels || 2) || Number(a.sample_rate) !== 48000))) throw Error('Target raster/aspect/cadence/audio mismatch');
   const sa = source.streams.some(s => s.codec_type === 'audio'), oa = result.streams.filter(s => s.codec_type === 'audio');
