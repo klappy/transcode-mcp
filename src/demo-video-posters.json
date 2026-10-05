@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "method": "Decode first frame at or after requested timestamp from each exact production file; RGB conversion then JPEG; native raster retained; video contain-fit display preserves full frame. No video encoding.",
+  "pyavVersion": "19.0.1",
+  "aggregateBytes": 193037,
+  "posters": [
+    {
+      "id": "source",
+      "sourceSha256": "257f632552979b05716ca438ab654b7489229f34ca59c6bca22149d3b42f3718",
+      "sourceBytes": 49851846,
+      "sourceUrl": "/reference/video/a13-source",
+      "requestedSeconds": 10,
+      "actualSeconds": 10.0,
+      "width": 1280,
+      "height": 720,
+      "sourceSampleAspectRatio": "0/1",
+      "resize": false,
+      "crop": false,
+      "jpeg": {
+        "quality": 40,
+        "optimize": true,
+        "subsampling": 2,
+        "bytes": 71375,
+        "sha256": "686abb2a40546545b05355c0ed3c9d18b3150506080b03a6a6df6612295e30a1"
+      }
+    },
+    {
+      "id": "old",
+      "sourceSha256": "47c822e37c918eb5a45d3f052481336676d987db69a3ea393eee91b6174d80f8",
+      "sourceBytes": 2547817,
+      "sourceUrl": "/reference/video/a13-bundled",
+      "requestedSeconds": 10,
+      "actualSeconds": 10.0,
+      "width": 400,
+      "height": 224,
+      "sourceSampleAspectRatio": "0/1",
+      "resize": false,
+      "crop": false,
+      "jpeg": {
+        "quality": 40,
+        "optimize": true,
+        "subsampling": 2,
+        "bytes": 7681,
+        "sha256": "60476a92db1df5a6005f4ed763b88d5dd64d611e2525da39855522b3120466ae"
+      }
+    },
+    {
+      "id": "small",
+      "sourceSha256": "19195e93cd9ba96aa920d23b94fddd5a0c9ccb12cc8c18af8224da39b4e2d9c5",
+      "sourceBytes": 2564228,
+      "sourceUrl": "/video/preset=fia,q=medium,f=mp4,size=small/https://s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
+      "requestedSeconds": 10,
+      "actualSeconds": 10.0,
+      "width": 854,
+      "height": 480,
+      "sourceSampleAspectRatio": "1280/1281",
+      "resize": false,
+      "crop": false,
+      "jpeg": {
+        "quality": 40,
+        "optimize": true,
+        "subsampling": 2,
+        "bytes": 27319,
+        "sha256": "8c89afbe978ee1b69cc02d027c9a5be927ec25c85cd471b152e17031aa8e6f4a"
+      }
+    },
+    {
+      "id": "medium",
+      "sourceSha256": "f0b39072378b5ca7ad77236f50981e779274cabc3d7d39b374fd7d6210ece610",
+      "sourceBytes": 3203638,
+      "sourceUrl": "/video/preset=fia,q=medium,f=mp4,size=medium/https://s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
+      "requestedSeconds": 10,
+      "actualSeconds": 10.0,
+      "width": 960,
+      "height": 540,
+      "sourceSampleAspectRatio": "1/1",
+      "resize": false,
+      "crop": false,
+      "jpeg": {
+        "quality": 40,
+        "optimize": true,
+        "subsampling": 2,
+        "bytes": 33405,
+        "sha256": "7dbf2af18b2899b1d844284babced96fb5f0cae99fed1d90f7ee0a8add95d055"
+      }
+    },
+    {
+      "id": "opt",
+      "sourceSha256": "7314f695f6087f6e0e93c8ae5cfe7235ac043ee8dec997a6e101fb3f47140d15",
+      "sourceBytes": 5508450,
+      "sourceUrl": "/video/preset=fia,q=medium,f=mp4/https://s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
+      "requestedSeconds": 10,
+      "actualSeconds": 10.0,
+      "width": 1280,
+      "height": 720,
+      "sourceSampleAspectRatio": "0/1",
+      "resize": false,
+      "crop": false,
+      "jpeg": {
+        "quality": 40,
+        "optimize": true,
+        "subsampling": 2,
+        "bytes": 53257,
+        "sha256": "af959fc48a5d41de39579281e70a03e908980e0d06564539fbde2ceef4dd4268"
+      }
+    }
+  ]
+}
