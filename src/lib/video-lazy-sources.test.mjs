@@ -182,3 +182,43 @@ test.skipIf(!hasEncoder)('VFR fixture encodes to constant frame rate through the
   expect(validateLazyOutput(source,result,contract)).toMatchObject({width:640,height:360,audioCodec:'aac'});
  }finally{await rm(dir,{recursive:true,force:true});}
 },90000);
+
+test('rotation: a quarter-turned source is fitted upright (review HOLD 6003939080)',()=>{
+ const rotated=(rotation,extra={})=>({width:1280,height:720,avg_frame_rate:'25/1',r_frame_rate:'25/1',sample_aspect_ratio:'1:1',side_data_list:[{side_data_type:'Display Matrix',rotation}],...extra});
+ for(const r of [90,-90,270,-270])expect(deriveLazyContract(containerLazySelect(a11,'large'),rotated(r)).encoding).toMatchObject({width:404,height:720,sar:'1:1',dar:'101:180'});
+ for(const r of [0,180,-180])expect(deriveLazyContract(containerLazySelect(a11,'large'),rotated(r)).encoding).toMatchObject({width:1280,height:720,sar:'1:1',dar:'16:9'});
+ // legacy rotate tag, and an anamorphic rotated source (pixel aspect inverts with the turn)
+ expect(deriveLazyContract(containerLazySelect(a11,'large'),{width:1280,height:720,avg_frame_rate:'25/1',r_frame_rate:'25/1',tags:{rotate:'90'}}).encoding).toMatchObject({width:404,height:720});
+ expect(deriveLazyContract(containerLazySelect(a11,'large'),rotated(90,{width:1440,height:1080,sample_aspect_ratio:'4:3'})).encoding).toMatchObject({width:404,height:720,sar:'1:1'});
+ // the output check uses upright source dims: landscape output from a portrait-displayed source is refused
+ const src={streams:[{codec_type:'video',...rotated(90)}],format:{duration:'1'}},c=deriveLazyContract(containerLazySelect(a11,'large'),src.streams[0]);
+ const out=o=>({streams:[{codec_type:'video',codec_name:'h264',pix_fmt:'yuv420p',width:404,height:720,avg_frame_rate:'25/1',r_frame_rate:'25/1',sample_aspect_ratio:'1:1',display_aspect_ratio:'101:180',...o}],format:{duration:'1'}});
+ expect(validateLazyOutput(src,out({}),c)).toMatchObject({width:404,height:720});
+ expect(()=>validateLazyOutput(src,out({width:1280,height:720,display_aspect_ratio:'16:9'}),{...c,encoding:{...c.encoding,width:1280,height:720,dar:'16:9'}})).toThrow('Invalid output dimensions');
+ expect(()=>validateLazyOutput(src,out({side_data_list:[{rotation:90}]}),c)).toThrow('rotation');
+});
+
+// Real encode: 1280x720 coded with display rotation 90 / 270 (phone portrait) comes out upright 404x720.
+test.skipIf(!hasEncoder)('rotated fixtures encode upright with square pixels (real ffmpeg)',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'lazy-rot-test-'));
+ try{
+  const run=args=>{const r=Bun.spawnSync(args);if(r.exitCode)throw Error(r.stderr.toString().slice(-400));return r.stdout.toString()+r.stderr.toString();};
+  const probe=p=>JSON.parse(run(['/usr/bin/ffprobe','-v','error','-show_streams','-show_format','-of','json',p]));
+  const land=join(dir,'land.mp4');
+  run(['/usr/bin/ffmpeg','-v','error','-y','-f','lavfi','-i','testsrc2=size=1280x720:rate=25','-f','lavfi','-i','sine=r=48000','-t','1','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac',land]);
+  for(const rotation of [90,270]){
+   const input=join(dir,`rot${rotation}.mp4`),output=join(dir,`out${rotation}.mp4`);
+   run(['/usr/bin/ffmpeg','-v','error','-y','-display_rotation',String(rotation),'-i',land,'-c','copy',input]);
+   const source=probe(input),v=source.streams.find(s=>s.codec_type==='video');
+   expect([v.width,v.height]).toEqual([1280,720]);expect(Math.abs(v.side_data_list.find(d=>'rotation' in d).rotation)).toBe(90);
+   const contract=deriveLazyContract(containerLazySelect(a11,'large'),v);
+   expect(contract.encoding).toMatchObject({width:404,height:720,sar:'1:1'});
+   await lazyEncode(input,output,dir,source,AbortSignal.timeout(60000),()=>{},contract);
+   const result=probe(output);expect(validateLazyOutput(source,result,contract)).toMatchObject({width:404,height:720});
+   // upright: the output matches the autorotated source picture, and not the opposite turn
+   const psnr=filter=>Number(/average:([\d.]+|inf)/.exec(run(['/usr/bin/ffmpeg','-v','info','-i',output,'-i',input,'-lavfi',`[1:v]${filter}scale=404:720[r];[0:v][r]psnr`,'-f','null','-']))?.[1].replace('inf','99'));
+   const upright=psnr(''),wrong=psnr('hflip,vflip,');
+   expect(upright).toBeGreaterThan(25);expect(upright).toBeGreaterThan(wrong+5);
+  }
+ }finally{await rm(dir,{recursive:true,force:true});}
+},120000);

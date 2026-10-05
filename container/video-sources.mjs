@@ -48,6 +48,21 @@ const gcd = (a, b) => (b ? gcd(b, a % b) : a);
 export const unqualifiedSource = message => Object.assign(Error(message), { status: 422 });
 const sarOf = sar => { const m = /^([1-9]\d*):([1-9]\d*)$/.exec(sar || ''); return m ? [Number(m[1]), Number(m[2])] : [1, 1]; };
 
+// Rotation from the probed stream (display matrix side data, else the legacy
+// rotate tag), normalized to 0/90/180/270. ffmpeg autorotates the input (its
+// default), so filters see the upright frame.
+export function streamRotation(v) {
+  const side = v?.side_data_list?.find(d => d && d.rotation !== undefined)?.rotation;
+  const raw = Number(side ?? v?.tags?.rotate ?? 0);
+  return Number.isFinite(raw) ? ((Math.round(raw / 90) * 90) % 360 + 360) % 360 : 0;
+}
+// The source as ffmpeg's filters see it after autorotation: a quarter turn swaps
+// the coded width and height and inverts the pixel aspect (as transpose does).
+export function uprightSource(v) {
+  const [sn, sd] = sarOf(v?.sample_aspect_ratio);
+  return streamRotation(v) % 180 ? { width: v.height, height: v.width, sar: `${sd}:${sn}` } : { width: v?.width, height: v?.height, sar: `${sn}:${sd}` };
+}
+
 // One raster rule for every lazy source (any display aspect, any pixel aspect):
 // display aspect DAR = (width * SAR) / height. The output fits inside the size
 // profile's box (profile width x height) preserving DAR, never exceeds the

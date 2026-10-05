@@ -13,3 +13,5 @@ export function createLazyVideoSelect(profiles: Record<'xsmall'|'small'|'medium'
 export function unqualifiedSource(message: string): Error & { status: 422 };
 export function fitLazyRaster(profile: {width:number;height:number;sar:string;dar:string}, source: {width:number;height:number;sar?:string}): {width:number;height:number;sar:string;dar:string};
 export function validateLazyGeometry(encoding: {width:number;height:number;sar:string;dar:string}): void;
+export function streamRotation(stream: unknown): number;
+export function uprightSource(stream: unknown): {width:number;height:number;sar:string};

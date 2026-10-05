@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { encoderIdentity, runBounded, deliveryPassArguments, validateCadenceContract, validateSourceCadence, videoPhaseLogger, selectCadence, sourceByteCeiling } from './video.mjs';
-import { createLazyVideoSelect, fitLazyRaster, validateLazyGeometry, unqualifiedSource } from './video-sources.mjs';
+import { createLazyVideoSelect, fitLazyRaster, validateLazyGeometry, unqualifiedSource, uprightSource, streamRotation } from './video-sources.mjs';
 const load = name => readFile(new URL(name, import.meta.url), 'utf8').then(JSON.parse);
 const [xsmall, small, medium, large, xlarge] = await Promise.all(['video-contract-xsmall.json', 'video-contract-small.json', 'video-contract-medium.json', 'video-contract.json', 'video-contract-4k-xlarge.json'].map(load));
 export const selectLazyVideoContract = createLazyVideoSelect({ xsmall, small, medium, large, xlarge });
@@ -38,7 +38,8 @@ export function deriveLazyContract(contract, v) {
   const cfr = typeof v.avg_frame_rate === 'string' && v.avg_frame_rate === v.r_frame_rate && rateValue(v.avg_frame_rate) > 0;
   const rate = cfr ? v.avg_frame_rate : nominalRate(v);
   const cadence = selectCadence(rate), [n, d] = cadence.rate.split('/').map(Number), fps = n / d;
-  const raster = fitLazyRaster(contract.encoding, { width: v.width, height: v.height, sar: v.sample_aspect_ratio });
+  // Fit the upright (autorotated) picture: a phone-portrait 1280x720 rotation=90 source is 720x1280.
+  const raster = fitLazyRaster(contract.encoding, uprightSource(v));
   // sourceCadence stays 'qualified-cfr' (the shared cadence check requires it):
   // with cadenceNormalization set, it describes the fps-filtered encoder input.
   const derived = { ...contract, source: { ...contract.source, geometry: { width: v.width, height: v.height } },
@@ -98,8 +99,10 @@ export function validateLazyOutput(source, result, contract) {
   const duration = Number(result.format?.duration), sourceDuration = Number(source.format?.duration);
   if (!v || !o || o.codec_name !== 'h264' || o.pix_fmt !== 'yuv420p' || !(duration > 0) || !(sourceDuration > 0) || Math.abs(duration - sourceDuration) > .25) throw Error('Invalid or truncated video output');
   const e = contract.encoding; validateLazyGeometry(e); validateCadenceContract(e);
-  const [sn, sd] = /^[1-9]\d*:[1-9]\d*$/.test(v.sample_aspect_ratio || '') ? v.sample_aspect_ratio.split(':').map(Number) : [1, 1], [en, ed] = e.sar.split(':').map(Number);
-  if (o.width !== e.width || o.height !== e.height || (o.height > v.height && o.height > 2) || (o.width * en * sd > v.width * sn * ed && o.width > 2)) throw Error('Invalid output dimensions');
+  // Compare against the upright source display size; the output must carry no rotation of its own.
+  const up = uprightSource(v), [sn, sd] = up.sar.split(':').map(Number), [en, ed] = e.sar.split(':').map(Number);
+  if (streamRotation(o) !== 0) throw Error('Output still carries rotation');
+  if (o.width !== e.width || o.height !== e.height || (o.height > up.height && o.height > 2) || (o.width * en * sd > up.width * sn * ed && o.width > 2)) throw Error('Invalid output dimensions');
   const a = result.streams.find(s => s.codec_type === 'audio');
   if (o.avg_frame_rate !== e.outputFrameRate || o.r_frame_rate !== e.outputFrameRate || o.sample_aspect_ratio !== e.sar || o.display_aspect_ratio !== e.dar || (a && (a.channels !== (e.audioChannels || 2) || Number(a.sample_rate) !== 48000))) throw Error('Target raster/aspect/cadence/audio mismatch');
   const sa = source.streams.some(s => s.codec_type === 'audio'), oa = result.streams.filter(s => s.codec_type === 'audio');
