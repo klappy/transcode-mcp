@@ -1,5 +1,5 @@
 {
-  "recipe": "fia-video@3-medium",
+  "recipe": "fia-video@4-medium",
   "source": {
     "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
     "sha256": "257f632552979b05716ca438ab654b7489229f34ca59c6bca22149d3b42f3718",
@@ -10,7 +10,7 @@
       "assetId": "a13",
       "assetVersion": "1.0.4",
       "metadataRevision": "1c02713d022bd96a29c78f5b75455315d6d35a6e",
-      "transformation": "H.264/AAC MP4 re-encode, 960x540, stereo"
+      "transformation": "H.264/AAC MP4 re-encode, 960x544 SAR136:135 DAR16:9"
     }
   },
   "limits": {
@@ -25,20 +25,21 @@
   },
   "encoding": {
     "width": 960,
-    "height": 540,
+    "height": 544,
     "fps": 50,
     "preset": "medium",
-    "videoBps": 253125,
-    "classBps": 253125,
-    "maxrateBps": 506250,
-    "bufferBits": 1012500,
+    "videoBps": 379688,
+    "classBps": 379688,
+    "maxrateBps": 759375,
+    "bufferBits": 1518750,
     "keyint": 1500,
     "minKeyint": 1,
     "scenecut": 60,
     "passes": 2,
     "audioBps": 54000,
     "audioChannels": 2,
-    "sar": "1:1"
+    "sar": "136:135",
+    "dar": "16:9"
   },
-  "recipeRevision": "d73df8652aa47846d18d8fdedadfaeee4fd1615c"
+  "recipeRevision": "0257be2349aa165fdb8413a3e99b0de417f95886"
 }

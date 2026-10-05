@@ -3,10 +3,12 @@ import { createHash, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import {createVideoCatalog} from './video-catalog.mjs';
 export const contract = JSON.parse(await readFile(new URL('./video-contract.json', import.meta.url), 'utf8'));
 export const videoContracts=[contract,...await Promise.all(['a184','a10'].map(async id=>JSON.parse(await readFile(new URL(`./video-contract-${id}.json`,import.meta.url),'utf8'))))];
 const targetContracts=Object.fromEntries(await Promise.all(['small','medium'].map(async size=>[size,JSON.parse(await readFile(new URL(`./video-contract-${size}.json`,import.meta.url),'utf8'))])));
-export const selectVideoContract=(url,size='large')=>size==='large'?videoContracts.find(c=>c.source.url===url):url===contract.source.url&&['small','medium'].includes(size)?targetContracts[size]:undefined;
+const extension=JSON.parse(await readFile(new URL('./video-source-extension.json',import.meta.url),'utf8'));
+export const selectVideoContract=createVideoCatalog(videoContracts,targetContracts,extension.recipeRevision).select;
 const hash = b => createHash('sha256').update(b).digest('hex');
 let busy = false;
 export function runBounded(command, args, { timeout = 30000, signal, outputPath, limit = contract.limits.bytes, onStderr, onSpawn, onClose } = {}) {
@@ -46,7 +48,14 @@ export async function encoderIdentity(signal, selected=contract) {
     if(!paths.length||linkage.includes('not found'))throw Error('Encoder linkage unavailable');
     const libraries={};for(const path of paths)libraries[path]=hash(await readFile(path));
     const adapterSha256=hash(await readFile(new URL('./video.mjs',import.meta.url)));
-    return { revision:hash(JSON.stringify({contract:selected,version,executableSha256,adapterSha256,libraries})), version, executableSha256, adapterSha256, libraries };
+    const catalogSha256=hash(await readFile(new URL('./video-catalog.mjs',import.meta.url)));
+    return { revision:hash(JSON.stringify({contract:selected,version,executableSha256,adapterSha256,catalogSha256,libraries})), version, executableSha256, adapterSha256, catalogSha256, libraries };
+}
+export function validateGeometryContract(e) {
+ const ratio=x=>{if(typeof x!=='string'||!/^\d+:\d+$/.test(x))throw Error('Explicit SAR/DAR required');const p=x.split(':').map(BigInt);if(p.some(v=>v<=0n))throw Error('Invalid aspect ratio');return p;};
+ if(!Number.isSafeInteger(e.width)||!Number.isSafeInteger(e.height)||e.width<=0||e.height<=0||e.width%16||e.height%16)throw Error('Unaligned raster');
+ const [sn,sd]=ratio(e.sar),[dn,dd]=ratio(e.dar);
+ if(BigInt(e.width)*sn*dd!==BigInt(e.height)*sd*dn||dn*9n!==dd*16n)throw Error('Raster SAR DAR mismatch');
 }
 export function validateOutput(source, result, selected=contract) {
     const v = source.streams?.find(s => s.codec_type === 'video'), o = result.streams?.find(s => s.codec_type === 'video');
@@ -55,10 +64,9 @@ export function validateOutput(source, result, selected=contract) {
         throw Error('Invalid or truncated video output');
     if (o.width > Math.min(selected.encoding.width, v.width) || o.height > Math.min(selected.encoding.height, v.height) || o.width <= 0 || o.height <= 0 || o.width % 2 || o.height % 2)
         throw Error('Invalid output dimensions');
-    if(selected.encoding.audioBps){
-        const e=selected.encoding,a=result.streams.find(s=>s.codec_type==='audio');
-        if(o.width!==e.width||o.height!==e.height||o.avg_frame_rate!=='50/1'||o.sample_aspect_ratio!==e.sar||a?.channels!==e.audioChannels||Number(a.sample_rate)!==48000)throw Error('Target raster/cadence/audio mismatch');
-    }
+    const e=selected.encoding;validateGeometryContract(e);
+    const a=result.streams.find(s=>s.codec_type==='audio');
+    if(o.width!==e.width||o.height!==e.height||o.avg_frame_rate!=='50/1'||o.sample_aspect_ratio!==e.sar||o.display_aspect_ratio!==e.dar||a?.channels!==(e.audioChannels||2)||Number(a.sample_rate)!==48000)throw Error('Target raster/aspect/cadence/audio mismatch');
     const sa = source.streams.some(s => s.codec_type === 'audio'), oa = result.streams.filter(s => s.codec_type === 'audio');
     if (sa ? (oa.length !== 1 || oa[0].codec_name !== 'aac') : oa.length !== 0)
         throw Error('Audio stream mismatch');
@@ -71,7 +79,7 @@ export function videoPhaseLogger(sink=line=>console.log(line),clock=()=>Date.now
  return(phase,details={})=>{if(!phases.has(phase)||count>=16)return;const event={schema:1,event:'fia-video-phase',jobId,assetId:selected.source.provenance.assetId,recipe:selected.recipe,phase,elapsedMs:Math.max(0,clock()-start)};if([1,2].includes(details.pass))event.pass=details.pass;if(['success','cancel','failure'].includes(details.outcome))event.outcome=details.outcome;const line=JSON.stringify(event);if(Buffer.byteLength(line)>1024)return;count++;try{sink(line);}catch{}};
 }
 export function deliveryPassArguments(input,output,prefix,pass,contract=videoContracts[0]){
- const e=contract.encoding;if(![1,2].includes(pass))throw Error('Invalid pass');
+ const e=contract.encoding;validateGeometryContract(e);if(![1,2].includes(pass))throw Error('Invalid pass');
  const common=['-nostdin','-hide_banner','-y','-protocol_whitelist','file,pipe','-i',input,'-map','0:v:0','-vf',`scale=${e.width}:${e.height}:flags=lanczos${e.sar?',setsar='+e.sar.replace(':','/')+':max=65535':''}`,'-c:v','libx264','-preset',e.preset,'-pix_fmt','yuv420p','-b:v',String(e.videoBps),'-maxrate',String(e.maxrateBps),'-bufsize',String(e.bufferBits),'-g',String(e.keyint),'-keyint_min',String(e.minKeyint),'-sc_threshold',String(e.scenecut),'-passlogfile',prefix];
  return pass===1?[...common,'-pass','1','-an','-f','null','/dev/null']:[...common,'-map','0:a:0?','-pass','2','-c:a','aac','-b:a',e.audioBps?String(e.audioBps):`${e.audioKbps}k`,'-ac',String(e.audioChannels||2),...(e.audioBps?['-ar','48000']:[]),'-movflags','+faststart',output];
 }
