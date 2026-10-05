@@ -1,5 +1,7 @@
 # Modern codec and time-to-first-frame: smallest next comparison
 
+> CLOSED / SUPERSEDED: [Single H.264 baseline](2026-10-05-video-single-baseline.md). Preserve this proposal and its experiment receipts as historical evidence only. No further codec benchmarks, variants or selection logic are planned. Reopen only for a concrete use case whose benefit justifies compatibility, CPU, storage and maintenance costs.
+
 Status: private cookbook proposal, superseding implementation of the paused H.264 subq1 micro-tuning experiment. Preserve that draft and earlier H.264 evidence unchanged. No encoding, download, runtime or delivery change. User permits single-pass when it improves useful playback latency; two-pass is no longer an unconditional requirement for the next candidate.
 
 ## Compatibility and CPU evidence
