@@ -4,7 +4,11 @@
   "method": "fia-video-two-pass-qualification@1",
   "displayHeight": 480,
   "encodeHeight": 720,
-  "videoKbps": [450,750,1000],
+  "videoKbps": [
+    450,
+    750,
+    1000
+  ],
   "audioKbps": 96,
   "maxrateMultiplier": 2,
   "bufferSeconds": 2,
@@ -15,5 +19,14 @@
   "muxAllowance": 1.02,
   "minimumBitrate": null,
   "spatialSceneWindow": "not-mapped",
-  "limits": {"benchmarkMs":600000,"candidateMs":300000,"passlogFileBytes":8388608,"passlogTotalBytes":16777216,"frameBytes":2097152,"frameCount":36,"metadataBytes":8388608,"totalBytes":352321536}
+  "limits": {
+    "benchmarkMs": 600000,
+    "candidateMs": 300000,
+    "passlogFileBytes": 33554432,
+    "passlogTotalBytes": 67108864,
+    "frameBytes": 2097152,
+    "frameCount": 36,
+    "metadataBytes": 8388608,
+    "totalBytes": 402653184
+  }
 }

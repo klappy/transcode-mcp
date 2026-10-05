@@ -27,9 +27,9 @@ export function runBounded(command, args, { timeout = 30000, signal, outputPath,
             stdout = Buffer.concat([stdout, b]); });
         child.stderr.on('data', b => {stderr = (stderr + b.toString()).slice(-contract.limits.stderrBytes);onStderr?.(b);});
         child.on('error', e => { failure = e; });
-        child.on('close', code => { clearTimeout(timer); if (monitor)
+        child.on('close', (code,exitSignal) => { clearTimeout(timer); if (monitor)
             clearInterval(monitor); signal?.removeEventListener('abort', abort); if (failure || code !== 0)
-            reject(failure || new Error(`Encoder failed ${code}: ${stderr}`));
+            reject(failure || new Error(`Encoder failed code=${code} signal=${exitSignal}: ${stderr}`));
         else
             resolve(stdout); });
     });
