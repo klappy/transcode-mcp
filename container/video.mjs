@@ -57,6 +57,21 @@ export function validateGeometryContract(e) {
  const [sn,sd]=ratio(e.sar),[dn,dd]=ratio(e.dar);
  if(BigInt(e.width)*sn*dd!==BigInt(e.height)*sd*dn||dn*9n!==dd*16n)throw Error('Raster SAR DAR mismatch');
 }
+export function selectCadence(rate) {
+ if(typeof rate!=='string'||!/^\d+\/\d+$/.test(rate))throw Error('Explicit rational cadence required');
+ const [n,d]=rate.split('/').map(BigInt);if(n<=0n||d<=0n)throw Error('Invalid cadence');
+ const divisor=(n+30n*d-1n)/(30n*d);const k=divisor>1n?divisor:1n;
+ const gcd=(a,b)=>b?gcd(b,a%b):a,g=gcd(n,d*k);
+ return {divisor:Number(k),rate:`${n/g}/${d*k/g}`};
+}
+export function validateCadenceContract(e) {
+ const c=selectCadence(e.sourceFrameRate);
+ if(e.sourceCadence!=='qualified-cfr'||e.cadencePolicy!=='integer-divisor-max30-v1'||e.outputFrameRate!==c.rate||e.fps!==Number(c.rate.split('/')[0])/Number(c.rate.split('/')[1])||e.keyint!==Math.floor(e.fps*30))throw Error('Cadence contract mismatch');
+ return c;
+}
+export function validateSourceCadence(v,e) {
+ validateCadenceContract(e);if(v?.avg_frame_rate!==e.sourceFrameRate||v?.r_frame_rate!==e.sourceFrameRate)throw Error('Unqualified source cadence');
+}
 export function validateOutput(source, result, selected=contract) {
     const v = source.streams?.find(s => s.codec_type === 'video'), o = result.streams?.find(s => s.codec_type === 'video');
     const duration = Number(result.format?.duration), sourceDuration = Number(source.format?.duration);
@@ -64,9 +79,9 @@ export function validateOutput(source, result, selected=contract) {
         throw Error('Invalid or truncated video output');
     if (o.width > Math.min(selected.encoding.width, v.width) || o.height > Math.min(selected.encoding.height, v.height) || o.width <= 0 || o.height <= 0 || o.width % 2 || o.height % 2)
         throw Error('Invalid output dimensions');
-    const e=selected.encoding;validateGeometryContract(e);
+    const e=selected.encoding;validateGeometryContract(e);validateCadenceContract(e);
     const a=result.streams.find(s=>s.codec_type==='audio');
-    if(o.width!==e.width||o.height!==e.height||o.avg_frame_rate!=='50/1'||o.sample_aspect_ratio!==e.sar||o.display_aspect_ratio!==e.dar||a?.channels!==(e.audioChannels||2)||Number(a.sample_rate)!==48000)throw Error('Target raster/aspect/cadence/audio mismatch');
+    if(o.width!==e.width||o.height!==e.height||o.avg_frame_rate!==e.outputFrameRate||o.sample_aspect_ratio!==e.sar||o.display_aspect_ratio!==e.dar||a?.channels!==(e.audioChannels||2)||Number(a.sample_rate)!==48000)throw Error('Target raster/aspect/cadence/audio mismatch');
     const sa = source.streams.some(s => s.codec_type === 'audio'), oa = result.streams.filter(s => s.codec_type === 'audio');
     if (sa ? (oa.length !== 1 || oa[0].codec_name !== 'aac') : oa.length !== 0)
         throw Error('Audio stream mismatch');
@@ -79,13 +94,13 @@ export function videoPhaseLogger(sink=line=>console.log(line),clock=()=>Date.now
  return(phase,details={})=>{if(!phases.has(phase)||count>=16)return;const event={schema:1,event:'fia-video-phase',jobId,assetId:selected.source.provenance.assetId,recipe:selected.recipe,phase,elapsedMs:Math.max(0,clock()-start)};if([1,2].includes(details.pass))event.pass=details.pass;if(['success','cancel','failure'].includes(details.outcome))event.outcome=details.outcome;const line=JSON.stringify(event);if(Buffer.byteLength(line)>1024)return;count++;try{sink(line);}catch{}};
 }
 export function deliveryPassArguments(input,output,prefix,pass,contract=videoContracts[0]){
- const e=contract.encoding;validateGeometryContract(e);if(![1,2].includes(pass))throw Error('Invalid pass');
- const common=['-nostdin','-hide_banner','-y','-protocol_whitelist','file,pipe','-i',input,'-map','0:v:0','-vf',`scale=${e.width}:${e.height}:flags=lanczos${e.sar?',setsar='+e.sar.replace(':','/')+':max=65535':''}`,'-c:v','libx264','-preset',e.preset,'-pix_fmt','yuv420p','-b:v',String(e.videoBps),'-maxrate',String(e.maxrateBps),'-bufsize',String(e.bufferBits),'-g',String(e.keyint),'-keyint_min',String(e.minKeyint),'-sc_threshold',String(e.scenecut),'-passlogfile',prefix];
+ const e=contract.encoding;validateGeometryContract(e);const cadence=validateCadenceContract(e);if(![1,2].includes(pass))throw Error('Invalid pass');
+ const common=['-nostdin','-hide_banner','-y','-protocol_whitelist','file,pipe','-i',input,'-map','0:v:0','-vf',`${cadence.divisor>1?'select=not(mod(n\\,'+cadence.divisor+')),':''}scale=${e.width}:${e.height}:flags=lanczos${e.sar?',setsar='+e.sar.replace(':','/')+':max=65535':''}`,'-fps_mode','passthrough','-c:v','libx264','-preset',e.preset,'-pix_fmt','yuv420p','-b:v',String(e.videoBps),'-maxrate',String(e.maxrateBps),'-bufsize',String(e.bufferBits),'-g',String(e.keyint),'-keyint_min',String(e.minKeyint),'-sc_threshold',String(e.scenecut),'-passlogfile',prefix];
  return pass===1?[...common,'-pass','1','-an','-f','null','/dev/null']:[...common,'-map','0:a:0?','-pass','2','-c:a','aac','-b:a',e.audioBps?String(e.audioBps):`${e.audioKbps}k`,'-ac',String(e.audioChannels||2),...(e.audioBps?['-ar','48000']:[]),'-movflags','+faststart',output];
 }
 export async function encodeDelivery(input,output,dir,sourceProbe,signal,phase=()=>{},contract=videoContracts[0]){
  const e=contract.encoding,v=sourceProbe.streams.find(s=>s.codec_type==='video');
- if(v?.width!==1280||v?.height!==720||v?.avg_frame_rate!=='50/1')throw Error('Unqualified source geometry/cadence');
+ validateSourceCadence(v,e);if(v?.width!==1280||v?.height!==720)throw Error('Unqualified source geometry');
  const prefix=join(dir,'pass'),start=Date.now(),passes=[],statistics=[];
  const local=AbortSignal.any([signal,AbortSignal.timeout(contract.limits.encodeMs)]);
  try{

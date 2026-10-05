@@ -1,4 +1,5 @@
-import {contract,deliveryPassArguments} from '../../container/video.mjs';
+import {contract} from '../../container/video.mjs';
+import {deliveryPassArguments} from '../historical-video-arguments.mjs';
 import {resolveRecipe} from '../../container/recipes.mjs';
 export const candidate={...structuredClone(contract),recipe:'private-a13-320-aligned-v2',encoding:{width:576,height:320,fps:50,preset:'medium',videoBps:133334,classBps:133334,maxrateBps:266667,bufferBits:533334,keyint:1500,minKeyint:1,scenecut:60,passes:2,audioBps:42667,audioChannels:1,sar:'80:81',dar:'16:9'}};
 export const comparisonTimeline=[{sourceStart:5,sourceEnd:18.2,localStart:0,localEnd:13.2},{sourceStart:35,sourceEnd:48.2,localStart:13.2,localEnd:26.4},{sourceStart:65,sourceEnd:78.2,localStart:26.4,localEnd:39.6}];
