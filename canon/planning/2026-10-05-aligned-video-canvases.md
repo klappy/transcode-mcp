@@ -21,6 +21,8 @@ Medium’s actual height is 544; “540p” is its nominal offering label, not a
 
 Resample the complete source image to each encoded raster, then explicitly signal the listed sample aspect ratio. Do not crop the source or add padding. Correct display restores the original 16:9 shape; consumers that ignore non-square pixels can distort it, so browser display acceptance is mandatory. The algebra is exact: `(576/320)*(80/81) = (864/480)*(80/81) = (960/544)*(136/135) = (1280/720)*1 = 16/9`.
 
+Every profile must declare explicit `sar` (FFmpeg's name for pixel/sample aspect ratio, also called PAR) and `dar` contract fields, including Large `sar: "1:1", dar: "16:9"`. Tests must prove coded width/height × SAR = DAR using exact rational arithmetic. The known source SAR is 1:1. No implicit encoder auto-SAR is accepted as the contract. Stream probes must expose the intended SAR and DAR, and the MP4 track display geometry must reconcile to 16:9. If a probe omits a field, record the omission and obtain explicit encoded bitstream/container evidence; do not silently substitute 1:1 or retain the historical unspecified-Large exception. Browser checks must verify the actual displayed picture, not only a CSS box or the coded raster. No crop or visible stretch is authorized.
+
 Use the existing scale/setsar pipeline. Example: `scale=864:480:flags=lanczos,setsar=80/81:max=65535`. The filter expression uses `/` for the ratio; `:` separates filter options. Probe metadata may format the same ratio with a colon. FFmpeg defines display aspect as raster width divided by height, multiplied by sample aspect ratio. [FFmpeg setdar/setsar documentation](https://www.ffmpeg.org/ffmpeg-filters.html#setdar_002c-setsar).
 
 ## Budgets remain independent of the alignment adjustment
