@@ -1,0 +1,46 @@
+name: Optional 320p comparison (manual only)
+on:
+  workflow_dispatch:
+    inputs:
+      reviewed_commit:
+        description: Exact independently reviewed experiment commit
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: video-320-experiment
+  cancel-in-progress: false
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bind dispatched revision
+        run: test "$(git rev-parse HEAD)" = "$REVIEWED_COMMIT"
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 11321498762
+          run-id: 37253567874
+          github-token: ${{ github.token }}
+          path: prior
+          merge-multiple: true
+      - run: node --test experiments/video-320/policy.test.mjs
+      - run: docker build -t fia-video-320 container
+      - name: One candidate and one Low listening reference without network
+        run: |
+          mkdir evidence
+          docker run --name fia-video-320 --network none --read-only --tmpfs /tmp:size=16m --memory 2g --cpus 4 --ulimit fsize=62914560:62914560 -e REVIEWED_COMMIT -v "$PWD:/proof:ro" -v "$PWD/prior:/prior:ro" -v "$PWD/evidence:/evidence" fia-video-320 node /proof/experiments/video-320/run.mjs /prior /evidence
+      - name: Remove owned container
+        if: always()
+        run: docker rm -f fia-video-320 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: optional-320-measurement
+          path: evidence
+          retention-days: 7

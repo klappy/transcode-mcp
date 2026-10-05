@@ -7,6 +7,10 @@ mode: planning
 
 # One optional 320p FIA comparison
 
+> Measure one retained-source320p H264/AAC candidate and an Opus Low listening reference, without adding a supported preset. Keep the existing Small AAC treatment until actual listening verifies the user’s Low-quality floor; report size, detail and timing separately.
+
+## Summary
+
 Test one retained a13 recording at 320p, seeking a file smaller than the existing 224p bundle while preserving more useful teaching detail. This is an experiment, not a promised quality improvement or a fourth supported offering. Small480, Medium540 and Large720, their routes, cache identities, UI and existing qualifications remain unchanged. Do not block the current FIA repair or whole-page release.
 
 ## Existing implementation and feasibility
@@ -44,3 +48,7 @@ Review matching decoded10/40/70s frames and motion at the same phone/display siz
 ## Result and reversal
 
 Publish the measured experiment separately; no automatic addition to the comparison page or presets. A whole-Bible pack estimate may multiply measured bytes-per-minute by an explicitly hypothetical duration, clearly excluding other media/pack overhead. One79sriver recording cannot establish a universal whole-Bible budget or quality result. Keep the three core offerings unchanged unless the user subsequently chooses an experimental result for product work. Reversal is to retain the evidence and remove no existing capability.
+
+## Concrete manual harness
+
+`experiments/video-320/run.mjs` and its manual workflow implement the candidate plus exactly one same-source Opus Low reference. The existing retained artifact11321498762/run37253567874 is pinned by receipt and source SHA; no origin fallback. The workflow is dispatch-only with an exact reviewed-commit input, fixed source, no target picker and no retry. Read-only Docker mounts and a16MiB tmpfs keep all writable media/pass files inside the accounted evidence directory. Root publication and one dispatch follow independent source review; no encoding has occurred while preparing this proposal.
