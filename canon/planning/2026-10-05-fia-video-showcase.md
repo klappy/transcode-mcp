@@ -8,7 +8,7 @@ derives_from: canon/planning/2026-10-05-video-single-baseline.md
 
 # FIA video showcase — useful detail at field-friendly download sizes
 
-> Add one video showcase to the existing transcode homepage navigation, centered on the FIA Guide use case: retain useful visual detail while reducing the cost of taking teaching resources into the field. Compare the same Jordan River asset in five visible cards: published high-quality source, original small FIA bundle, and our Small480p, Medium540p and Large720p H.264 outputs. Preserve exact identities and disclose that the optimized video is larger than the old low-resolution bundle.
+> Add one video showcase to the existing transcode homepage navigation, centered on the FIA Guide use case: retain useful visual detail while reducing the cost of taking teaching resources into the field. Compare the same Jordan River asset in five visible cards: published high-quality source, original small FIA bundle, and our Small480p, Medium540p and Large720p H.264 outputs. Preserve exact identities and disclose that the measured Large example is larger than the old low-resolution bundle; lower-target sizes remain unmeasured.
 
 ## Summary — One real resource, five visible comparisons
 
