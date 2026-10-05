@@ -36,9 +36,33 @@ export function byteRange(value: string | null, size: number): {
     }
     return { offset: start, length: end - start + 1 };
 }
+export class VideoBusyError extends Error {}
+export class VideoOwner {
+    private active?: { key: string; promise: Promise<unknown> };
+    constructor(private retain: (promise: Promise<unknown>) => void) {}
+    run<T>(key: string, task: () => Promise<T>): Promise<T> {
+        if (this.active) {
+            if (this.active.key !== key) return Promise.reject(new VideoBusyError('Video capacity busy'));
+            return this.active.promise as Promise<T>;
+        }
+        // Admission is synchronous, before task's first asynchronous operation.
+        const owner = { key, promise: Promise.resolve().then(task) as Promise<unknown> };
+        this.active = owner;
+        owner.promise = owner.promise.finally(() => { if (this.active === owner) this.active = undefined; });
+        // Retain all work; caller still receives failures. No unhandled rejection.
+        this.retain(owner.promise.catch(() => undefined));
+        return owner.promise as Promise<T>;
+    }
+}
+export async function videoSlot(source: string, count: number) {
+    const selected = selectVideoContract(source);
+    if (!selected || !Number.isSafeInteger(count) || count < 1) throw Error('Invalid video slot');
+    const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(selected))));
+    return 'instance-' + (new DataView(hash.buffer).getUint32(0) % count);
+}
 export async function handleVideoProxy(request: Request, bucket: R2Bucket | undefined, instance: () => Promise<{
     fetch: (r: Request) => Promise<Response>;
-}>, source: string, options: Record<string, string>): Promise<Response> {
+}>, source: string, options: Record<string, string>, owner?: VideoOwner): Promise<Response> {
     const headers = new Headers({ 'Access-Control-Allow-Origin': '*', 'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges, ETag, X-Transcode-Cache, X-Transcode-Encode', 'Accept-Ranges': 'bytes' });
     const fail = (status: number, message: string) => new Response(message, { status, headers });
     if (request.method === 'OPTIONS') {
@@ -59,8 +83,9 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
         return fail(403, 'Video source not approved');
     if (!bucket)
         return fail(503, 'Video storage unavailable');
-    const signal=AbortSignal.any([request.signal,AbortSignal.timeout(contract.limits.jobMs)]);
     try {
+        const prepare = async () => {
+        const signal=AbortSignal.timeout(contract.limits.jobMs);
         const worker = await instance(), info = await worker.fetch(new Request('https://audio-container/video-info?assetId='+contract.source.provenance.assetId, { signal }));
         if (info.status !== 200)
             return fail(503, 'Video encoder unavailable');
@@ -116,6 +141,11 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
         const stored = object.customMetadata;
         if (stored?.sourceSha256 !== contract.source.sha256 || stored?.sourceUrl !== source || stored?.encoderRevision !== encoder.revision || stored?.recipe !== contract.recipe || Number(stored?.bytes) !== object.size || !/^[a-f0-9]{64}$/.test(stored?.sha256 || ''))
             return fail(502, 'Video cache metadata invalid');
+        return { object, key, cache };
+        };
+        const prepared = await (owner ? owner.run(JSON.stringify(contract), prepare) : prepare());
+        if (prepared instanceof Response) return prepared.clone();
+        const { object, key, cache } = prepared;
         let range;
         try {
             range = byteRange(request.headers.get('Range'), object.size);
@@ -139,7 +169,8 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
             return fail(502, 'Video cache missing');
         return new Response(hit.body, { status: range ? 206 : 200, headers });
     }
-    catch {
+    catch (error) {
+        if (error instanceof VideoBusyError) return fail(503, 'Video capacity busy');
         return fail(502, 'Video service unavailable');
     }
 }
