@@ -1,4 +1,19 @@
+---
+title: Modern Codec Comparison — Closed Historical Proposal
+date: 2026-10-05
+status: superseded
+superseded_by: canon/planning/2026-10-05-video-single-baseline.md
+---
+
 # Modern codec and time-to-first-frame: smallest next comparison
+
+> This exploration is closed; use the single-H.264 baseline. Retain historical measurements, but schedule no new codec benchmark or implementation without a concrete use case.
+
+## Summary — Historical Evidence Only
+
+This proposal is superseded by the single-baseline decision. Its experimental design and receipts remain historical evidence, not active encode instructions or production codec acceptance.
+
+> CLOSED / SUPERSEDED: [Single H.264 baseline](2026-10-05-video-single-baseline.md). Preserve this proposal and its experiment receipts as historical evidence only. No further codec benchmarks, variants or selection logic are planned. Reopen only for a concrete use case whose benefit justifies compatibility, CPU, storage and maintenance costs.
 
 Status: private cookbook proposal, superseding implementation of the paused H.264 subq1 micro-tuning experiment. Preserve that draft and earlier H.264 evidence unchanged. No encoding, download, runtime or delivery change. User permits single-pass when it improves useful playback latency; two-pass is no longer an unconditional requirement for the next candidate.
 
