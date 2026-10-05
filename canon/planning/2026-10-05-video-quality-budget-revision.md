@@ -1,6 +1,6 @@
 # Restore video quality headroom: all three budgets +50%
 
-2026-10-05. Latest user decision supersedes the unexecuted +20% proposal in commit de17d8f: apply +50% to ORIGINAL budgets, never compound the increases. User decision: keep roughly double-average peak capacity, increase each video budget50%, and value useful quality as well as size. This supersedes the unimplemented cadence-first proposal in PROPOSAL.md. No encoding or runtime change has occurred in this document task. No further user permission is required for this authorized policy; exact implementation and output review still precede release.
+2026-10-05. Latest user decision supersedes the unexecuted +20% proposal : apply +50% to ORIGINAL budgets, never compound the increases. User decision: keep roughly double-average peak capacity, increase each video budget50%, and value useful quality as well as size. This supersedes the unimplemented cadence-first option; see [prior cadence context](2026-10-05-natural-video-budget-frame-rate.md). No encoding or runtime change has occurred in this document task. Exact implementation and output review still precede release.
 
 ## Exact data revision
 
@@ -34,10 +34,12 @@ The other two approved source assets require their own changed-recipe qualificat
 
 ## Evidence and provenance
 
-Actual shared flags inspected in `source/video-source-size-catalog/container/video.mjs:76–96`; root independently verified released target numbers in video-cached-owner. Root checked primary FFmpeg rate-control documentation. This record supersedes PROPOSAL.md e0f1e97f (written but not executed) and keeps its historical reasoning about ABR/VBV and cadence tradeoffs without authorizing its optional experiment.
+Actual shared flags inspected in [`container/video.mjs`](../../../container/video.mjs); root independently verified released target numbers in video-cached-owner. Root checked primary FFmpeg rate-control documentation. The [prior cadence context](2026-10-05-natural-video-budget-frame-rate.md) remains historical reasoning about ABR/VBV and cadence tradeoffs; its optional experiment is not authorized by this revision.
 
 ## Viewing acceptance and discovery
 
 The user’s quality criterion includes continuous motion when displayed one resolution step above the encoded frame. Review source, previous same-size output and revised output at matched times and the same larger display size. Declare each tested display size explicitly; compare foliage and water during motion, not only paused stills. The fifty-percent increase is the first correction, not an assumed solution or a guaranteed perceived-quality equivalence. Keep 50fps. Any later macroblock or cadence experiment requires a separately bounded record.
 
-This canonical planning record is discoverable through the existing docs search tool by the title and terms `video quality budget`, `fifty percent`, and `motion acceptance`; retrieve its single URI for the full body. No bundled catalog or additional docs tool is introduced.
+This canonical planning record is intended to become discoverable after publication through the existing docs search tool by the title and terms `video quality budget`, `fifty percent`, and `motion acceptance`; retrieve its single URI for the full body. No bundled catalog or additional docs tool is introduced.
+
+Decisions are locked for this revision: only the declared three video rates change; audio, cadence and safety bounds remain fixed. Local implementation is reversible through Git and preserves all old immutable outputs. Definition of done is exact argument/identity tests plus independently reviewed bounded output and continuous-motion evidence before deployment. Failure to earn the added bytes or remaining distracting motion artifacts withholds output acceptance; it does not authorize automatic tuning or retries. Search discovery must be verified against the published repository after merge.
