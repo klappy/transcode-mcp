@@ -1,3 +1,4 @@
+import { DEMO_VIDEO_HTML } from "./demo-video";
 import { handleVideoReference } from "./lib/video-reference";
 import { liveDocs, docsSchema } from "./lib/docs";
 import {handleVideoProxy, VideoOwner, videoSlot, videoOptions, selectVideoContract} from "./lib/video";
@@ -278,6 +279,9 @@ export default {
     }
     if (url.pathname === "/bench" || url.pathname === "/bench/") {
       return htmlResponse(DEMO_PAGE_HTML);
+    }
+    if (url.pathname === "/bench/video" || url.pathname === "/bench/video/") {
+      return htmlResponse(DEMO_VIDEO_HTML);
     }
     if (url.pathname === "/bench/audio" || url.pathname === "/bench/audio/") {
       return htmlResponse(DEMO_AUDIOBENCH_HTML);
