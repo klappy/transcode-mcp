@@ -6,7 +6,7 @@ status: accepted-for-implementation
 
 # Whole-page partner comparison — replacement contract proposal
 
-Patterned on recorded Product/Design lens methods; not a human owner's words or endorsement. Supersedes the earlier narrow player-only YES as any claim of whole-page acceptance. No product code changed.
+Patterned on recorded Product/Design lens methods; not a human owner's words or endorsement. Supersedes the earlier narrow player-only YES as any claim of whole-page acceptance. This proposal was recorded before the product code changed.
 
 ## Product decision
 
@@ -105,3 +105,11 @@ Current verdict: whole-page HOLD pending this reduced-information candidate and 
 The operator explicitly expands the correction from the player to every line, section and layout. One page must support one comparison journey. Keep the source/optimized pairs and middle option in the viewing path, move complete timing/provenance/storage detail behind two native disclosures, and derive rounded values from the same records rather than duplicate them. Remove the second invitation, numbered card taxonomy, duplicated captions and infrastructure narrative. This changes the plan from preserving all surrounding layout to deliberately reducing it. Reject hiding a comparison behind a tab, removing measurements, inventing new benchmarks, or changing the native player. The existing styles are the material; no new design framework, route, binding, encoding or player library. The same L5 Knows / Does NOT Know / Is NOT enumerations in the embedded-player contract remain authoritative.
 
 Accept only after whole-page closed/open screenshots at390×844 and1280×800, every copy group reviewed, native interactions, disclosure keyboard access and retained data checked independently. The earlier narrow visual YES is historical, not this page’s acceptance. Public release remains sequential DEV→staging→production; the narrow DEV build is not promoted independently. Reversal is a presentation-only revert. No physical-device or field-quality inference.
+
+## Challenge disposition
+
+The execution challenge on 2026-10-05 raised sample representativeness, comparison fairness, missing evidence, reversibility and success criteria. This is a scoped presentation decision for one Jordan River resource, not a general compression principle or new pattern. Grounding is the operator’s explicit information-dump report, the complete production before captures in `integration/whole-page-before`, and the five qualified production files documented in `2026-10-05-fia-r2-production-proof.md`. The compact 224p file is explicitly one existing version; it is not presented as the strongest industry approach. Resolution alone is not a quality verdict.
+
+The alternative of leaving all technical material visible preserves audit detail but obstructs the requested viewing journey. Removing it entirely loses useful verification. Two native disclosures retain that information with one additional interaction. The cost is reduced immediate visibility for visitors seeking measurements; descriptive disclosure labels address discoverability. A failure to find all five videos, reach details by keyboard, read measurements on a phone, or preserve exact file identities disconfirms acceptance and requires correction before promotion. No universal usability claim or field study is asserted. Reversal remains a presentation-only revert.
+
+The earlier production proof’s explicit-Play-only loading wording records historical behavior. The operator subsequently clarified ordinary showcase metadata loading is appropriate. Native `preload="metadata"` now applies to this comparison page; it does not alter FIA’s separate offline-download policy.
