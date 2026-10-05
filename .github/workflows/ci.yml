@@ -43,6 +43,9 @@ jobs:
     name: Video — bounded Linux encode
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -62,6 +65,15 @@ jobs:
         if: steps.paths.outputs.changed == 'true'
         with:
           node-version: 22
+      - name: Acquire exact retained qualification artifact
+        if: steps.paths.outputs.changed == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 11321498762
+          run-id: 37253567874
+          github-token: ${{ github.token }}
+          path: prior-video-evidence
+          merge-multiple: true
       - name: Build actual encoder image
         if: steps.paths.outputs.changed == 'true'
         run: docker build -t fia-video-proof container
@@ -70,10 +82,10 @@ jobs:
         run: |
           mkdir -p video-evidence
           docker image inspect fia-video-proof > video-evidence/image.json
-          docker run -d --name fia-video-proof -p 127.0.0.1:8080:8080 -v "$PWD/video-evidence:/evidence" -v "$PWD:/proof:ro" fia-video-proof
-      - name: Compare bounded two-pass candidates from one source
+          docker run -d --name fia-video-proof -p 127.0.0.1:8080:8080 -v "$PWD/video-evidence:/evidence" -v "$PWD:/proof:ro" -v "$PWD/prior-video-evidence:/prior:ro" fia-video-proof
+      - name: Qualify one corrected A encode against exact retained B/C
         if: steps.paths.outputs.changed == 'true'
-        run: docker exec fia-video-proof node /proof/scripts/video-benchmark.mjs /evidence
+        run: docker exec fia-video-proof node /proof/scripts/video-benchmark.mjs /evidence /prior
       - name: Preserve container logs and stop
         if: always() && steps.paths.outputs.changed == 'true'
         run: |
