@@ -15,7 +15,7 @@ date: 2026-10-05
 | Medium | 540p |
 | Large | 912p |
 
-This supersedes the previous Small480p/Large720p application mapping and the tentative four-class/1080p selection. The240p,1080p and1360p experiments are deferred. Existing comparison evidence and earlier cost scenarios remain history, not the final app menu. This decision does not authorize an additional encode, deployment or new experiment during wrap-up.
+This supersedes the previous Small480p/Large720p application mapping and the tentative four-class/1080p selection. The240p,1080p and1360p experiments are deferred. Existing comparison evidence and earlier cost scenarios remain history, not the final app menu. No additional experiment is started during this wrap-up; implementation and delivery remain queued under the existing release plan.
 
 ## Truthful migration and availability
 
@@ -25,7 +25,9 @@ Reuse the existing verified catalog, selection and offline mechanisms. Streaming
 
 ## Pericope download total
 
-Calculate the pericope total from the unique, actual, verified files selected for its image, audio and video choices. Sum each delivery object's verified byte length once even when several activities reference it; deduplicate by its actual delivery identity rather than by activity count. Count only the chosen variants, not all available variants. If a separate core/text subtotal is shown, label it explicitly.
+Calculate the pericope total from the actual verified file list after selecting its image, audio and video variants. Count each selected manifest member once, rather than counting activity references or summing all variants. Match the downloader’s real storage and transfer semantics: do not assume cross-path content deduplication unless the downloader actually reuses that file. Include core/text files in the complete package total; label any media-only subtotal explicitly.
+
+The prepared app already derives the displayed total from the selected manifest file bytes in LibraryPanel.svelte. The remaining work is to bind the final320/540/912 video catalog and preserve truthful unavailable/unknown states. The current total is package file bytes, not browser overhead or an estimate of additional network traffic after cache reuse.
 
 Missing or unavailable resources remain a separately reported unknown/pending component, never zero bytes. A partial known subtotal must not be presented as the complete download size. An existing saved package's status describes its actual saved members, not the current preference controls.
 
