@@ -1,4 +1,16 @@
+---
+title: FIA Transcode Decisions and Validated Evidence
+date: 2026-10-05
+status: working
+---
+
 # FIA transcode session: decisions, evidence and remaining gates
+
+> Preserve the measured tradeoffs and rejected options: H.264-only delivery, exact source/encoder cache identity, and accepted DEV completion after disconnect. Keep mobile, rollout, quality and cost limits distinct from observed success.
+
+## Summary — Current Decisions, Evidence and Remaining Gates
+
+This record links the October4–5 decisions and evidence: selected H.264 settings, frame-rate and audio experiments, compatibility closure, capacity costs, and retained cache ownership. DEV a184 completion and full HIT are accepted; independent client admission, device checks and later environment gates remain separately scoped. Retrieve the canonical record through the restored historical docs interface once its live proof passes.
 
 Status: durable session synthesis for October4–5,2026, recorded through05:12UTC on October5. This is a navigation and decision record, not a blanket production-readiness claim. Detailed recipes and exact receipts take precedence. The project charter remains unchanged. Historical documents can retain proposal wording; the superseding decisions below identify current direction.
 
@@ -42,6 +54,6 @@ The modern-codec run37265792670 is historical exploratory evidence only. No reru
 - Five existing slots are a configurable cap, not five continuously running instances. Deterministic source placement is not load-aware warm reuse. Warm admission, concurrent expansion, explicit cost cap and shorter idle policy are separate queued improvements; no artificial batching delay for Play.
 - Video HIT currently resolves encoder information before cache lookup and may wake a container. Any bypass must use trusted release-bound encoder identity, never an unversioned stale pointer. Audio's existing cache-before-container behavior is different and remains unchanged.
 - Remaining actual source-specific output/browser/device qualification, truthful app binding and audio listening/compatibility gates. No media is ready merely because metadata or a fixture exists.
-- Exposing these curated docs through MCP is specified separately below; the existing tool surface currently generates transcode URLs and does not yet provide documentation retrieval. [Read-only docs contract](2026-10-05-mcp-curated-docs.md).
+- Restoring documentation retrieval through MCP awaits the live kitchen tool standard; the existing tool surface currently exposes URL generation after regressing the historical `docs` tool; restore that existing Oddkit-backed interface rather than inventing a replacement. [Existing Oddkit client guidance](../governance/oddkit-mcp-clients.md).
 
 Related immutable policy history: [capacity/cancellation scope PR52](https://github.com/klappy/transcode-mcp/pull/52), [owner recipe PR54](https://github.com/klappy/transcode-mcp/pull/54), [storage clarification PR56](https://github.com/klappy/transcode-mcp/pull/56). This synthesis does not erase their superseded observations or broaden their implementation authority.

@@ -1,4 +1,17 @@
+---
+title: Single H.264 Baseline
+date: 2026-10-05
+status: stable
+supersedes: canon/planning/2026-10-05-modern-codec-comparison.md
+---
+
 # Single H.264 baseline
+
+> Keep H.264 as the only current delivery codec; modern-codec work is closed. Reopen only when a concrete use case justifies compatibility, CPU, storage and maintenance costs.
+
+## Summary — Single Baseline Until a Use Case Justifies More
+
+The current delivery path remains H.264 only. Preserve historical codec experiments without more benchmarks, production variants or selection logic. Compatibility excludes universal HEVC/AV1 delivery across the stated target; future reopening is use-case driven, not calendar driven.
 
 Cookbook decision superseding `2026-10-05-modern-codec-comparison.md`. Documentation only; no runtime change, new encode or rerun. Preserve exploratory run37265792670 and its actual successes/failures as evidence; it does not select a production codec. The compatibility-first order below supersedes any implication that further encoding should precede compatibility screening. The project charter and the rolling three-year hardware AND browser-release target remain unchanged (approximately October2023 onward at this decision).
 
