@@ -41,7 +41,7 @@ export class VideoDeadlineError extends Error {}
 export class VideoOwner {
     private active?: { key: string; consumer: Promise<unknown> };
     constructor(private retain: (promise: Promise<unknown>) => void,
-        private deadlineMs = 600_000,
+        readonly deadlineMs = 600_000,
         private report: (event: {event:string; deadlineExceeded:boolean}) => void = event => console.error(JSON.stringify(event))) {}
     run<T>(key: string, task: (signal: AbortSignal) => Promise<T>): Promise<T> {
         if (this.active) {
@@ -79,6 +79,7 @@ export async function videoSlot(source: string, count: number) {
 export async function handleVideoProxy(request: Request, bucket: R2Bucket | undefined, instance: () => Promise<{
     fetch: (r: Request) => Promise<Response>;
 }>, source: string, options: Record<string, string>, owner?: VideoOwner): Promise<Response> {
+    const consumerStarted = Date.now();
     const headers = new Headers({ 'Access-Control-Allow-Origin': '*', 'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges, ETag, X-Transcode-Cache, X-Transcode-Encode', 'Accept-Ranges': 'bytes' });
     const fail = (status: number, message: string) => new Response(message, { status, headers });
     if (request.method === 'OPTIONS') {
@@ -190,7 +191,19 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
             headers.set('Content-Range', `bytes ${range.offset}-${range.offset + range.length - 1}/${object.size}`);
         if (request.method === 'HEAD')
             return new Response(null, { status: range ? 206 : 200, headers });
-        const hit = await bucket.get(key, range ? { range } : undefined);
+        const remaining = consumerStarted + Math.min(owner?.deadlineMs ?? contract.limits.jobMs, contract.limits.jobMs) - Date.now();
+        if (remaining <= 0) throw new VideoDeadlineError('Video response deadline');
+        // This is a read-only consumer acquisition, not the retained publication.
+        // R2 cannot be cancelled; a late body is discarded without starting work.
+        const hit = await new Promise<R2ObjectBody | null>((resolve, reject) => {
+            let expired = false;
+            const timer = setTimeout(() => { expired = true; reject(new VideoDeadlineError('Video response deadline')); }, remaining);
+            bucket.get(key, range ? { range } : undefined).then(value => {
+                clearTimeout(timer);
+                if (expired) { value?.body.cancel().catch(() => {}); return; }
+                resolve(value);
+            }, error => { clearTimeout(timer); if (!expired) reject(error); });
+        });
         if (!hit)
             return fail(502, 'Video cache missing');
         return new Response(hit.body, { status: range ? 206 : 200, headers });

@@ -1,4 +1,4 @@
-import {test,expect} from 'bun:test';
+import {test,expect,spyOn} from 'bun:test';
 import {VideoOwner,VideoBusyError,videoSlot,videoContract,handleVideoProxy} from './video';
 (globalThis as any).FixedLengthStream=class extends TransformStream{constructor(_n:number){super();}};
 const deferred=<T>()=>{let resolve!:(v:T)=>void;const promise=new Promise<T>(r=>resolve=r);return {promise,resolve};};
@@ -73,4 +73,20 @@ test('post-deadline settlement failure is reported, never unhandled or success',
  await expect(owner.run('key',()=>pending)).rejects.toThrow('deadline');
  await expect(owner.run('different',async()=>1)).rejects.toBeInstanceOf(VideoBusyError);
  reject(Error('cleanup unavailable'));await retained[0];expect(events).toEqual([{event:'video-owner-failed',deadlineExceeded:true}]);expect(await owner.run('different',async()=>1)).toBe(1);
+});
+
+test('final consumer read uses remaining original deadline and discards a late body',async()=>{
+ const read=deferred<any>(),revision='a'.repeat(64);let discarded=0;
+ const object={size:2,customMetadata:{sourceSha256:videoContract.source.sha256,sourceUrl:videoContract.source.url,encoderRevision:revision,recipe:videoContract.recipe,bytes:'2',sha256:'b'.repeat(64)}};
+ const retained:Promise<unknown>[]=[];const owner=new VideoOwner(p=>retained.push(p),30,()=>{});
+ const bucket={head:async()=>{await new Promise(r=>setTimeout(r,15));return object;},get:()=>read.promise} as unknown as R2Bucket;
+ const instance=async()=>({fetch:async()=>Response.json({revision})});
+ const timers=spyOn(globalThis,'setTimeout');
+ const started=Date.now();const response=await handleVideoProxy(new Request('https://x'),bucket,instance,videoContract.source.url,{},owner);
+ const delays=timers.mock.calls.map(call=>Number(call[1]));timers.mockRestore();
+ expect(response.status).toBe(504);expect(Date.now()-started).toBeLessThan(100);
+ expect(delays.length).toBe(3);expect(delays[2]).toBeGreaterThan(0);expect(delays[2]).toBeLessThan(25);
+ // Publication owner already settled. Independent read cannot block new work.
+ expect(await owner.run('other',async()=>1)).toBe(1);
+ read.resolve({body:new ReadableStream({cancel(){discarded++;}})});await Promise.resolve();await Promise.resolve();expect(discarded).toBe(1);
 });
