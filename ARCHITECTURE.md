@@ -81,11 +81,13 @@ One Cloudflare Worker. No Container needed for images (v1). Presets as data.
 - **Orphan risk:** R2 lifecycle rules — 90-day eviction after last access
 - **Presets:** voice and music
 
-### Video (future, architecture-ready)
+### Video
 
-- **Transform engine:** Cloudflare Media binding (env.MEDIA) or Container
-- **Deferred from v1 launch** — URL convention and Worker routing handle video
-  today; the transform pipeline is not yet built
+- **Transform engine:** ffmpeg in the Container (`container/video.mjs`), two-pass H.264/AAC
+  FIA profiles (xsmall/small/medium/large/xlarge), cached in R2 by contract + encoder revision
+- **Sources:** exact catalog rows first; any other canonical URL on an approved host encodes
+  lazily on first request (`container/video-sources.mjs`,
+  `canon/planning/2026-10-05-lazy-video-sources.md`)
 
 ## URL Convention
 
