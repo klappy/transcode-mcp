@@ -18,10 +18,14 @@ Nine decoded PNGs compare original 10/40/70 seconds with candidate local 5/18.2/
 
 At 10 seconds the candidate preserves more distinct tree trunks and palm/frond edges than the compact reference. At 40 seconds reeds, branch edges and the bank are better separated. At 70 seconds dense palm foliage remains more legible than the compact file but visibly loses fine structure and has blocky/smeared areas relative to the 720p source. Across all three scenes the river, trees and bank occupy corresponding positions without visible cropping or stretching. This is a scoped still-detail/geometry observation, not lossless equivalence or universal perceptual acceptance.
 
-Still images cannot establish temporal stability, distracting motion artifacts, audio quality or A/V synchronization. These remain pending actual continuous-motion/listening review. Omitted source intervals are unassessed; synthetic sample joins are not evidence about original scene-cut behavior. Desktop playback is not a physical-phone test.
+Still images cannot establish temporal stability, distracting motion artifacts, audio quality or A/V synchronization. These properties were not established by the still review; the user subsequently accepted the baseline without requiring another quality experiment. Omitted source intervals are unassessed; synthetic sample joins are not evidence about original scene-cut behavior. Desktop playback is not a physical-phone test.
 
 ## Useful playback comparison
 
 The original decoded comparison page has independent native players, not synchronized playback. A separate private motion page adds three window choices, shared Play/Pause/Reset, mapped reference/candidate starts, boundary stop and only one audible selected track. It reports clock drift rather than claiming frame lock. This is a review aid, not a deployed service or a quality verdict. Preserve the original receipt/index unchanged; subsequent motion/listening findings must be separately recorded.
 
-No new encode, codec, frame-rate sweep, production setting or remote mutation is authorized by these observations. Continue with the smallest evidence-driven next step after actual sample review rather than automatically running the full matrix.
+## User decision: ship the accepted baseline
+
+The user accepts the +50% video-budget baseline and ends this quality experiment workstream. Proceed with the existing dependency release train; no additional motion or acoustic acceptance gate is required. This is the user’s product decision, not a claim that measurement proved all motion artifacts cured or established universal listening quality.
+
+Keep the existing closed profiles, aligned geometry, 50 fps and retained audio settings. No further tuning encodes, codec or cadence sweeps are part of this decision. Reopen tuning only when a concrete use case demands it. Required source/output identity, mechanical integrity and sequential deployment verification remain in place; they must not be turned into another quality-tuning exercise.
