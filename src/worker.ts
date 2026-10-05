@@ -1,3 +1,4 @@
+import { handleVideoReference } from "./lib/video-reference";
 import { liveDocs, docsSchema } from "./lib/docs";
 import {handleVideoProxy, VideoOwner, videoSlot, videoOptions, selectVideoContract} from "./lib/video";
 // src/worker.ts
@@ -241,6 +242,7 @@ function createServer(request: Request, McpServerCtor: typeof McpServer) {
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+    if (url.pathname.startsWith("/reference/video/")) return handleVideoReference(request);
 
     // MCP endpoint. The MCP machinery (agents/mcp + the SDK) is imported lazily
     // here so the proxy module stays importable outside the Workers runtime —
