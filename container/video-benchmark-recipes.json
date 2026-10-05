@@ -1,20 +1,10 @@
 {
   "schema": 1,
   "status": "experimental-not-selected-for-delivery",
-  "method": "fia-video-two-pass-qualification@1",
+  "method": "fia-video-matched-budget-qualification@2",
   "displayHeight": 480,
-  "encodeHeight": 720,
-  "videoKbps": [
-    450,
-    750,
-    1000
-  ],
   "audioKbps": 96,
-  "maxrateMultiplier": 2,
-  "bufferSeconds": 2,
-  "gopSeconds": 30,
   "minKeyint": 1,
-  "scenecut": 60,
   "preset": "medium",
   "muxAllowance": 1.02,
   "minimumBitrate": null,
@@ -28,5 +18,43 @@
     "frameCount": 36,
     "metadataBytes": 8388608,
     "totalBytes": 402653184
-  }
+  },
+  "recipeRevision": "cd94273b2fda6eff09065a07a558781eb1832a21",
+  "ladder": [
+    240,
+    360,
+    480,
+    720,
+    1080
+  ],
+  "videoClassBps": 450000,
+  "encoderRequestBps": 439024,
+  "maxrateBps": 900000,
+  "bufferBits": 1800000,
+  "videoTolerance": 0.02,
+  "pairTolerance": 0.01,
+  "selectionHeadroom": 1.25,
+  "candidates": [
+    {
+      "id": "A",
+      "width": 640,
+      "height": 360,
+      "gopSeconds": 2,
+      "scenecut": 40
+    },
+    {
+      "id": "B",
+      "width": 1280,
+      "height": 720,
+      "gopSeconds": 2,
+      "scenecut": 40
+    },
+    {
+      "id": "C",
+      "width": 1280,
+      "height": 720,
+      "gopSeconds": 30,
+      "scenecut": 60
+    }
+  ]
 }
