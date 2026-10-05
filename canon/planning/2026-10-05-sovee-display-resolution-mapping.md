@@ -1,5 +1,7 @@
 # Sovee display tier and encoded resolution proposal
 
+> Superseded as app-selection direction by [FIA Guide phone video sizes](2026-10-05-fia-phone-video-sizes.md): Small320p, Medium540p, Large912p. Preserved planning history; no further experiments today.
+
 Status: local planning proposal, 5 October 2026. No implementation, encoding, deployment or adaptive-streaming readiness is claimed. This records the latest user direction; it does not silently amend existing released profiles.
 
 ## User direction and source limits
