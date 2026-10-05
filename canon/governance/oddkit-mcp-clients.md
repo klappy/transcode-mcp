@@ -1,6 +1,6 @@
 ---
 title: Oddkit MCP Client Configuration
-date: 2026-05-27
+date: 2026-10-05
 status: stable
 governs: how agents connect oddkit to this repo's knowledge base
 complements:
