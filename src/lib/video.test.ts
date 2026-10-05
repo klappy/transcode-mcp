@@ -64,3 +64,20 @@ for(const fault of ['short','oversized','staging rejection','missing staging'])t
 test('source-specific cache keys separate all three contracts and reject URL variants',async()=>{const keys=await Promise.all(videoContracts.map(c=>videoKey('a'.repeat(64),c)));expect(new Set(keys).size).toBe(3);for(const c of videoContracts){expect(selectVideoContract(c.source.url)).toBe(c);expect(selectVideoContract(c.source.url+'?unapproved')).toBeUndefined();}});
 
 test('new sources reject forged a13 metadata before quarantine publication',async()=>{for(const selected of videoContracts.slice(1)){let writes=0;const bucket={head:async()=>null,put:async()=>{writes++;}} as unknown as R2Bucket;const instance=async()=>({fetch:async(req:Request)=>new URL(req.url).pathname==='/video-info'?Response.json({revision:'a'.repeat(64)}):new Response(new Uint8Array([1]),{headers:{'X-Video-Metadata':JSON.stringify({encoderRevision:'a'.repeat(64),sourceSha256:videoContract.source.sha256,sourceBytes:videoContract.source.bytes,recipe:selected.recipe,bytes:1,sha256:'b'.repeat(64)})}})});expect((await handleVideoProxy(new Request('https://proxy/video'),bucket,instance,selected.source.url,{})).status).toBe(502);expect(writes).toBe(0);}});
+
+test('rolling containers receive legacy assetId for each old source and exact URL only for composite',async()=>{
+ const composite=(await import('../../container/video-contract-4k-xlarge.json')).default;
+ for(const selected of [...videoContracts,composite]){
+  const legacy=videoContracts.includes(selected);let observed:URL|undefined,accepted=false;
+  const instance=async()=>({fetch:async(req:Request)=>{observed=new URL(req.url);const keys=[...observed.searchParams.keys()];
+   // Model old containers rejecting the new source_url parameter.
+   if(legacy&&keys.some(k=>!['assetId','size'].includes(k)))return new Response('Unsupported option',{status:400});
+   accepted=true;return new Response('End test before encoding',{status:503});}});
+  const bucket={head:async()=>null} as unknown as R2Bucket;
+  await handleVideoProxy(new Request('https://proxy/video'),bucket,instance,selected.source.url,legacy?{}:{size:'xlarge'});
+  expect(accepted).toBe(true);expect(observed?.pathname).toBe('/video-info');
+  expect(observed?.searchParams.get('size')).toBe(legacy?'large':'xlarge');
+  expect(observed?.searchParams.get('assetId')).toBe(legacy?selected.source.provenance.assetId:null);
+  expect(observed?.searchParams.get('source_url')).toBe(legacy?null:composite.source.url);
+ }
+});
