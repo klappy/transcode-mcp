@@ -33,7 +33,7 @@ export interface ParsedAudioRequest {
   sourceUrl: string;
 }
 
-export interface ParsedVideoRequest {mediaType:"video"; options:{preset:"fia";q:"medium";f:"mp4";size?:"small"|"medium"|"large"};sourceUrl:string;}
+export interface ParsedVideoRequest {mediaType:"video"; options:{preset:"fia";q:"medium";f:"mp4";size?:"xsmall"|"small"|"medium"|"large"};sourceUrl:string;}
 export type ParsedRequest = ParsedImageRequest | ParsedAudioRequest | ParsedVideoRequest;
 
 export class ProxyPathError extends Error {

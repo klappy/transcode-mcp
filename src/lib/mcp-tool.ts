@@ -12,7 +12,7 @@ export type AudioPreset = "voice" | "music";
 export type AudioCodec = "opus" | "aac" | "mp3";
 
 export interface ToolArgs {
-  size?: "small" | "medium" | "large";
+  size?: "xsmall" | "small" | "medium" | "large";
   source_url: string;
   media_type?: "image" | "audio" | "video";
   viewport?: number;
