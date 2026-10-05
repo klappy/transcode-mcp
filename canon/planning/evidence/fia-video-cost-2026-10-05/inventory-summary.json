@@ -1,0 +1,492 @@
+{
+  "upstreamRevision": "1c02713d022bd96a29c78f5b75455315d6d35a6e",
+  "scope": {
+    "repo": "BibleAquifer/VideoBibleDictionary",
+    "revision": "1c02713d022bd96a29c78f5b75455315d6d35a6e",
+    "scope": "all19 English metadata JSON files; not global FIA universe",
+    "uniqueAssetIds": 93,
+    "uniqueUrls": 93,
+    "hashDeduplication": "not possible for unacquired sources; source-ID/URL dedupe only",
+    "positiveDurationCount": 85,
+    "positiveDurationSeconds": 6252,
+    "unknownDurationIds": [
+      "a2218",
+      "a2219",
+      "a2220",
+      "a2297",
+      "a2376",
+      "a2377",
+      "a2378",
+      "a2119"
+    ],
+    "imputedTotalMinutes": 114.00705882352942,
+    "imputation": "8 unknown durations assigned mean of85 positive metadata labels; not measured"
+  },
+  "assets": [
+    {
+      "id": "a16",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a16/720p.mp4",
+      "durationLabel": "58 seconds"
+    },
+    {
+      "id": "a13",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
+      "durationLabel": "79 seconds"
+    },
+    {
+      "id": "a1354",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1354/720p.mp4",
+      "durationLabel": "88 seconds"
+    },
+    {
+      "id": "a21",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a21/720p.mp4",
+      "durationLabel": "84 seconds"
+    },
+    {
+      "id": "a27",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a27/720p.mp4",
+      "durationLabel": "83 seconds"
+    },
+    {
+      "id": "a2242",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2242/720p.mp4",
+      "durationLabel": "10 seconds"
+    },
+    {
+      "id": "a18",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a18/720p.mp4",
+      "durationLabel": "87 seconds"
+    },
+    {
+      "id": "a9",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a9/720p.mp4",
+      "durationLabel": "58 seconds"
+    },
+    {
+      "id": "a141",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a141/720p.mp4",
+      "durationLabel": "94 seconds"
+    },
+    {
+      "id": "a26",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a26/720p.mp4",
+      "durationLabel": "73 seconds"
+    },
+    {
+      "id": "a12",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a12/720p.mp4",
+      "durationLabel": "49 seconds"
+    },
+    {
+      "id": "a25",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a25/720p.mp4",
+      "durationLabel": "74 seconds"
+    },
+    {
+      "id": "a28",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a28/720p.mp4",
+      "durationLabel": "65 seconds"
+    },
+    {
+      "id": "a43",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a43/720p.mp4",
+      "durationLabel": "81 seconds"
+    },
+    {
+      "id": "a29",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a29/720p.mp4",
+      "durationLabel": "69 seconds"
+    },
+    {
+      "id": "a181",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a181/720p.mp4",
+      "durationLabel": "77 seconds"
+    },
+    {
+      "id": "a133",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a133/720p.mp4",
+      "durationLabel": "72 seconds"
+    },
+    {
+      "id": "a148",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a148/720p.mp4",
+      "durationLabel": "88 seconds"
+    },
+    {
+      "id": "a1268",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1268/720p.mp4",
+      "durationLabel": "83 seconds"
+    },
+    {
+      "id": "a17",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a17/720p.mp4",
+      "durationLabel": "89 seconds"
+    },
+    {
+      "id": "a8",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a8/720p.mp4",
+      "durationLabel": "93 seconds"
+    },
+    {
+      "id": "a23",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a23/720p.mp4",
+      "durationLabel": "47 seconds"
+    },
+    {
+      "id": "a4",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a4/720p.mp4",
+      "durationLabel": "82 seconds"
+    },
+    {
+      "id": "a38",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a38/720p.mp4",
+      "durationLabel": "71 seconds"
+    },
+    {
+      "id": "a1355",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1355/720p.mp4",
+      "durationLabel": "67 seconds"
+    },
+    {
+      "id": "a33",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a33/720p.mp4",
+      "durationLabel": "70 seconds"
+    },
+    {
+      "id": "a32",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a32/720p.mp4",
+      "durationLabel": "88 seconds"
+    },
+    {
+      "id": "a40",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a40/720p.mp4",
+      "durationLabel": "90 seconds"
+    },
+    {
+      "id": "a143",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a143/720p.mp4",
+      "durationLabel": "101 seconds"
+    },
+    {
+      "id": "a1350",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1350/720p.mp4",
+      "durationLabel": "68 seconds"
+    },
+    {
+      "id": "a127",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a127/720p.mp4",
+      "durationLabel": "85 seconds"
+    },
+    {
+      "id": "a129",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a129/720p.mp4",
+      "durationLabel": "72 seconds"
+    },
+    {
+      "id": "a19",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a19/720p.mp4",
+      "durationLabel": "82 seconds"
+    },
+    {
+      "id": "a3",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a3/720p.mp4",
+      "durationLabel": "89 seconds"
+    },
+    {
+      "id": "a30",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a30/720p.mp4",
+      "durationLabel": "77 seconds"
+    },
+    {
+      "id": "a1253",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1253/720p.mp4",
+      "durationLabel": "88 seconds"
+    },
+    {
+      "id": "a135",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a135/720p.mp4",
+      "durationLabel": "71 seconds"
+    },
+    {
+      "id": "a39",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a39/720p.mp4",
+      "durationLabel": "71 seconds"
+    },
+    {
+      "id": "a188",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a188/720p.mp4",
+      "durationLabel": "107 seconds"
+    },
+    {
+      "id": "a22",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a22/720p.mp4",
+      "durationLabel": "75 seconds"
+    },
+    {
+      "id": "a5",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a5/720p.mp4",
+      "durationLabel": "68 seconds"
+    },
+    {
+      "id": "a44",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a44/720p.mp4",
+      "durationLabel": "92 seconds"
+    },
+    {
+      "id": "a139",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a139/720p.mp4",
+      "durationLabel": "70 seconds"
+    },
+    {
+      "id": "a169",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a169/720p.mp4",
+      "durationLabel": "91 seconds"
+    },
+    {
+      "id": "a184",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a184/720p.mp4",
+      "durationLabel": "56 seconds"
+    },
+    {
+      "id": "a11",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a11/720p.mp4",
+      "durationLabel": "114 seconds"
+    },
+    {
+      "id": "a185",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a185/720p.mp4",
+      "durationLabel": "68 seconds"
+    },
+    {
+      "id": "a31",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a31/720p.mp4",
+      "durationLabel": "59 seconds"
+    },
+    {
+      "id": "a1262",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1262/720p.mp4",
+      "durationLabel": "79 seconds"
+    },
+    {
+      "id": "a1381",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1381/720p.mp4",
+      "durationLabel": "73 seconds"
+    },
+    {
+      "id": "a166",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a166/720p.mp4",
+      "durationLabel": "53 seconds"
+    },
+    {
+      "id": "a113",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a113/720p.mp4",
+      "durationLabel": "72 seconds"
+    },
+    {
+      "id": "a170",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a170/720p.mp4",
+      "durationLabel": "70 seconds"
+    },
+    {
+      "id": "a34",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a34/720p.mp4",
+      "durationLabel": "71 seconds"
+    },
+    {
+      "id": "a186",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a186/720p.mp4",
+      "durationLabel": "88 seconds"
+    },
+    {
+      "id": "a1444",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1444/720p.mp4",
+      "durationLabel": "12 seconds"
+    },
+    {
+      "id": "a2218",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2218/720p.mp4",
+      "durationLabel": "0 seconds"
+    },
+    {
+      "id": "a2219",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2219/720p.mp4",
+      "durationLabel": "0 seconds"
+    },
+    {
+      "id": "a2220",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2220/720p.mp4",
+      "durationLabel": "0 seconds"
+    },
+    {
+      "id": "a145",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a145/720p.mp4",
+      "durationLabel": "87 seconds"
+    },
+    {
+      "id": "a37",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a37/720p.mp4",
+      "durationLabel": "108 seconds"
+    },
+    {
+      "id": "a35",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a35/720p.mp4",
+      "durationLabel": "84 seconds"
+    },
+    {
+      "id": "a1352",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1352/720p.mp4",
+      "durationLabel": "81 seconds"
+    },
+    {
+      "id": "a183",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a183/720p.mp4",
+      "durationLabel": "67 seconds"
+    },
+    {
+      "id": "a1269",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1269/720p.mp4",
+      "durationLabel": "89 seconds"
+    },
+    {
+      "id": "a41",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a41/720p.mp4",
+      "durationLabel": "73 seconds"
+    },
+    {
+      "id": "a177",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a177/720p.mp4",
+      "durationLabel": "74 seconds"
+    },
+    {
+      "id": "a182",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a182/720p.mp4",
+      "durationLabel": "69 seconds"
+    },
+    {
+      "id": "a187",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a187/720p.mp4",
+      "durationLabel": "82 seconds"
+    },
+    {
+      "id": "a1388",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1388/720p.mp4",
+      "durationLabel": "5 seconds"
+    },
+    {
+      "id": "a175",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a175/720p.mp4",
+      "durationLabel": "75 seconds"
+    },
+    {
+      "id": "a1264",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1264/720p.mp4",
+      "durationLabel": "91 seconds"
+    },
+    {
+      "id": "a2295",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2295/720p.mp4",
+      "durationLabel": "16 seconds"
+    },
+    {
+      "id": "a2296",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2296/720p.mp4",
+      "durationLabel": "11 seconds"
+    },
+    {
+      "id": "a2297",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2297/720p.mp4",
+      "durationLabel": "0 seconds"
+    },
+    {
+      "id": "a2298",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2298/720p.mp4",
+      "durationLabel": "67 seconds"
+    },
+    {
+      "id": "a180",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a180/720p.mp4",
+      "durationLabel": "72 seconds"
+    },
+    {
+      "id": "a1356",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1356/720p.mp4",
+      "durationLabel": "89 seconds"
+    },
+    {
+      "id": "a1351",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1351/720p.mp4",
+      "durationLabel": "71 seconds"
+    },
+    {
+      "id": "a2447",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2447/720p.mp4",
+      "durationLabel": "10 seconds"
+    },
+    {
+      "id": "a36",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a36/720p.mp4",
+      "durationLabel": "97 seconds"
+    },
+    {
+      "id": "a1",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a1/720p.mp4",
+      "durationLabel": "79 seconds"
+    },
+    {
+      "id": "a2",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2/720p.mp4",
+      "durationLabel": "131 seconds"
+    },
+    {
+      "id": "a131",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a131/720p.mp4",
+      "durationLabel": "76 seconds"
+    },
+    {
+      "id": "a10",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a10/720p.mp4",
+      "durationLabel": "55 seconds"
+    },
+    {
+      "id": "a2376",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2376/720p.mp4",
+      "durationLabel": "0 seconds"
+    },
+    {
+      "id": "a2377",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2377/720p.mp4",
+      "durationLabel": "0 seconds"
+    },
+    {
+      "id": "a2378",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2378/720p.mp4",
+      "durationLabel": "0 seconds"
+    },
+    {
+      "id": "a2379",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2379/720p.mp4",
+      "durationLabel": "96 seconds"
+    },
+    {
+      "id": "a6",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a6/720p.mp4",
+      "durationLabel": "59 seconds"
+    },
+    {
+      "id": "a24",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a24/720p.mp4",
+      "durationLabel": "75 seconds"
+    },
+    {
+      "id": "a2119",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a2119/720p.mp4",
+      "durationLabel": "0 seconds"
+    },
+    {
+      "id": "a118",
+      "sourceUrl": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a118/720p.mp4",
+      "durationLabel": "72 seconds"
+    }
+  ]
+}
