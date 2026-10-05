@@ -4,10 +4,12 @@ import a184 from '../../container/video-contract-a184.json';
 import a10 from '../../container/video-contract-a10.json';
 import small from '../../container/video-contract-small.json';
 import medium from '../../container/video-contract-medium.json';
+import extension from '../../container/video-source-extension.json';
+import {createVideoCatalog} from '../../container/video-catalog.mjs';
 export { contract as videoContract };
 export type VideoSize='small'|'medium'|'large';
 export const videoContracts=[contract,a184,a10];
-export const selectVideoContract=(url:string,size:string='large')=>size==='large'?videoContracts.find(c=>c.source.url===url):url===contract.source.url&&['small','medium'].includes(size)?({small,medium} as Record<string,typeof small>)[size]:undefined;
+export const selectVideoContract=createVideoCatalog(videoContracts,{small,medium},extension.recipeRevision).select;
 export function videoOptions(raw: Record<string, string>) {
     for (const [key,value] of Object.entries(raw)) {
         if(key==='size'){if(!['small','medium','large'].includes(value))throw Error('Unsupported video size');}

@@ -1,7 +1,11 @@
 import { byteRange } from './video';
+const qualifiedReview = 'https://github.com/klappy/transcode-mcp/blob/625ec4d563fe895f6fd11a23ff27d8dafbefed85/canon/planning/2026-10-05-fia-r2-production-proof.md';
 export const videoReferences = {
   'a13-source': {url:'https://s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4', bytes:49851846, sha256:'257f632552979b05716ca438ab654b7489229f34ca59c6bca22149d3b42f3718'},
   'a13-bundled': {url:'https://fiaguide.app/assets/jordan-river.mp4', bytes:2547817, sha256:'47c822e37c918eb5a45d3f052481336676d987db69a3ea393eee91b6174d80f8'},
+  'a13-small-qualified-v1': {url:'https://transcode.klappy.dev/video/preset=fia,q=medium,f=mp4,size=small/https://s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4',bytes:2564228,sha256:'19195e93cd9ba96aa920d23b94fddd5a0c9ccb12cc8c18af8224da39b4e2d9c5',review:qualifiedReview},
+  'a13-medium-qualified-v1': {url:'https://transcode.klappy.dev/video/preset=fia,q=medium,f=mp4,size=medium/https://s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4',bytes:3203638,sha256:'f0b39072378b5ca7ad77236f50981e779274cabc3d7d39b374fd7d6210ece610',review:qualifiedReview},
+  'a13-large-qualified-v1': {url:'https://transcode.klappy.dev/video/preset=fia,q=medium,f=mp4/https://s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4',bytes:5508450,sha256:'7314f695f6087f6e0e93c8ae5cfe7235ac043ee8dec997a6e101fb3f47140d15',review:qualifiedReview},
 } as const;
 export const sourceReview = 'https://github.com/klappy/fia-app-cookbook/blob/56979f7463879b01ccdde18f6a36102d779c9680/evidence/2026-10-05-video-source-review-a13.json';
 const cors = {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET, HEAD, OPTIONS','Access-Control-Allow-Headers':'Range','Access-Control-Expose-Headers':'Content-Length, Content-Range, Accept-Ranges, ETag, X-Reference-Expected-SHA256','Cache-Control':'public, max-age=0, must-revalidate'};
@@ -28,7 +32,7 @@ export async function handleVideoReference(request:Request, bucket?:R2Bucket) {
     catch(e){await reader.cancel().catch(()=>{});throw e;}
     const bytes=new Uint8Array(count);let offset=0;for(const c of chunks){bytes.set(c,offset);offset+=c.length;}
     const m=JSON.parse(new TextDecoder().decode(bytes));
-    if(m.schemaVersion!==1||m.referenceId!==id||m.sha256!==ref.sha256||m.bytes!==ref.bytes||m.sourceUrl!==ref.url||m.rights!=='CC-BY-SA-4.0'||m.sourceReview!==sourceReview||typeof m.r2Etag!=='string'||!m.r2Etag)throw Error('Invalid publication');
+    if(m.schemaVersion!==1||m.referenceId!==id||m.sha256!==ref.sha256||m.bytes!==ref.bytes||m.sourceUrl!==ref.url||m.rights!=='CC-BY-SA-4.0'||m.sourceReview!==('review' in ref?ref.review:sourceReview)||typeof m.r2Etag!=='string'||!m.r2Etag)throw Error('Invalid publication');
     const valid=(o:R2Object|null)=>Boolean(o&&o.size===ref.bytes&&o.etag===m.r2Etag&&o.httpMetadata?.contentType==='video/mp4');
     if(!valid(await bucket.head(`${key}.mp4`)))throw Error('Invalid object');
     const start=range?.offset??0,length=range?.length??ref.bytes;

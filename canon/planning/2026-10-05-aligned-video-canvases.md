@@ -59,3 +59,7 @@ This document is intended for the existing repository-backed docs search and sin
 ## Measured sampling-first checkpoint
 
 See [the sampled 320p results](2026-10-05-320-sampled-results.md) for the actual 39.6-second measurement, matched still and geometry review, and remaining motion/listening limits. This evidence does not qualify the complete source or change production availability.
+
+## Subsequent user acceptance
+
+The user accepts the +50% baseline and closes further quality experiments. The [recorded decision](2026-10-05-320-sampled-results.md#user-decision-ship-the-accepted-baseline) supersedes earlier requirements for additional motion or acoustic quality gates in this experiment. Continue mechanical integrity and sequential release verification without another tuning matrix. Reopen tuning only for a concrete use case; do not claim this decision proves all motion artifacts resolved.
