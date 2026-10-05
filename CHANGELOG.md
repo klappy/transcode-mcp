@@ -11,6 +11,9 @@ Earlier granularity lives in `canon/handoffs/` and the PR record.
 
 ## [Unreleased]
 
+### Fixed
+- FIA alpha.13 omitted-size video URLs (a13, a184, a10) are served from their pinned released bytes (size + streamed SHA-256 verified, `X-Transcode-Pinned: legacy-alpha13`) instead of re-encoding under the changed Large recipe; an encode fallback is served only if it matches the pin, otherwise 503. Explicit `size=large` and lazy URLs are unchanged. See `canon/planning/2026-10-05-legacy-video-pins.md`.
+
 ## [0.5.0] — 2026-10-05
 
 ### Added
