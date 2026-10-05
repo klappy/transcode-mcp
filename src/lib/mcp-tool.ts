@@ -3,7 +3,7 @@
 // MCP SDK or constructing a Request. The worker calls these and wraps the
 // result in the SDK's { content: [{ type, text }] } envelope.
 
-import { videoOptions, videoContract } from "./video";
+import { videoOptions, selectVideoContract } from "./video";
 import { generateTranscodeUrl } from "./generate-transcode-url";
 
 export type Quality = "low" | "medium" | "high";
@@ -12,6 +12,7 @@ export type AudioPreset = "voice" | "music";
 export type AudioCodec = "opus" | "aac" | "mp3";
 
 export interface ToolArgs {
+  size?: "small" | "medium" | "large";
   source_url: string;
   media_type?: "image" | "audio" | "video";
   viewport?: number;
@@ -62,14 +63,15 @@ export function buildToolResponse(args: ToolArgs, origin: string): ToolResponse 
   const mediaType = args.media_type ?? "image";
   const cleanOrigin = origin.replace(/\/$/, "");
 
+  if(mediaType!=="video"&&args.size!==undefined)throw Error("Size selector is video only");
   let proxyPath: string;
   let guidance: string;
 
   if (mediaType === "video") {
-    if(args.source_url!==videoContract.source.url || args.w!==undefined || args.h!==undefined || args.viewport!==undefined) throw Error("Video source or dimensions not supported");
-    const options=videoOptions({preset:args.preset??"fia",q:args.q??"medium",f:args.f??"mp4"});
+    if(!selectVideoContract(args.source_url,args.size) || args.w!==undefined || args.h!==undefined || args.viewport!==undefined) throw Error("Video source or dimensions not supported");
+    const options=videoOptions({preset:args.preset??"fia",q:args.q??"medium",f:args.f??"mp4",...(args.size?{size:args.size}:{})});
     proxyPath=generateTranscodeUrl({mediaType:"video",sourceUrl:args.source_url,options});
-    guidance="Approved FIA source only. H.264/AAC MP4 is encoded and verified before delivery; a cold miss may take minutes. Single byte ranges support browser seeking after cache publication. No passthrough fallback.";
+    guidance="Approved FIA source and size only. Small is 480p mono, Medium 540p stereo, Large 720p stereo; omitted size is Large. Quality q=medium is independent of size. H.264/AAC MP4 is encoded and verified before delivery; a cold miss may take minutes. Single byte ranges support browser seeking after cache publication. No passthrough fallback.";
   } else if (mediaType === "audio") {
     // Emit the canonical defaults (preset=voice, q=medium, f=opus) when the
     // caller omits them so a minimal tool call still produces an option segment

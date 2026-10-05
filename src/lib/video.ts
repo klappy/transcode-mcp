@@ -2,13 +2,20 @@ import {createHash} from "node:crypto";
 import contract from '../../container/video-contract.json';
 import a184 from '../../container/video-contract-a184.json';
 import a10 from '../../container/video-contract-a10.json';
+import small from '../../container/video-contract-small.json';
+import medium from '../../container/video-contract-medium.json';
 export { contract as videoContract };
+export type VideoSize='small'|'medium'|'large';
 export const videoContracts=[contract,a184,a10];
-export const selectVideoContract=(url:string)=>videoContracts.find(c=>c.source.url===url);
-export function videoOptions(raw: Record<string, string>) { for (const [k, v] of Object.entries(raw))
-    if (!({ preset: 'fia', q: 'medium', f: 'mp4' } as Record<string, string>)[k] || ({ preset: 'fia', q: 'medium', f: 'mp4' } as Record<string, string>)[k] !== v)
-        throw Error('Unsupported video option'); return { preset: 'fia', q: 'medium', f: 'mp4' } as const; }
-export async function videoKey(encoderRevision: string, selected=contract) { if (!/^[a-f0-9]{64}$/.test(encoderRevision))
+export const selectVideoContract=(url:string,size:string='large')=>size==='large'?videoContracts.find(c=>c.source.url===url):url===contract.source.url&&['small','medium'].includes(size)?({small,medium} as Record<string,typeof small>)[size]:undefined;
+export function videoOptions(raw: Record<string, string>) {
+    for (const [key,value] of Object.entries(raw)) {
+        if(key==='size'){if(!['small','medium','large'].includes(value))throw Error('Unsupported video size');}
+        else if(({preset:'fia',q:'medium',f:'mp4'} as Record<string,string>)[key]!==value)throw Error('Unsupported video option');
+    }
+    return {preset:'fia',q:'medium',f:'mp4',...(raw.size&&raw.size!=='large'?{size:raw.size as VideoSize}:{})} as const;
+}
+export async function videoKey(encoderRevision: string, selected: typeof contract | typeof small=contract) { if (!/^[a-f0-9]{64}$/.test(encoderRevision))
     throw Error('Invalid encoder revision'); return 'video-v1/' + Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify({ contract:selected, encoderRevision })))), x => x.toString(16).padStart(2, '0')).join('') + '.mp4'; }
 export function byteRange(value: string | null, size: number): {
     offset: number;
@@ -70,8 +77,8 @@ export class VideoOwner {
         return owner.consumer;
     }
 }
-export async function videoSlot(source: string, count: number) {
-    const selected = selectVideoContract(source);
+export async function videoSlot(source: string, count: number, size:string='large') {
+    const selected = selectVideoContract(source,size);
     if (!selected || !Number.isSafeInteger(count) || count < 1) throw Error('Invalid video slot');
     const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(selected))));
     return 'instance-' + (new DataView(hash.buffer).getUint32(0) % count);
@@ -95,7 +102,7 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
     catch {
         return fail(400, 'Unsupported video options');
     }
-    const contract=selectVideoContract(source);
+    const contract=selectVideoContract(source,options.size);
     if (!contract)
         return fail(403, 'Video source not approved');
     if (!bucket)
@@ -105,7 +112,7 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
         signal.throwIfAborted();
         const worker = await instance();
         signal.throwIfAborted();
-        const info = await worker.fetch(new Request('https://audio-container/video-info?assetId='+contract.source.provenance.assetId, { signal }));
+        const info = await worker.fetch(new Request('https://audio-container/video-info?assetId='+contract.source.provenance.assetId+'&size='+(options.size||'large'), { signal }));
         if (info.status !== 200)
             return fail(503, 'Video encoder unavailable');
         const encoder = await info.json() as {
@@ -118,7 +125,7 @@ export async function handleVideoProxy(request: Request, bucket: R2Bucket | unde
         signal.throwIfAborted();
         if (!object) {
             cache = 'MISS';
-            const encoded = await worker.fetch(new Request('https://audio-container/video-transcode', { method: 'POST', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source_url: source, recipe: contract.recipe, encoderRevision: encoder.revision }) }));
+            const encoded = await worker.fetch(new Request('https://audio-container/video-transcode', { method: 'POST', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source_url: source, size: options.size||'large', recipe: contract.recipe, encoderRevision: encoder.revision }) }));
             if (encoded.status === 503)
                 return fail(503, 'Video capacity busy');
             if (encoded.status !== 200 || !encoded.body)

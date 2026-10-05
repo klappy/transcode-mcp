@@ -1,0 +1,54 @@
+name: FIA three-target qualification
+on:
+  workflow_dispatch:
+    inputs:
+      reviewed_commit:
+        description: Exact independently reviewed 40-character runtime commit
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: fia-three-target-qualification
+  cancel-in-progress: false
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.reviewed_commit }}
+      - name: Verify exact reviewed commit
+        env:
+          REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
+        run: |
+          [[ "$REVIEWED_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$REVIEWED_COMMIT"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Acquire pinned retained artifact (no origin fallback)
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 11321498762
+          run-id: 37253567874
+          github-token: ${{ github.token }}
+          path: target-qualification/prior
+          merge-multiple: true
+      - name: Build one actual encoder image
+        run: docker build -t fia-video-proof container
+      - name: Measure three targets exactly once
+        env:
+          REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
+        run: node scripts/video-qualify-targets.mjs target-qualification
+      - name: Stop owned container
+        if: always()
+        run: docker rm -f fia-video-proof || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fia-three-target-measurements
+          path: target-qualification
+          retention-days: 7

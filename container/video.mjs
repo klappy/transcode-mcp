@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 export const contract = JSON.parse(await readFile(new URL('./video-contract.json', import.meta.url), 'utf8'));
 export const videoContracts=[contract,...await Promise.all(['a184','a10'].map(async id=>JSON.parse(await readFile(new URL(`./video-contract-${id}.json`,import.meta.url),'utf8'))))];
-export const selectVideoContract=url=>videoContracts.find(c=>c.source.url===url);
+const targetContracts=Object.fromEntries(await Promise.all(['small','medium'].map(async size=>[size,JSON.parse(await readFile(new URL(`./video-contract-${size}.json`,import.meta.url),'utf8'))])));
+export const selectVideoContract=(url,size='large')=>size==='large'?videoContracts.find(c=>c.source.url===url):url===contract.source.url&&['small','medium'].includes(size)?targetContracts[size]:undefined;
 const hash = b => createHash('sha256').update(b).digest('hex');
 let busy = false;
 export function runBounded(command, args, { timeout = 30000, signal, outputPath, limit = contract.limits.bytes, onStderr, onSpawn, onClose } = {}) {
@@ -47,13 +48,17 @@ export async function encoderIdentity(signal, selected=contract) {
     const adapterSha256=hash(await readFile(new URL('./video.mjs',import.meta.url)));
     return { revision:hash(JSON.stringify({contract:selected,version,executableSha256,adapterSha256,libraries})), version, executableSha256, adapterSha256, libraries };
 }
-export function validateOutput(source, result) {
+export function validateOutput(source, result, selected=contract) {
     const v = source.streams?.find(s => s.codec_type === 'video'), o = result.streams?.find(s => s.codec_type === 'video');
     const duration = Number(result.format?.duration), sourceDuration = Number(source.format?.duration);
     if (!v || !o || o.codec_name !== 'h264' || o.pix_fmt !== 'yuv420p' || !(duration > 0) || !(sourceDuration > 0) || Math.abs(duration - sourceDuration) > .25)
         throw Error('Invalid or truncated video output');
-    if (o.width > Math.min(1280, v.width) || o.height > Math.min(720, v.height) || o.width <= 0 || o.height <= 0 || o.width % 2 || o.height % 2)
+    if (o.width > Math.min(selected.encoding.width, v.width) || o.height > Math.min(selected.encoding.height, v.height) || o.width <= 0 || o.height <= 0 || o.width % 2 || o.height % 2)
         throw Error('Invalid output dimensions');
+    if(selected.encoding.audioBps){
+        const e=selected.encoding,a=result.streams.find(s=>s.codec_type==='audio');
+        if(o.width!==e.width||o.height!==e.height||o.avg_frame_rate!=='50/1'||o.sample_aspect_ratio!==e.sar||a?.channels!==e.audioChannels||Number(a.sample_rate)!==48000)throw Error('Target raster/cadence/audio mismatch');
+    }
     const sa = source.streams.some(s => s.codec_type === 'audio'), oa = result.streams.filter(s => s.codec_type === 'audio');
     if (sa ? (oa.length !== 1 || oa[0].codec_name !== 'aac') : oa.length !== 0)
         throw Error('Audio stream mismatch');
@@ -67,12 +72,12 @@ export function videoPhaseLogger(sink=line=>console.log(line),clock=()=>Date.now
 }
 export function deliveryPassArguments(input,output,prefix,pass,contract=videoContracts[0]){
  const e=contract.encoding;if(![1,2].includes(pass))throw Error('Invalid pass');
- const common=['-nostdin','-hide_banner','-y','-protocol_whitelist','file,pipe','-i',input,'-map','0:v:0','-vf',`scale=${e.width}:${e.height}:flags=lanczos`,'-c:v','libx264','-preset',e.preset,'-pix_fmt','yuv420p','-b:v',String(e.videoBps),'-maxrate',String(e.maxrateBps),'-bufsize',String(e.bufferBits),'-g',String(e.keyint),'-keyint_min',String(e.minKeyint),'-sc_threshold',String(e.scenecut),'-passlogfile',prefix];
- return pass===1?[...common,'-pass','1','-an','-f','null','/dev/null']:[...common,'-map','0:a:0?','-pass','2','-c:a','aac','-b:a',`${e.audioKbps}k`,'-ac','2','-movflags','+faststart',output];
+ const common=['-nostdin','-hide_banner','-y','-protocol_whitelist','file,pipe','-i',input,'-map','0:v:0','-vf',`scale=${e.width}:${e.height}:flags=lanczos${e.sar?',setsar='+e.sar.replace(':','/')+':max=65535':''}`,'-c:v','libx264','-preset',e.preset,'-pix_fmt','yuv420p','-b:v',String(e.videoBps),'-maxrate',String(e.maxrateBps),'-bufsize',String(e.bufferBits),'-g',String(e.keyint),'-keyint_min',String(e.minKeyint),'-sc_threshold',String(e.scenecut),'-passlogfile',prefix];
+ return pass===1?[...common,'-pass','1','-an','-f','null','/dev/null']:[...common,'-map','0:a:0?','-pass','2','-c:a','aac','-b:a',e.audioBps?String(e.audioBps):`${e.audioKbps}k`,'-ac',String(e.audioChannels||2),...(e.audioBps?['-ar','48000']:[]),'-movflags','+faststart',output];
 }
 export async function encodeDelivery(input,output,dir,sourceProbe,signal,phase=()=>{},contract=videoContracts[0]){
  const e=contract.encoding,v=sourceProbe.streams.find(s=>s.codec_type==='video');
- if(v?.width!==e.width||v?.height!==e.height||v?.avg_frame_rate!=='50/1')throw Error('Unqualified source geometry/cadence');
+ if(v?.width!==1280||v?.height!==720||v?.avg_frame_rate!=='50/1')throw Error('Unqualified source geometry/cadence');
  const prefix=join(dir,'pass'),start=Date.now(),passes=[],statistics=[];
  const local=AbortSignal.any([signal,AbortSignal.timeout(contract.limits.encodeMs)]);
  try{
@@ -80,7 +85,7 @@ export async function encodeDelivery(input,output,dir,sourceProbe,signal,phase=(
    const remaining=contract.limits.encodeMs-(Date.now()-start);if(remaining<=0)throw Error('Combined encode deadline');let log='',spawned=false,reported=false;const began=Date.now();
    await runBounded('/usr/bin/ffmpeg',deliveryPassArguments(input,output,prefix,pass,contract),{timeout:remaining,signal:local,outputPath:pass===1?'/dev/null':output,limit:pass===1?contract.limits.passlogFileBytes:contract.limits.bytes,onSpawn:()=>{spawned=true;},onClose:({outcome})=>phase('encode-exited',{pass,outcome}),onStderr:b=>{log=(log+b.toString()).slice(-contract.limits.stderrBytes);if(spawned&&!reported&&/frame=\s*[1-9]\d*/.test(log)){reported=true;phase('encode-spawned',{pass});}}});
    const settings=pass===1?(await readFile(prefix+'-0.log','utf8')).split('\n')[0]:log;
-   for(const token of [`bitrate=${Math.floor(e.videoBps/1000)}`,`vbv_maxrate=${e.maxrateBps/1000}`,`vbv_bufsize=${e.bufferBits/1000}`,`keyint=${e.keyint}`,`scenecut=${e.scenecut}`,pass===1?'rc=abr':'rc=2pass'])if(!settings.includes(token))throw Error('Unconfirmed encoder setting '+token);
+   for(const token of [`bitrate=${Math.floor(e.videoBps/1000)}`,`vbv_maxrate=${Math.floor(e.maxrateBps/1000)}`,`vbv_bufsize=${Math.floor(e.bufferBits/1000)}`,`keyint=${e.keyint}`,`scenecut=${e.scenecut}`,pass===1?'rc=abr':'rc=2pass'])if(!settings.includes(token))throw Error('Unconfirmed encoder setting '+token);
    let total=0;for(const name of (await readdir(dir)).filter(n=>n.startsWith('pass'))){if(!/^pass-0\.log(?:\.mbtree)?(?:\.temp)?$/.test(name))throw Error('Unexpected statistics file');const length=(await stat(join(dir,name))).size;if(length>contract.limits.passlogFileBytes)throw Error('Statistics file ceiling');total+=length;}if(total>contract.limits.passlogTotalBytes)throw Error('Statistics aggregate ceiling');
    passes.push({pass,elapsedMs:Date.now()-began,settingsSha256:hash(settings),appliedSettings:pass===1?settings:undefined});
   }
@@ -91,8 +96,9 @@ export async function encodeDelivery(input,output,dir,sourceProbe,signal,phase=(
 export async function handleVideo(req, res) {
     const infoUrl=new URL(req.url,'http://container');
     if (infoUrl.pathname === '/video-info') {
+        if([...infoUrl.searchParams.keys()].some(k=>!['assetId','size'].includes(k))||infoUrl.searchParams.getAll('size').length>1){res.writeHead(400).end('Unsupported video info option');return true;}
         if(req.method !== 'GET'){res.writeHead(405).end('GET only');return true;}
-        const selected=videoContracts.find(c=>c.source.provenance.assetId===(infoUrl.searchParams.get('assetId')||'a13'));if(!selected){res.writeHead(400).end('Unapproved asset');return true;}
+        const sourceContract=videoContracts.find(c=>c.source.provenance.assetId===(infoUrl.searchParams.get('assetId')||'a13'));const selected=sourceContract&&selectVideoContract(sourceContract.source.url,infoUrl.searchParams.get('size')||'large');if(!selected){res.writeHead(400).end('Unapproved asset');return true;}
         try {
             res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(await encoderIdentity(undefined,selected)));
         }
@@ -129,7 +135,8 @@ export async function handleVideo(req, res) {
             raw = Buffer.concat([raw, b]);
         }
         const job = JSON.parse(raw);
-        const selected=selectVideoContract(job.source_url);if(!selected)throw Error('Unapproved source');const contract=selected;
+        if(!job||typeof job!=='object'||Array.isArray(job)||Object.keys(job).some(k=>!['source_url','size','recipe','encoderRevision','assetId'].includes(k)))throw Error('Unsupported video job option');
+        const selected=selectVideoContract(job.source_url,job.size);if(!selected)throw Error('Unapproved source');const contract=selected;
         if (job.recipe !== contract.recipe || (job.assetId!==undefined&&job.assetId!==contract.source.provenance.assetId))
             throw Error('Unapproved video source or recipe');
         phase=videoPhaseLogger(undefined,undefined,contract);hasJob=true;phase('job-start');
@@ -168,7 +175,7 @@ export async function handleVideo(req, res) {
         phase('source-verified');
         const sourceProbe = await probe(input, controller.signal);
         const encoding=await encodeDelivery(input,output,dir,sourceProbe,controller.signal,phase,contract);
-        const outputProbe = await probe(output, controller.signal), metadata = validateOutput(sourceProbe, outputProbe);
+        const outputProbe = await probe(output, controller.signal), metadata = validateOutput(sourceProbe, outputProbe,contract);
         const length = (await stat(output)).size;
         if (!length || length > contract.limits.bytes)
             throw Error('Invalid output bytes');

@@ -11,6 +11,18 @@ Earlier granularity lives in `canon/handoffs/` and the PR record.
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-10-05
+
+### Added
+- FIA video showcase pairs source 720p with Large, the original 224p bundle with Small, and presents Medium as the balanced option. Per-target measurements and the Cloudflare delivery explanation distinguish encoding, first request and verified R2 reuse. Playback remains gated until the delivery measurements are accepted.
+- Fixed, identity-checked reference routes preserve the source and original bundle without re-encoding; only the bundled origin receives bounded streamed range adaptation.
+- Video comparison qualification is manually dispatched against an exact reviewed commit; ordinary CI no longer repeats encodes.
+- Explicit FIA video size targets: Small 480p mono and Medium 540p stereo for the approved a13 source; Large 720p stereo remains the omitted-size default. Quality remains independent of delivery size. Target-specific contracts bind cache and admission identity.
+- Lower targets derive proportional AAC rates and preserve source cadence. Unknown sizes and arbitrary video dimensions are rejected.
+
+### Qualification scope
+- Runtime preparation only. New target outputs still require measured encode, quality/listening, HTTP/cache, browser and sequential deployment acceptance. Adapter changes advance the actual encoder identity; no historical cache identity is fabricated.
+
 ## [0.4.0] — 2026-10-05
 
 ### Fixed

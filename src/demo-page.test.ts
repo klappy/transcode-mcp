@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { DEMO_VIDEO_HTML } from "./demo-video";
 import { DEMO_PAGE_HTML } from "./demo-page";
 import { DEMO_FILM_HTML } from "./demo-film";
 import { DEMO_CASESTUDY_HTML } from "./demo-casestudy";
@@ -13,6 +14,7 @@ import { DEMO_AUDIOBENCH_HTML } from "./demo-audiobench";
 // would, catching that class of bug. Run over every page so the film and case
 // study get the same protection the bench has always had.
 const PAGES: Array<[string, string]> = [
+  ["FIA video", DEMO_VIDEO_HTML],
   ["bench (demo-page.html)", DEMO_PAGE_HTML],
   ["film (demo-film.html)", DEMO_FILM_HTML],
   ["case study (demo-casestudy.html)", DEMO_CASESTUDY_HTML],
@@ -59,8 +61,9 @@ describe.each(PAGES)("demo page emitted script — %s", (_label, htmlDoc) => {
 });
 
 describe("shared cross-page nav", () => {
-  test("every page links to all four routes (shared nav)", () => {
+  test("every page links to all five routes (shared nav)", () => {
     for (const [label, htmlDoc] of PAGES) {
+      expect(htmlDoc, `${label} -> /bench/video`).toContain('href="/bench/video"');
       expect(htmlDoc, `${label} -> /film`).toContain('href="/film"');
       expect(htmlDoc, `${label} -> /bench`).toContain('href="/bench"');
       expect(htmlDoc, `${label} -> /bench/audio`).toContain('href="/bench/audio"');
