@@ -1,0 +1,328 @@
+{
+  "asOf": "2026-10-05",
+  "currency": "USD",
+  "units": "decimalGB/MB except container memoryGiB",
+  "rates": {
+    "cpuUsdPerVcpuSecond": 2e-05,
+    "memoryUsdPerGiBSecond": 2.5e-06,
+    "diskUsdPerGBSecond": 7e-08,
+    "r2UsdPerGBMonth": 0.015,
+    "r2ClassAPerMillion": 4.5,
+    "r2ClassBPerMillion": 0.36,
+    "r2EgressPerGB": 0
+  },
+  "instance": {
+    "vCPU": 4,
+    "memoryGiB": 12,
+    "diskGB": 20,
+    "sleepAfterSeconds": 600
+  },
+  "grossFullCpuPerSecond": 0.0001114,
+  "grossIdleMemoryDiskPerSecond": 3.14e-05,
+  "rows": [
+    {
+      "sizeLabel": 320,
+      "raster": [
+        576,
+        320
+      ],
+      "videoBps": 133334,
+      "audioBps": 42667,
+      "channels": 1,
+      "fps": 25,
+      "observedEncodeSeconds": 17.965,
+      "observedSourceSeconds": 79.153,
+      "observedBytes": 1825753,
+      "observedScope": "Actual Cloudflare DEV capped25fps a13 xsmall standard-4; CPU utilization unmeasured",
+      "proxyEncodeSecondsPerSourceMinute": 13.61792983209733,
+      "grossComputeUsdPerSourceMinuteProxy": 0.0015170373832956426,
+      "newNominalMBPerMinute": 1.3200075,
+      "qualityScore": null,
+      "actualFileMBPerMinute": 1.3837052849636216,
+      "observedOutputSeconds": 79.168,
+      "passSeconds": [
+        7.299,
+        10.663
+      ],
+      "actualVsNominalBeforeMuxRatio": 1.0482556235200342
+    },
+    {
+      "sizeLabel": 480,
+      "raster": [
+        864,
+        480
+      ],
+      "videoBps": 300000,
+      "audioBps": 42667,
+      "channels": 1,
+      "fps": 25,
+      "observedEncodeSeconds": 30.393,
+      "observedSourceSeconds": 79.153,
+      "observedBytes": 3493851,
+      "observedScope": "Actual capped25fps +50% video budget, Cloudflare DEV a13 standard-4; active CPU usage unmeasured",
+      "proxyEncodeSecondsPerSourceMinute": 23.03867193915581,
+      "grossComputeUsdPerSourceMinuteProxy": 0.0025665080540219574,
+      "newNominalMBPerMinute": 2.5700025,
+      "qualityScore": null,
+      "firstHttpSeconds": 40.779,
+      "observedOutputSeconds": 79.168,
+      "cachedTransferSeconds": 1.225,
+      "actualFileMBPerMinute": 2.647926687550525,
+      "actualVsNominalBeforeMuxRatio": 1.0303206660501398
+    },
+    {
+      "sizeLabel": 540,
+      "raster": [
+        960,
+        544
+      ],
+      "videoBps": 379688,
+      "audioBps": 54000,
+      "channels": 2,
+      "fps": 25,
+      "observedEncodeSeconds": 30.284,
+      "observedSourceSeconds": 79.153,
+      "observedBytes": 4386076,
+      "observedScope": "Actual capped25fps +50% video budget, Cloudflare DEV a13 standard-4; active CPU usage unmeasured",
+      "proxyEncodeSecondsPerSourceMinute": 22.956047149192067,
+      "grossComputeUsdPerSourceMinuteProxy": 0.002557303652419996,
+      "newNominalMBPerMinute": 3.25266,
+      "qualityScore": null,
+      "observedOutputSeconds": 79.168,
+      "firstHttpSeconds": 39.485,
+      "cachedTransferSeconds": 0.989,
+      "actualFileMBPerMinute": 3.32412793047696,
+      "actualVsNominalBeforeMuxRatio": 1.0219721490954972
+    },
+    {
+      "sizeLabel": 720,
+      "raster": [
+        1280,
+        720
+      ],
+      "videoBps": 658536,
+      "audioBps": 96000,
+      "channels": 2,
+      "fps": 25,
+      "observedEncodeSeconds": 43.168,
+      "observedSourceSeconds": 79.153,
+      "observedBytes": 7598950,
+      "observedScope": "Actual capped25fps +50% video budget, Cloudflare DEV a13 standard-4; active CPU usage unmeasured",
+      "proxyEncodeSecondsPerSourceMinute": 32.722448928025464,
+      "grossComputeUsdPerSourceMinuteProxy": 0.0036452808105820367,
+      "newNominalMBPerMinute": 5.65902,
+      "qualityScore": null,
+      "observedOutputSeconds": 79.168,
+      "firstHttpSeconds": 48.492,
+      "cachedTransferSeconds": 1.048,
+      "actualFileMBPerMinute": 5.759107215036378,
+      "actualVsNominalBeforeMuxRatio": 1.017686315834964
+    }
+  ],
+  "scenarios": [
+    {
+      "set": "three480540720",
+      "uniqueSourceMinutes": 104.2,
+      "grossEncodeResourceProxyUSD": 0.9137394402738999,
+      "runtimeSensitivityHalfToDouble": [
+        0.45686972013694993,
+        1.8274788805477997
+      ],
+      "outputGBFromObservedFileRates": 1.2223870630052545,
+      "grossR2MonthlyUSD": 0.018335805945078817,
+      "nominalGBWithAssumed5pctMux": 1.256210882325,
+      "scope": "All four anchors actual25fps DEV a13; corpus/time extrapolation, not actual93 execution"
+    },
+    {
+      "set": "three480540720",
+      "uniqueSourceMinutes": 114.00705882352942,
+      "grossEncodeResourceProxyUSD": 0.9997384464173258,
+      "runtimeSensitivityHalfToDouble": [
+        0.4998692232086629,
+        1.9994768928346516
+      ],
+      "outputGBFromObservedFileRates": 1.337435257170455,
+      "grossR2MonthlyUSD": 0.020061528857556826,
+      "nominalGBWithAssumed5pctMux": 1.3744424947791178,
+      "scope": "All four anchors actual25fps DEV a13; corpus/time extrapolation, not actual93 execution"
+    },
+    {
+      "set": "three480540720",
+      "uniqueSourceMinutes": 1000,
+      "grossEncodeResourceProxyUSD": 8.76909251702399,
+      "runtimeSensitivityHalfToDouble": [
+        4.384546258511995,
+        17.53818503404798
+      ],
+      "outputGBFromObservedFileRates": 11.731161833063863,
+      "grossR2MonthlyUSD": 0.17596742749595795,
+      "nominalGBWithAssumed5pctMux": 12.055766625,
+      "scope": "All four anchors actual25fps DEV a13; corpus/time extrapolation, not actual93 execution"
+    },
+    {
+      "set": "three320480720",
+      "uniqueSourceMinutes": 104.2,
+      "grossEncodeResourceProxyUSD": 0.8053436950311421,
+      "runtimeSensitivityHalfToDouble": [
+        0.40267184751557106,
+        1.6106873900622842
+      ],
+      "outputGBFromObservedFileRates": 1.0201950233427646,
+      "grossR2MonthlyUSD": 0.015302925350141468,
+      "nominalGBWithAssumed5pctMux": 1.0447593723000002,
+      "scope": "All four anchors actual25fps DEV a13; corpus/time extrapolation, not actual93 execution"
+    },
+    {
+      "set": "three320480720",
+      "uniqueSourceMinutes": 114.00705882352942,
+      "grossEncodeResourceProxyUSD": 0.881140748681132,
+      "runtimeSensitivityHalfToDouble": [
+        0.440570374340566,
+        1.762281497362264
+      ],
+      "outputGBFromObservedFileRates": 1.1162133784809074,
+      "grossR2MonthlyUSD": 0.01674320067721361,
+      "nominalGBWithAssumed5pctMux": 1.1430896661635295,
+      "scope": "All four anchors actual25fps DEV a13; corpus/time extrapolation, not actual93 execution"
+    },
+    {
+      "set": "three320480720",
+      "uniqueSourceMinutes": 1000,
+      "grossEncodeResourceProxyUSD": 7.728826247899636,
+      "runtimeSensitivityHalfToDouble": [
+        3.864413123949818,
+        15.457652495799271
+      ],
+      "outputGBFromObservedFileRates": 9.790739187550525,
+      "grossR2MonthlyUSD": 0.14686108781325788,
+      "nominalGBWithAssumed5pctMux": 10.026481500000001,
+      "scope": "All four anchors actual25fps DEV a13; corpus/time extrapolation, not actual93 execution"
+    },
+    {
+      "set": "four",
+      "uniqueSourceMinutes": 104.2,
+      "grossEncodeResourceProxyUSD": 1.0718147356133059,
+      "runtimeSensitivityHalfToDouble": [
+        0.5359073678066529,
+        2.1436294712266117
+      ],
+      "outputGBFromObservedFileRates": 1.3665691536984639,
+      "grossR2MonthlyUSD": 0.020498537305476957,
+      "nominalGBWithAssumed5pctMux": 1.4006329029000002,
+      "scope": "All four anchors actual25fps DEV a13; corpus/time extrapolation, not actual93 execution"
+    },
+    {
+      "set": "four",
+      "uniqueSourceMinutes": 114.00705882352942,
+      "grossEncodeResourceProxyUSD": 1.172691416612205,
+      "runtimeSensitivityHalfToDouble": [
+        0.5863457083061026,
+        2.34538283322441
+      ],
+      "outputGBFromObservedFileRates": 1.4951874269877312,
+      "grossR2MonthlyUSD": 0.022427811404815968,
+      "nominalGBWithAssumed5pctMux": 1.532457176114118,
+      "scope": "All four anchors actual25fps DEV a13; corpus/time extrapolation, not actual93 execution"
+    },
+    {
+      "set": "four",
+      "uniqueSourceMinutes": 1000,
+      "grossEncodeResourceProxyUSD": 10.286129900319633,
+      "runtimeSensitivityHalfToDouble": [
+        5.1430649501598165,
+        20.572259800639266
+      ],
+      "outputGBFromObservedFileRates": 13.114867118027485,
+      "grossR2MonthlyUSD": 0.19672300677041227,
+      "nominalGBWithAssumed5pctMux": 13.441774500000001,
+      "scope": "All four anchors actual25fps DEV a13; corpus/time extrapolation, not actual93 execution"
+    }
+  ],
+  "priceURLs": [
+    "https://developers.cloudflare.com/containers/platform/pricing/",
+    "https://developers.cloudflare.com/r2/pricing/",
+    "https://developers.cloudflare.com/workers/platform/pricing/",
+    "https://developers.cloudflare.com/durable-objects/platform/pricing/"
+  ],
+  "limitations": [
+    "CPU usage unmeasured: compute assumes full4CPU plus provisioned memory/disk during measured encode walltime; overhead and idle excluded.",
+    "All current3 profile anchors are one source on DEV; corpus cost/size extrapolation not a measured total.",
+    "Eight of93 durations imputed; content-level SHA deduplication unavailable.",
+    "Shared allowances and invoice rounding excluded; rate card carried forward from prior dated report, not newly price-checked.",
+    "One environment; retained originals, old outputs, transfer, startup, Worker/DO/logs and retries excluded."
+  ],
+  "catalog": {
+    "repo": "BibleAquifer/VideoBibleDictionary",
+    "revision": "1c02713d022bd96a29c78f5b75455315d6d35a6e",
+    "scope": "all19 English metadata JSON files; not global FIA universe",
+    "uniqueAssetIds": 93,
+    "uniqueUrls": 93,
+    "hashDeduplication": "not possible for unacquired sources; source-ID/URL dedupe only",
+    "positiveDurationCount": 85,
+    "positiveDurationSeconds": 6252,
+    "unknownDurationIds": [
+      "a2218",
+      "a2219",
+      "a2220",
+      "a2297",
+      "a2376",
+      "a2377",
+      "a2378",
+      "a2119"
+    ],
+    "imputedTotalMinutes": 114.00705882352942,
+    "imputation": "8 unknown durations assigned mean of85 positive metadata labels; not measured"
+  },
+  "latestPolicyCaveat": "All four comparison profiles have actual25fps Cloudflare a13 measurements. App options remain separate.912 and4K decode overhead unmeasured.",
+  "modelVersion": "four-current-capped-dev-v3",
+  "supersedesForCurrentTiming": "fia-video-cost-2026-10-05/model.json",
+  "previousModelSha256": "04b16c4a3767c6ff77512a2755c645203aa0623b637b75204179b246f6e75bbd",
+  "evidence": [
+    {
+      "sourceReceipt": "outputs/fia-v3-continue/integration/video-capped-live-proof/development-a13-small-reconciliation.json",
+      "sha256": "b9bb665d789d84c8cdfad47c072eff58764c56cbd476a1d7932da11f40c5f25c",
+      "outputSha256": "ff6e824bc2fb902fd380052247287431ba62750c249f88406729f440320d96b3",
+      "encoderRevision": "fe52c02f5d1af1e78af35165d2439a6f5cf03f613e63aae2dd4b13ff5baccfb6",
+      "canonicalKey": "video-v1/3a66fee2fee01ad91013c4bfa83538366a52ccdf22b3f5c96b0420f0da19d6ca.mp4",
+      "encodeMs": 30393
+    },
+    {
+      "sourceReceipt": "outputs/fia-v3-continue/integration/video-capped-live-proof/development-a13-medium-reconciliation.json",
+      "sha256": "8a4d5e388f2da50dd1a5c662f4c0fe2bf614f274088514a9feb431bbd336573b",
+      "outputSha256": "f39a7b8ab99b15dc00ead12a0be5e1fddb9d77f3d57758b3a368b2093e66a38c",
+      "encoderRevision": "76c3de9b9cb84ddf3a953f741bb5ba535f3e42cd268eaecfe3632edb390f57e5",
+      "canonicalKey": "video-v1/7ca3ff7713ed96fde7a5a4fea24c5275fef7151750b2a32ff51556944e53c9bb.mp4",
+      "encodeMs": 30284
+    },
+    {
+      "sourceReceipt": "outputs/fia-v3-continue/integration/video-capped-live-proof/development-a13-large-reconciliation.json",
+      "sha256": "25696a26e1d416d11520a8ff963a7a2b7c0ebf0d3bb2e53555b20506210abea3",
+      "outputSha256": "83f22e9ffa67218b89cf852c85db8e0b52781697e4bf8665104dc27658525668",
+      "encoderRevision": "60f5a937a556b21727f385f5999fb5ad4f9e7f2fba4108fcce2885983e0dcb08",
+      "canonicalKey": "video-v1/04eed685b63969afc8ed752bf9c9886766e59a1730a25df3f670b5d7ff6b0fc6.mp4",
+      "encodeMs": 43168
+    },
+    {
+      "sourceReceipt": "outputs/fia-v3-continue/integration/video-xsmall-live-proof/development-a13-xsmall/receipt.json",
+      "sha256": "ba025f2b1c987baa0beec91d1fdc13fda3a4f5b847e6f0a035288f547e32cafd",
+      "r2Receipt": "outputs/fia-v3-continue/integration/video-xsmall-live-proof/development-a13-xsmall-r2.json",
+      "r2Sha256": "8fb1773a70a7c9961528ac11082c6ba6da739d3a2db8597c3ab6daa902c90772",
+      "outputSha256": "627ac30873371b3c237eead9b582672016da5a3d44c3b420dc0149850bf8003d",
+      "encoderRevision": "e29c2c9ac5a9493bb324f4c319352f0c6483c5442a97c3bc8c9c6c8dbbcde196",
+      "canonicalKey": "video-v1/827774d4c3891a7c18974110b082ee4da0b7a18ad7e0587045593925843ba16e.mp4",
+      "encodeMs": 17965
+    }
+  ],
+  "durableObjects": {
+    "rowWritesIncludedPerMonth": 50000000,
+    "usdPerMillionRowWrites": 1,
+    "requestsIncludedPerMonth": 1000000,
+    "usdPerMillionRequests": 0.15,
+    "durationIncludedGBSecondsPerMonth": 400000,
+    "usdPerMillionGBSeconds": 12.5,
+    "allocatedGBPerObject": 0.128,
+    "grossDurationUsdPerActiveSecond": 1.6e-06,
+    "actualRowsRequestsDuration": "unmeasured SDK lifecycle and alarm usage; not zero",
+    "invoiceRule": "Monthly shared excess rounded up to billable units; per-job values gross allocation only"
+  }
+}

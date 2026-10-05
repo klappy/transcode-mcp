@@ -1,0 +1,10 @@
+import {contract} from '../../container/video.mjs';
+import {deliveryPassArguments} from '../historical-video-arguments.mjs';
+import {resolveRecipe} from '../../container/recipes.mjs';
+export const candidate={...structuredClone(contract),recipe:'private-a13-320-aligned-v2',encoding:{width:576,height:320,fps:50,preset:'medium',videoBps:133334,classBps:133334,maxrateBps:266667,bufferBits:533334,keyint:1500,minKeyint:1,scenecut:60,passes:2,audioBps:42667,audioChannels:1,sar:'80:81',dar:'16:9'}};
+export const comparisonTimeline=[{sourceStart:5,sourceEnd:18.2,localStart:0,localEnd:13.2},{sourceStart:35,sourceEnd:48.2,localStart:13.2,localEnd:26.4},{sourceStart:65,sourceEnd:78.2,localStart:26.4,localEnd:39.6}];
+export const sampleDuration=39.6;
+export function sampleFilter(kind){const letter=kind==='video'?'v':'a',trim=kind==='video'?'trim':'atrim',pts=kind==='video'?'setpts':'asetpts';return comparisonTimeline.map((w,i)=>`[0:${letter}:0]${trim}=start=${w.sourceStart}:end=${w.sourceEnd},${pts}=PTS-STARTPTS[${letter}${i}]`).join(';')+';'+comparisonTimeline.map((_,i)=>`[${letter}${i}]`).join('')+`concat=n=3:v=${letter==='v'?1:0}:a=${letter==='a'?1:0}`+(letter==='v'?`,scale=576:320:flags=lanczos,setsar=80/81:max=65535[vout]`:'[aout]');}
+export function passArguments(source,output,prefix,pass){const a=deliveryPassArguments(source,output,prefix,pass,candidate);let i=a.indexOf('-vf');a.splice(i,2);i=a.indexOf('-map');a.splice(i,2,'-filter_complex',sampleFilter('video')+(pass===2?';'+sampleFilter('audio'):''),'-map','[vout]');if(pass===2)a[a.indexOf('0:a:0?')]='[aout]';return a;}
+export const lowArguments=(source,output)=>['-nostdin','-hide_banner','-y','-protocol_whitelist','file,pipe','-i',source,'-filter_complex',sampleFilter('audio'),'-map','[aout]','-vn',...resolveRecipe('opus','voice','low').args,output];
+export function budget(measurement){const v=measurement.tracks.find(t=>t.type==='vide');const bps=v.bytes*8/v.duration;return{actualVideoBps:bps,nominalVideoBps:133334,relativeDeviation:Math.abs(bps-133334)/133334,accepted:Math.abs(bps-133334)/133334<=.05};}

@@ -1,0 +1,9 @@
+# Sampled 320p comparison first
+
+2026-10-05. User-directed successor to the aligned-canvas optional320 comparison. No encode has run. Keep one576×320 SAR80:81/DAR16:9 H26450fps two-pass candidate at133334bits/s, max266667, buffer533334 and AAC42667mono48k.
+
+Use exactly three source intervals [5,18.2), [35,48.2), [65,78.2), each13.2seconds. Concatenate in that order into39.6seconds, approximately half the retained79.153-second source. Both video passes use identical trim, reset timestamps, concatenate, scale and setsar filters. Final AAC and the single OpusLow listening reference use exactly matching audio trims and concatenation. No source re-encode/intermediate, additional candidate, origin fetch or retry.
+
+Keep immutable full-source SHA/probe distinct from expected sample duration. Output validation targets39.6seconds (existing0.25second mux tolerance),1980video frames at50fps, and explicit non-square pixel/display metadata. Never describe this output as the complete source. Receipt comparisonTimeline maps local [0,13.2)→source[5,18.2), [13.2,26.4)→[35,48.2), [26.4,39.6)→[65,78.2). Matched stills use local5/18.2/31.4seconds corresponding to original10/40/70seconds. Continuous-motion listening/review uses these windows; omitted scenes remain unassessed. Joins are synthetic and cannot prove original scene-cut handling.
+
+Existing bounds unchanged: one300second combined video job, at most one120second OpusLow reference, ten-minute shared bound,60MiB output,32/64MiB passlogs and384MiB aggregate storage. No network in container. Reuse pinned artifact11321498762 and existing source/compact bytes. Sampling reduces encoded duration; decoding skipped input and encoder overhead mean no promised twofold speedup. The shared production service stays untouched. Independent source review precedes root manual execution; browser/motion/audio acceptance follows actual output.

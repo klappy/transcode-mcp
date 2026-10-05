@@ -19,3 +19,12 @@ describe('fixed verified R2 references',()=>{
  test('metadata mismatch fails before body and oversized sidecar cancels',async()=>{const f=fixture();f.meta.size=1;expect((await handleVideoReference(request(),f.bucket)).status).toBe(503);let cancelled=false;const b={get:async()=>({size:4097,body:new ReadableStream({cancel(){cancelled=true;}})})};expect((await handleVideoReference(request(),b as any)).status).toBe(503);expect(cancelled).toBe(true);});
  test('TOCTOU object mismatch cancels selected body',async()=>{const f=fixture();const old=f.bucket.get.bind(f.bucket);(f.bucket as any).get=async(k:string,o:any)=>{const v=await old(k,o);if(k.endsWith('.mp4'))(v as any).etag='changed';return v;};expect((await handleVideoReference(request(),f.bucket)).status).toBe(503);expect(f.cancelled()).toBe(true);});
 });
+
+for(const id of ['a13-small-qualified-v1','a13-medium-qualified-v1','a13-large-qualified-v1','a13-xsmall-25fps-benchmark-v1','a13-small-25fps-benchmark-v1','a13-medium-25fps-benchmark-v1','a13-large-25fps-benchmark-v1'] as const)test(`qualified comparison ${id} binds its output review and reads R2 only`,async()=>{
+ const ref=videoReferences[id],key=`video-reference-v1/${ref.sha256}`;let bodyReads=0;
+ const publication={schemaVersion:1,referenceId:id,sha256:ref.sha256,bytes:ref.bytes,sourceUrl:ref.url,rights:'CC-BY-SA-4.0',sourceReview:String(ref.review),r2Etag:'stored'};
+ const object={size:ref.bytes,etag:'stored',httpMetadata:{contentType:'video/mp4'}};
+ const bucket={head:async(k:string)=>{expect(k).toBe(key+'.mp4');return object;},get:async(k:string)=>{if(k.endsWith('.json')){const b=new TextEncoder().encode(JSON.stringify(publication));return{size:b.length,body:new Response(b).body};}bodyReads++;expect(k).toBe(key+'.mp4');return{...object,body:new Response(new Uint8Array(10)).body};}}as unknown as R2Bucket;
+ const r=await handleVideoReference(request('GET','bytes=0-9',id),bucket);expect(r.status).toBe(206);expect(r.headers.get('ETag')).toBe(`"sha256-${ref.sha256}"`);expect(r.headers.get('Content-Range')).toBe(`bytes 0-9/${ref.bytes}`);await r.body!.cancel();expect(bodyReads).toBe(1);
+ publication.sourceReview=sourceReview;expect((await handleVideoReference(request('HEAD',undefined,id),bucket)).status).toBe(503);expect(bodyReads).toBe(1);
+});

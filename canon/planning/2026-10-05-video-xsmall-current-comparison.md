@@ -1,0 +1,11 @@
+# Current 320p comparison through the existing video pipeline
+
+The user explicitly requires 320p in the current comparison. Add the closed API/tool size `xsmall` to the existing source×profile catalog; retain `small`, `medium`, `large` and the default Large unchanged. This is one shared pipeline, not a separate encoder or service. FIA app download choices remain the existing three until separately directed.
+
+The new profile is coded576×320, SAR80:81, DAR16:9, qualified50fps source divided to25fps with the approved rational fps filter and no blending. Video average/class133334bps, maximum266667bps, buffer533334bits; AAC42667bps mono48k. Preserve the existing two-pass medium preset,30-second GOP750, source allowlist, rights, byte/time limits and publication owner. Current video/audio rates are not inferred from an arbitrary target file size. Existing three profile contracts and settings are byte-for-byte unchanged.
+
+The adapter and catalog hash change, so all computed encoder/cache identities advance truthfully. Old outputs remain immutable; no compatibility alias is permitted. Existing fixed showcase references continue serving their approved bytes. Newly acquired members require actual source/contract/output/R2 binding under the deployed identity before publication to an app catalog.
+
+First acquire one necessary a13 xsmall through the actual Cloudflare pipeline, then verify HTTP/HIT/range, full decode,25fps, duration, SAR/DAR and native display, and bind R2 identity and measured pass times. This is mechanical qualification, not a new perceptual release gate. Replace the historical320 cost proxy only after actual measurements. The comparison page may then show source, existing compact and four measured optimized sizes; no invented320 timing/size or placeholder playback is ready beforehand. Other source xsmall outputs remain unavailable until qualified; adding a catalog selector does not claim published bytes.
+
+Risks: lower spatial detail, rate-control size differences, and additional storage are disclosed rather than assumed improvements. Compare measured sizes/costs, not bitrate alone. Reversibility is removal of the additive selector; existing fixed outputs remain retained. No external writes or encoding are authorized by the existence of this local document alone; the root operator owns the approved release execution.

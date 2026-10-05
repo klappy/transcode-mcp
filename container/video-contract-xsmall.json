@@ -1,0 +1,49 @@
+{
+  "recipe": "fia-video@5-xsmall",
+  "source": {
+    "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
+    "sha256": "257f632552979b05716ca438ab654b7489229f34ca59c6bca22149d3b42f3718",
+    "bytes": 49851846,
+    "provenance": {
+      "publisher": "Word Collective",
+      "license": "CC BY-SA 4.0",
+      "assetId": "a13",
+      "assetVersion": "1.0.4",
+      "metadataRevision": "1c02713d022bd96a29c78f5b75455315d6d35a6e",
+      "transformation": "H.264/AAC MP4 re-encode, 576x320 SAR80:81 DAR16:9, mono downmix"
+    }
+  },
+  "limits": {
+    "bytes": 62914560,
+    "requestBytes": 8192,
+    "sourceMs": 120000,
+    "encodeMs": 300000,
+    "jobMs": 600000,
+    "stderrBytes": 65536,
+    "passlogFileBytes": 33554432,
+    "passlogTotalBytes": 67108864
+  },
+  "encoding": {
+    "width": 576,
+    "height": 320,
+    "fps": 25,
+    "preset": "medium",
+    "videoBps": 133334,
+    "classBps": 133334,
+    "maxrateBps": 266667,
+    "bufferBits": 533334,
+    "keyint": 750,
+    "minKeyint": 1,
+    "scenecut": 60,
+    "passes": 2,
+    "audioBps": 42667,
+    "audioChannels": 1,
+    "sar": "80:81",
+    "dar": "16:9",
+    "cadencePolicy": "integer-divisor-max30-v1",
+    "sourceFrameRate": "50/1",
+    "sourceCadence": "qualified-cfr",
+    "outputFrameRate": "25/1"
+  },
+  "recipeRevision": "0257be2349aa165fdb8413a3e99b0de417f95886"
+}

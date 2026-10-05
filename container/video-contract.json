@@ -1,5 +1,5 @@
 {
-  "recipe": "fia-video@2",
+  "recipe": "fia-video@5-large",
   "source": {
     "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
     "sha256": "257f632552979b05716ca438ab654b7489229f34ca59c6bca22149d3b42f3718",
@@ -26,17 +26,23 @@
   "encoding": {
     "width": 1280,
     "height": 720,
-    "fps": 50,
+    "fps": 25,
     "preset": "medium",
-    "videoBps": 439024,
-    "classBps": 450000,
-    "maxrateBps": 900000,
-    "bufferBits": 1800000,
-    "keyint": 1500,
+    "videoBps": 658536,
+    "classBps": 675000,
+    "maxrateBps": 1350000,
+    "bufferBits": 2700000,
+    "keyint": 750,
     "minKeyint": 1,
     "scenecut": 60,
     "audioKbps": 96,
     "passes": 2,
-    "qualificationRevision": "7fc5e54667fb4d7f9df16755172d6ffec8b3c52d"
-  }
+    "sar": "1:1",
+    "dar": "16:9",
+    "cadencePolicy": "integer-divisor-max30-v1",
+    "sourceFrameRate": "50/1",
+    "sourceCadence": "qualified-cfr",
+    "outputFrameRate": "25/1"
+  },
+  "recipeRevision": "0257be2349aa165fdb8413a3e99b0de417f95886"
 }

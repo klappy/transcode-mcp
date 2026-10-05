@@ -92,7 +92,7 @@ test('final consumer read uses remaining original deadline and discards a late b
 
 test('concurrent cached presets sharing a slot bypass encode admission and return independent ranges',async()=>{
  const revision='a'.repeat(64), sizes=['small','medium','large'];
- expect(await videoSlot(videoContract.source.url,5,'small')).toBe(await videoSlot(videoContract.source.url,5,'medium'));
+ expect(await videoSlot(videoContract.source.url,1,'small')).toBe(await videoSlot(videoContract.source.url,1,'medium'));
  const objects=new Map<string,any>();
  for(const size of sizes){const c=selectVideoContract(videoContract.source.url,size)!;objects.set(await videoKey(revision,c),{size:4,customMetadata:{sourceSha256:c.source.sha256,sourceUrl:c.source.url,encoderRevision:revision,recipe:c.recipe,bytes:'4',sha256:'b'.repeat(64)}});}
  const gate=deferred<void>();let heads=0,transforms=0,admissions=0;

@@ -1,5 +1,5 @@
 {
-  "recipe": "fia-video@3-small",
+  "recipe": "fia-video@5-small",
   "source": {
     "url": "https://s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
     "sha256": "257f632552979b05716ca438ab654b7489229f34ca59c6bca22149d3b42f3718",
@@ -10,7 +10,7 @@
       "assetId": "a13",
       "assetVersion": "1.0.4",
       "metadataRevision": "1c02713d022bd96a29c78f5b75455315d6d35a6e",
-      "transformation": "H.264/AAC MP4 re-encode, 854x480, mono downmix"
+      "transformation": "H.264/AAC MP4 re-encode, 864x480 SAR80:81 DAR16:9, mono downmix"
     }
   },
   "limits": {
@@ -24,21 +24,26 @@
     "passlogTotalBytes": 67108864
   },
   "encoding": {
-    "width": 854,
+    "width": 864,
     "height": 480,
-    "fps": 50,
+    "fps": 25,
     "preset": "medium",
-    "videoBps": 200000,
-    "classBps": 200000,
-    "maxrateBps": 400000,
-    "bufferBits": 800000,
-    "keyint": 1500,
+    "videoBps": 300000,
+    "classBps": 300000,
+    "maxrateBps": 600000,
+    "bufferBits": 1200000,
+    "keyint": 750,
     "minKeyint": 1,
     "scenecut": 60,
     "passes": 2,
     "audioBps": 42667,
     "audioChannels": 1,
-    "sar": "1280:1281"
+    "sar": "80:81",
+    "dar": "16:9",
+    "cadencePolicy": "integer-divisor-max30-v1",
+    "sourceFrameRate": "50/1",
+    "sourceCadence": "qualified-cfr",
+    "outputFrameRate": "25/1"
   },
-  "recipeRevision": "d73df8652aa47846d18d8fdedadfaeee4fd1615c"
+  "recipeRevision": "0257be2349aa165fdb8413a3e99b0de417f95886"
 }
