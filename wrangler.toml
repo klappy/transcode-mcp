@@ -111,6 +111,10 @@ tag = "v1"
 [env.development]
 name = "transcode-mcp-development"
 
+[env.development.observability]
+enabled = true
+head_sampling_rate = 1
+
 [env.development.vars]
 
 [env.development.images]

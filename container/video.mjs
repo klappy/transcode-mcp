@@ -1,15 +1,16 @@
 import { readFile, mkdtemp, rm, stat, open, readdir } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 export const contract = JSON.parse(await readFile(new URL('./video-contract.json', import.meta.url), 'utf8'));
 const hash = b => createHash('sha256').update(b).digest('hex');
 let busy = false;
-export function runBounded(command, args, { timeout = 30000, signal, outputPath, limit = contract.limits.bytes, onStderr } = {}) {
+export function runBounded(command, args, { timeout = 30000, signal, outputPath, limit = contract.limits.bytes, onStderr, onSpawn, onClose } = {}) {
     return new Promise((resolve, reject) => {
         let failure, stdout = Buffer.alloc(0), stderr = '';
         const child = spawn(outputPath ? '/usr/bin/prlimit' : command, outputPath ? [`--fsize=${limit}:${limit}`, '--', command, ...args] : args, { stdio: ['ignore', 'pipe', 'pipe'] });
+        const notify=(fn,value)=>{try{fn?.(value);}catch{}};child.once('spawn',()=>notify(onSpawn));
         const fail = e => { failure ??= e; child.kill('SIGKILL'); };
         const abort = () => fail(new Error('Video job cancelled'));
         signal?.addEventListener('abort', abort, { once: true });
@@ -28,7 +29,7 @@ export function runBounded(command, args, { timeout = 30000, signal, outputPath,
         child.stderr.on('data', b => {stderr = (stderr + b.toString()).slice(-contract.limits.stderrBytes);onStderr?.(b);});
         child.on('error', e => { failure = e; });
         child.on('close', (code,exitSignal) => { clearTimeout(timer); if (monitor)
-            clearInterval(monitor); signal?.removeEventListener('abort', abort); if (failure || code !== 0)
+            clearInterval(monitor); signal?.removeEventListener('abort', abort);notify(onClose,{outcome:signal?.aborted?'cancel':failure||code!==0?'failure':'success'}); if (failure || code !== 0)
             reject(failure || new Error(`Encoder failed code=${code} signal=${exitSignal}: ${stderr}`));
         else
             resolve(stdout); });
@@ -57,20 +58,25 @@ export function validateOutput(source, result) {
     return { duration, width: o.width, height: o.height, videoCodec: o.codec_name, audioCodec: oa[0]?.codec_name || null };
 }
 async function probe(path, signal) { return JSON.parse((await runBounded('/usr/bin/ffprobe', ['-v', 'error', '-show_streams', '-show_format', '-of', 'json', path], { signal })).toString()); }
+export function videoPhaseLogger(sink=line=>console.log(line),clock=()=>Date.now()){
+ const jobId=randomUUID(),start=clock();let count=0;
+ const phases=new Set(['job-start','source-verified','encode-spawned','encode-exited','cancellation-observed','cleanup-complete','cleanup-failed']);
+ return(phase,details={})=>{if(!phases.has(phase)||count>=16)return;const event={schema:1,event:'fia-video-phase',jobId,assetId:contract.source.provenance.assetId,recipe:contract.recipe,phase,elapsedMs:Math.max(0,clock()-start)};if([1,2].includes(details.pass))event.pass=details.pass;if(['success','cancel','failure'].includes(details.outcome))event.outcome=details.outcome;const line=JSON.stringify(event);if(Buffer.byteLength(line)>1024)return;count++;try{sink(line);}catch{}};
+}
 export function deliveryPassArguments(input,output,prefix,pass){
  const e=contract.encoding;if(![1,2].includes(pass))throw Error('Invalid pass');
  const common=['-nostdin','-hide_banner','-y','-protocol_whitelist','file,pipe','-i',input,'-map','0:v:0','-vf',`scale=${e.width}:${e.height}:flags=lanczos`,'-c:v','libx264','-preset',e.preset,'-pix_fmt','yuv420p','-b:v',String(e.videoBps),'-maxrate',String(e.maxrateBps),'-bufsize',String(e.bufferBits),'-g',String(e.keyint),'-keyint_min',String(e.minKeyint),'-sc_threshold',String(e.scenecut),'-passlogfile',prefix];
  return pass===1?[...common,'-pass','1','-an','-f','null','/dev/null']:[...common,'-map','0:a:0?','-pass','2','-c:a','aac','-b:a',`${e.audioKbps}k`,'-ac','2','-movflags','+faststart',output];
 }
-export async function encodeDelivery(input,output,dir,sourceProbe,signal){
+export async function encodeDelivery(input,output,dir,sourceProbe,signal,phase=()=>{}){
  const e=contract.encoding,v=sourceProbe.streams.find(s=>s.codec_type==='video');
  if(v?.width!==e.width||v?.height!==e.height||v?.avg_frame_rate!=='50/1')throw Error('Unqualified source geometry/cadence');
  const prefix=join(dir,'pass'),start=Date.now(),passes=[],statistics=[];
  const local=AbortSignal.any([signal,AbortSignal.timeout(contract.limits.encodeMs)]);
  try{
   for(const pass of [1,2]){
-   const remaining=contract.limits.encodeMs-(Date.now()-start);if(remaining<=0)throw Error('Combined encode deadline');let log='';const began=Date.now();
-   await runBounded('/usr/bin/ffmpeg',deliveryPassArguments(input,output,prefix,pass),{timeout:remaining,signal:local,outputPath:pass===1?'/dev/null':output,limit:pass===1?contract.limits.passlogFileBytes:contract.limits.bytes,onStderr:b=>{log=(log+b.toString()).slice(-contract.limits.stderrBytes);}});
+   const remaining=contract.limits.encodeMs-(Date.now()-start);if(remaining<=0)throw Error('Combined encode deadline');let log='',spawned=false,reported=false;const began=Date.now();
+   await runBounded('/usr/bin/ffmpeg',deliveryPassArguments(input,output,prefix,pass),{timeout:remaining,signal:local,outputPath:pass===1?'/dev/null':output,limit:pass===1?contract.limits.passlogFileBytes:contract.limits.bytes,onSpawn:()=>{spawned=true;},onClose:({outcome})=>phase('encode-exited',{pass,outcome}),onStderr:b=>{log=(log+b.toString()).slice(-contract.limits.stderrBytes);if(spawned&&!reported&&/frame=\s*[1-9]\d*/.test(log)){reported=true;phase('encode-spawned',{pass});}}});
    const settings=pass===1?(await readFile(prefix+'-0.log','utf8')).split('\n')[0]:log;
    for(const token of [`bitrate=${Math.floor(e.videoBps/1000)}`,`vbv_maxrate=${e.maxrateBps/1000}`,`vbv_bufsize=${e.bufferBits/1000}`,`keyint=${e.keyint}`,`scenecut=${e.scenecut}`,pass===1?'rc=abr':'rc=2pass'])if(!settings.includes(token))throw Error('Unconfirmed encoder setting '+token);
    let total=0;for(const name of (await readdir(dir)).filter(n=>n.startsWith('pass'))){if(!/^pass-0\.log(?:\.mbtree)?(?:\.temp)?$/.test(name))throw Error('Unexpected statistics file');const length=(await stat(join(dir,name))).size;if(length>contract.limits.passlogFileBytes)throw Error('Statistics file ceiling');total+=length;}if(total>contract.limits.passlogTotalBytes)throw Error('Statistics aggregate ceiling');
@@ -102,7 +108,7 @@ export async function handleVideo(req, res) {
         return;
     }
     busy = true;
-    let dir;
+    let dir,phase=()=>{};let hasJob=false;
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), contract.limits.jobMs);
     const abort = () => { if (!res.writableEnded)
         controller.abort(); };
@@ -110,6 +116,7 @@ export async function handleVideo(req, res) {
     const abortBody = () => { if (!req.complete)
         req.destroy(); };
     controller.signal.addEventListener('abort', abortBody, { once: true });
+    const cancelEvent=()=>phase('cancellation-observed');controller.signal.addEventListener('abort',cancelEvent,{once:true});
     try {
         let raw = Buffer.alloc(0);
         for await (const b of req) {
@@ -120,6 +127,7 @@ export async function handleVideo(req, res) {
         const job = JSON.parse(raw);
         if (job.source_url !== contract.source.url || job.recipe !== contract.recipe)
             throw Error('Unapproved video source or recipe');
+        phase=videoPhaseLogger();hasJob=true;phase('job-start');
         const encoder = await encoderIdentity(controller.signal);
         if (job.encoderRevision !== encoder.revision)
             throw Error('Encoder identity changed');
@@ -152,8 +160,9 @@ export async function handleVideo(req, res) {
         }
         if (size !== contract.source.bytes || digest.digest('hex') !== contract.source.sha256)
             throw Error('Source identity mismatch');
+        phase('source-verified');
         const sourceProbe = await probe(input, controller.signal);
-        const encoding=await encodeDelivery(input,output,dir,sourceProbe,controller.signal);
+        const encoding=await encodeDelivery(input,output,dir,sourceProbe,controller.signal,phase);
         const outputProbe = await probe(output, controller.signal), metadata = validateOutput(sourceProbe, outputProbe);
         const length = (await stat(output)).size;
         if (!length || length > contract.limits.bytes)
@@ -170,9 +179,10 @@ export async function handleVideo(req, res) {
     }
     finally {
         clearTimeout(timer);
-        controller.signal.removeEventListener('abort', abortBody);
+        controller.signal.removeEventListener('abort', abortBody);controller.signal.removeEventListener('abort',cancelEvent);
         res.off('close', abort);
-        try { if (dir) await rm(dir, { recursive: true, force: true }); }
+        try { if (dir) await rm(dir, { recursive: true, force: true });if(hasJob)phase('cleanup-complete'); }
+        catch(error){if(hasJob)phase('cleanup-failed');throw error;}
         finally { busy = false; }
     }
     return true;
