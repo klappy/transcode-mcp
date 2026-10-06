@@ -12,6 +12,7 @@ Earlier granularity lives in `canon/handoffs/` and the PR record.
 ## [Unreleased]
 
 ### Fixed
+- A proxy path whose `https://` was collapsed to `https:/` by a relay that merges slashes is now restored to the canonical URL before parsing. It gets the same allowlist check, legacy pin, cache key and bytes as the canonical URL instead of a `400`. Every Worker response, including errors, 404s, 503s and OPTIONS preflight, now carries `Access-Control-Allow-Origin: *` and exposes the `X-Transcode-*` headers. See `canon/planning/2026-10-06-proxy-path-normalization.md`.
 - FIA alpha.13 omitted-size video URLs (a13, a184, a10) are served from their pinned released bytes (size + streamed SHA-256 verified, `X-Transcode-Pinned: legacy-alpha13`) instead of re-encoding under the changed Large recipe; an encode fallback is served only if it matches the pin, otherwise 503. Explicit `size=large` and lazy URLs are unchanged. See `canon/planning/2026-10-05-legacy-video-pins.md`.
 
 ## [0.5.0] — 2026-10-05
