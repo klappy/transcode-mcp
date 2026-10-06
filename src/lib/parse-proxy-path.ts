@@ -43,10 +43,24 @@ export class ProxyPathError extends Error {
   }
 }
 
+// Some HTTP relays merge "//" in a path, so .../https://host/... arrives as
+// .../https:/host/... . A path with no "http://" or "https://" anywhere is the
+// only shape that changes: its first segment-initial "http:/" or "https:/"
+// followed by a non-slash gets its second slash back. Every path the parser
+// already accepted is returned unchanged, so canonical URLs keep their exact
+// parse, cache keys and pin matches; the restored source URL still goes
+// through the same allowlist as a canonical one.
+// Canon: canon/planning/2026-10-06-proxy-path-normalization.md
+export function normalizeProxyPath(pathname: string): string {
+  if (pathname.includes("http://") || pathname.includes("https://")) return pathname;
+  return pathname.replace(/\/(https?):\/(?=[^/])/, "/$1://");
+}
+
 export function parseProxyPath(
   pathname: string,
   search: string = "",
 ): ParsedRequest {
+  pathname = normalizeProxyPath(pathname);
   // Strip leading slash
   const trimmed = pathname.startsWith("/") ? pathname.slice(1) : pathname;
 

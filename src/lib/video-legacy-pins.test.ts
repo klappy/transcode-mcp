@@ -1,6 +1,6 @@
 import {test,expect,beforeEach} from 'bun:test';
 import {createHash} from 'node:crypto';
-import {LEGACY_PINS,legacyPinFor,serveLegacyVideoPin,servePinnedFallback,clearLegacyPinVerification,type LegacyVideoPin} from './video-legacy-pins';
+import {LEGACY_PINS,legacyPinFor,serveLegacyVideoPin,servePinnedFallback,clearLegacyPinVerification,type LegacyVideoPin} from './video-published-pins';
 import {videoContracts,selectCatalogVideoContract,videoKey,videoSlot} from './video';
 import worker from '../worker';
 

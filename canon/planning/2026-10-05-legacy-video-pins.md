@@ -22,7 +22,7 @@ Delivery identity was derived from encoder identity. A recipe change is a legiti
 
 ## Rule
 
-- Released identities are served by pinned bytes (`LEGACY_PINS` in `src/lib/video-legacy-pins.ts`), keyed by the exact released URL form. Only the omitted-size form alpha.13 uses is pinned; explicit `size=large` follows the current recipe.
+- Released identities are served by pinned bytes (`LEGACY_PINS` in `src/lib/video-published-pins.ts`, formerly `src/lib/video-legacy-pins.ts`; generalized to every published output in `canon/planning/2026-10-06-published-identity-pins.md`), keyed by the exact released URL form. Only the omitted-size form alpha.13 uses is pinned; explicit `size=large` follows the current recipe.
 - Candidates, in order: `video-reference-v1/<sha256>.mp4`, then the historical `video-v1/<key>.mp4`. An object is accepted only if its size equals the pin and its streamed SHA-256 equals the pin (memoized per isolate by key + etag). A key name or metadata claim alone is never trusted — staging/development hold different bytes under the a13 `video-v1` key.
 - No retained candidate verifies: the unchanged encode path may run, but its full output must match the pinned length and SHA-256 before any byte is served (app owner amendment). Mismatch → `503 Pinned release bytes unavailable` with `X-Transcode-Pinned`; those bytes are never served under the legacy identity.
 - The pin path never writes or deletes R2. Explicit-size and lazy requests keep their cache keys and behavior.
