@@ -263,3 +263,104 @@ describe("error responses carry CORS", () => {
     expect(resp.headers.get("Access-Control-Allow-Origin")).toBe("*");
   });
 });
+
+// Every Worker response carries CORS, so a browser reads the status and body of
+// an error instead of "Failed to fetch". canon/planning/2026-10-06-proxy-path-normalization.md
+describe("every response carries CORS (errors, 404s, 503s, preflight)", () => {
+  const A13 = "https://s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4";
+  const VIDEO = `${PROXY_ORIGIN}/video/preset=fia,q=medium,f=mp4`;
+  const emptyR2 = { head: async () => null, get: async () => null } as unknown;
+  const container = (fetch: (r: Request) => Promise<Response>) => ({ idFromName: (n: string) => n, get: () => ({ fetch }) });
+  const immutable = (r: Response) => { Object.defineProperty(r.headers, "set", { value: () => { throw new TypeError("immutable headers"); } }); return r; };
+
+  // Readable cross-origin: wildcard origin, never credentials, and every
+  // X-Transcode-* header on the response is in its expose list.
+  function expectReadable(resp: Response) {
+    expect(resp.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    expect(resp.headers.get("Access-Control-Allow-Credentials")).toBeNull();
+    const expose = (resp.headers.get("Access-Control-Expose-Headers") || "").toLowerCase().split(/\s*,\s*/);
+    for (const [name] of resp.headers) if (name.toLowerCase().startsWith("x-transcode-")) expect(expose).toContain(name.toLowerCase());
+  }
+
+  const CASES: [string, () => Request, () => unknown, number, string?][] = [
+    ["unknown route 404", () => new Request(`${PROXY_ORIGIN}/nope`), () => ({}), 404, "Not found"],
+    ["unknown route HEAD 404", () => new Request(`${PROXY_ORIGIN}/nope`, { method: "HEAD" }), () => ({}), 404],
+    ["unknown media type 404", () => new Request(`${PROXY_ORIGIN}/unknown/https://cdn.example/x`), () => ({}), 404],
+    ["demo page", () => new Request(`${PROXY_ORIGIN}/`), () => ({}), 200],
+    ["video bad options 400", () => new Request(`${PROXY_ORIGIN}/video/preset=fia,q=high,f=mp4/${A13}`), () => ({}), 400, "Invalid video request"],
+    ["video no source 400 (encoded slashes)", () => new Request(`${VIDEO}/https:%2F%2Fs3.amazonaws.com/cbbt-er.public/x.mp4`), () => ({}), 400, "Invalid video request"],
+    ["video rejected source 403", () => new Request(`${VIDEO}/https:/evil.example/v.mp4`), () => ({}), 403],
+    ["video service unavailable 503", () => new Request(`${VIDEO},size=small/${A13}`), () => ({}), 503, "Video service unavailable"],
+    ["pinned release bytes unavailable 503", () => new Request(`${VIDEO}/${A13}`), () => ({ AUDIO_BUCKET: emptyR2, AUDIO_CONTAINER: container(async () => new Response(new Uint8Array(10))) }), 503, "Pinned release bytes unavailable"],
+    ["video container error without CORS 502", () => new Request(`${VIDEO},size=small/${A13}`), () => ({ AUDIO_CONTAINER: container(async () => new Response("upstream broke", { status: 502 })) }), 502, "upstream broke"],
+    ["video container error with immutable headers 500", () => new Request(`${VIDEO},size=small/${A13}`), () => ({ AUDIO_CONTAINER: container(async () => immutable(new Response("sealed", { status: 500, headers: { "X-Transcode-Error": "true" } }))) }), 500, "sealed"],
+    // The Durable Object call rejecting escapes the route; the envelope answers.
+    ["video container rejects 500", () => new Request(`${VIDEO},size=small/${A13}`), () => ({ AUDIO_CONTAINER: container(async () => { throw Error("down"); }) }), 500, "Internal error"],
+    ["image invalid option 400", () => new Request(`${PROXY_ORIGIN}/image/w=99999/${SOURCE}`), () => ({}), 400],
+    ["reference unknown 404", () => new Request(`${PROXY_ORIGIN}/reference/video/nope`), () => ({}), 404],
+  ];
+
+  for (const [label, request, env, status, body] of CASES) {
+    test(label, async () => {
+      installCaches();
+      installFetch({ status: 404 });
+      const err = console.error; console.error = () => {};
+      try {
+        const resp = await worker.fetch(request(), env() as any, makeCtx());
+        expect(resp.status).toBe(status);
+        expectReadable(resp);
+        if (body !== undefined) expect(await resp.text()).toBe(body);
+      } finally { console.error = err; }
+    });
+  }
+
+  test("an uncaught throw becomes a 500 that still carries CORS", async () => {
+    (globalThis as any).caches = { default: { match: async () => { throw new Error("cache down"); } } };
+    const err = console.error; console.error = () => {};
+    try {
+      const resp = await worker.fetch(new Request(`${PROXY_ORIGIN}/image/s=320/${SOURCE}`), {} as any, makeCtx());
+      expect(resp.status).toBe(500);
+      expectReadable(resp);
+      expect(await resp.text()).toBe("Internal error");
+    } finally { console.error = err; }
+  });
+
+  test("routes that own their CORS keep it unchanged", async () => {
+    installCaches();
+    const err = console.error; console.error = () => {};
+    try {
+      const pinned = await worker.fetch(new Request(`${VIDEO}/${A13}`), { AUDIO_BUCKET: emptyR2, AUDIO_CONTAINER: container(async () => new Response(new Uint8Array(10))) } as any, makeCtx());
+      expect(pinned.headers.get("Access-Control-Expose-Headers")).toBe("Content-Length, Content-Range, Accept-Ranges, ETag, X-Transcode-Cache, X-Transcode-Encode, X-Transcode-Video-Width, X-Transcode-Video-Height, X-Transcode-Pinned");
+      const ref = await worker.fetch(new Request(`${PROXY_ORIGIN}/reference/video/nope`), {} as any, makeCtx());
+      expect(ref.headers.get("Access-Control-Expose-Headers")).toBe("Content-Length, Content-Range, Accept-Ranges, ETag, X-Reference-Expected-SHA256");
+    } finally { console.error = err; }
+  });
+
+  test("OPTIONS preflight succeeds on every proxy route without touching the container", async () => {
+    let touched = 0;
+    const env = { AUDIO_BUCKET: { head: async () => { touched++; return null; } }, AUDIO_CONTAINER: { idFromName: () => { touched++; return ""; }, get: () => { touched++; throw Error("no"); } } };
+    (globalThis as any).fetch = async () => { touched++; throw Error("no source fetch on preflight"); };
+    const paths = [
+      `/video/preset=fia,q=medium,f=mp4/${A13}`,
+      `/video/preset=fia,q=medium,f=mp4,size=small/https:/s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4`,
+      `/video/preset=fia,q=medium,f=mp4/https://evil.example/v.mp4`,
+      `/image/s=320/${SOURCE}`,
+      `/audio/preset=voice/${AUDIO_SOURCE}`,
+      `/nope`,
+    ];
+    for (const path of paths) {
+      const resp = await worker.fetch(new Request(PROXY_ORIGIN + path, { method: "OPTIONS", headers: { Origin: "https://app.example", "Access-Control-Request-Method": "GET", "Access-Control-Request-Headers": "range, x-persona" } }), env as any, makeCtx());
+      expect(resp.status).toBe(204);
+      expectReadable(resp);
+      expect(resp.headers.get("Access-Control-Allow-Methods")).toBe("GET, HEAD, OPTIONS");
+      expect(resp.headers.get("Access-Control-Allow-Headers")).toBe("range, x-persona");
+      expect(resp.body).toBeNull();
+    }
+    expect(touched).toBe(0);
+    // Without (or with a malformed) request-headers list the preflight allows Range.
+    for (const headers of [{}, { "Access-Control-Request-Headers": "range;evil" }] as Record<string, string>[]) {
+      const resp = await worker.fetch(new Request(`${PROXY_ORIGIN}/image/${SOURCE}`, { method: "OPTIONS", headers }), {} as any, makeCtx());
+      expect(resp.headers.get("Access-Control-Allow-Headers")).toBe("Range");
+    }
+  });
+});

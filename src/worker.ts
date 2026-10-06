@@ -27,7 +27,7 @@ import { Container, getRandom } from "@cloudflare/containers";
 // (0.1.0 vs 0.3.0) for a month before anyone noticed.
 import { version as PKG_VERSION } from "../package.json";
 import { z } from "zod";
-import { parseProxyPath, ProxyPathError } from "./lib/parse-proxy-path";
+import { normalizeProxyPath, parseProxyPath, ProxyPathError } from "./lib/parse-proxy-path";
 import { encodeDimension, QUALITY_MAP, type Quality } from "./lib/encode-dimension";
 import { shortestSideToWidth } from "./lib/generate-transcode-url";
 import {
@@ -150,6 +150,14 @@ const CORS_EXPOSE_HEADERS = [
   "X-Transcode-Channels",
   "X-Transcode-Duration",
   "X-Transcode-Encode",
+  // Degrade/error reasons and video delivery headers, so a browser can read
+  // why a request failed or what was served (every response carries CORS;
+  // canon/planning/2026-10-06-proxy-path-normalization.md).
+  "X-Transcode-Reason",
+  "X-Transcode-Error",
+  "X-Transcode-Pinned",
+  "X-Transcode-Video-Width",
+  "X-Transcode-Video-Height",
 ].join(", ");
 
 // One DRY helper applied to every served image/audio response — transcode,
@@ -160,6 +168,38 @@ function withCors(response: Response): Response {
   response.headers.set("Access-Control-Allow-Origin", "*");
   response.headers.set("Access-Control-Expose-Headers", CORS_EXPOSE_HEADERS);
   return response;
+}
+
+// Envelope applied once to EVERY Worker response, so a browser can read the
+// status and body of 4xx/5xx errors instead of failing with "Failed to fetch".
+// Responses that already carry their own CORS (video delivery, pinned bytes,
+// reference routes, MCP) are returned untouched; everything else gets the
+// wildcard origin and the X-Transcode-* expose list. Never credentials.
+function ensureCors(response: Response): Response {
+  if (response.status === 101 || response.headers.has("Access-Control-Allow-Origin")) return response;
+  try {
+    return withCors(response);
+  } catch {
+    // Immutable headers (e.g. a subrequest's Response): copy, then annotate.
+    return withCors(new Response(response.body, response));
+  }
+}
+
+// CORS preflight for every non-MCP route: a browser only sends the real
+// request (and can only read its error) after a 2xx preflight. Requested
+// header names are echoed so app-specific headers (e.g. Range) pass.
+const HEADER_LIST = /^[A-Za-z0-9!#$%&'*+.^_`|~-]+(\s*,\s*[A-Za-z0-9!#$%&'*+.^_`|~-]+)*$/;
+function preflight(request: Request): Response {
+  const requested = request.headers.get("Access-Control-Request-Headers")?.trim();
+  return withCors(new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+      "Access-Control-Allow-Headers": requested && HEADER_LIST.test(requested) ? requested : "Range",
+      "Access-Control-Max-Age": "86400",
+      "Vary": "Access-Control-Request-Headers",
+    },
+  }));
 }
 
 // Best-effort source bytes for non-transcode paths: parse an upstream
@@ -243,7 +283,31 @@ function createServer(request: Request, McpServerCtor: typeof McpServer) {
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    let response: Response;
+    try {
+      response = await route(request, env, ctx);
+    } catch (error) {
+      // An uncaught throw would surface as a platform error page without CORS.
+      console.error(JSON.stringify({ event: "worker-unhandled-error", error: String(error) }));
+      response = new Response("Internal error", { status: 500 });
+    }
+    return ensureCors(response);
+  },
+};
+
+async function route(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+    // Relays that merge "//" deliver .../https:/host/... . Restore the canonical
+    // path once, here, with the parser's own rule, so parsing, the host
+    // allowlist, legacy pins, cache keys and catalog/lazy selection all see the
+    // same request the canonical URL would have produced.
+    if (/^\/(image|audio|video)\//.test(url.pathname)) {
+      const canonical = normalizeProxyPath(url.pathname);
+      if (canonical !== url.pathname) {
+        url.pathname = canonical;
+        request = new Request(url.href, request);
+      }
+    }
     if (url.pathname.startsWith("/reference/video/")) return handleVideoReference(request, env.AUDIO_BUCKET);
 
     // MCP endpoint. The MCP machinery (agents/mcp + the SDK) is imported lazily
@@ -260,6 +324,8 @@ export default {
       const handler = createMcpHandler(server);
       return handler(request, env, ctx);
     }
+
+    if (request.method === "OPTIONS") return preflight(request);
 
     // Demo pages. Three audience-specific pages, each its own HTML string:
     //   /         + /film   -> the scroll film (default landing)
@@ -332,8 +398,7 @@ export default {
     }
 
     return new Response("Not found", { status: 404 });
-  },
-};
+}
 
 // Image proxy with half-class overshoot via env.IMAGES binding.
 // On a binding miss (local preview or missing config), falls back to passthrough.

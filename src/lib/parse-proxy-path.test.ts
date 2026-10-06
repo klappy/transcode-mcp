@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { parseProxyPath, ProxyPathError } from "./parse-proxy-path";
+import { normalizeProxyPath, parseProxyPath, ProxyPathError } from "./parse-proxy-path";
+import { isApprovedVideoSource } from "./video";
 
 describe("parseProxyPath — image", () => {
   test("parses bare image URL with no options", () => {
@@ -129,5 +130,93 @@ describe("parseProxyPath — errors", () => {
 
   test("rejects path with no source URL", () => {
     expect(() => parseProxyPath("/image/w=800")).toThrow(ProxyPathError);
+  });
+});
+
+// A relay that merges "//" turns .../https://host/... into .../https:/host/... .
+// canon/planning/2026-10-06-proxy-path-normalization.md
+describe("parseProxyPath — collapsed scheme slash (relay-merged //)", () => {
+  const A13 = "https://s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4";
+  const collapse = (path: string) => path.replace(/\/\//g, "/");
+  const CANONICAL = [
+    "/image/https://example.com/photo.jpg",
+    "/image/s=320,q=low,f=webp/https://cdn.example/photo.jpg",
+    "/image/w=800,h=600,q=high,f=avif/http://example.com/a/b/photo.jpg",
+    "/audio/https://example.com/sound.mp3",
+    "/audio/preset=voice,q=low,f=opus/https://cdn.example/clip.mp3",
+    `/video/preset=fia,q=medium,f=mp4/${A13}`,
+    `/video/preset=fia,q=medium,f=mp4,size=small/${A13}`,
+    `/video/size=xsmall,preset=fia,q=medium,f=mp4/${A13}`,
+    "/video/https://pub-27b708e1b3d94fe2ac53247a87bb142a.r2.dev/other.mp4",
+  ];
+
+  test("collapsed form parses to exactly the canonical result (audio, video, image)", () => {
+    for (const path of CANONICAL) {
+      const collapsed = collapse(path);
+      expect(collapsed).not.toBe(path);
+      expect(normalizeProxyPath(collapsed)).toBe(path);
+      for (const search of ["", "?w=2000&v=2"]) {
+        expect(parseProxyPath(collapsed, search)).toEqual(parseProxyPath(path, search));
+      }
+    }
+  });
+
+  test("canonical paths are returned byte-identical and normalization is idempotent", () => {
+    for (const path of CANONICAL) {
+      expect(normalizeProxyPath(path)).toBe(path);
+      expect(normalizeProxyPath(normalizeProxyPath(collapse(path)))).toBe(path);
+    }
+    // Any path that already holds a canonical scheme is untouched, even with a
+    // single-slash scheme elsewhere in it.
+    const mixed = "/image/w=800/https://cdn.example/redirect/https:/other.example/x.jpg";
+    expect(normalizeProxyPath(mixed)).toBe(mixed);
+    expect(parseProxyPath(mixed).sourceUrl).toBe("https://cdn.example/redirect/https:/other.example/x.jpg");
+  });
+
+  test("only the first segment-initial scheme is restored", () => {
+    expect(normalizeProxyPath("/image/https:/cdn.example/a/https:/b.example/c.jpg")).toBe(
+      "/image/https://cdn.example/a/https:/b.example/c.jpg",
+    );
+    // Not at a segment start: left alone, so the path stays unparseable.
+    expect(normalizeProxyPath("/image/x=https:/cdn.example/a.jpg")).toBe("/image/x=https:/cdn.example/a.jpg");
+    expect(() => parseProxyPath("/image/x=https:/cdn.example/a.jpg")).toThrow(ProxyPathError);
+  });
+
+  test("shapes that are not a single collapsed slash are not rewritten", () => {
+    for (const path of [
+      "/image/https:/",
+      "/video/preset=fia,q=medium,f=mp4/https:%2F%2Fs3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
+      "/video/preset=fia,q=medium,f=mp4/https:%2Fs3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
+      "/video/preset=fia,q=medium,f=mp4/HTTPS:/s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
+      "/video/preset=fia,q=medium,f=mp4/ftp:/s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
+    ]) {
+      expect(normalizeProxyPath(path)).toBe(path);
+      expect(() => parseProxyPath(path)).toThrow(ProxyPathError);
+    }
+    // Triple slash already holds "https://": untouched, parsed as before.
+    expect(normalizeProxyPath("/video/https:///x")).toBe("/video/https:///x");
+    expect(parseProxyPath("/video/https:///x").sourceUrl).toBe("https:///x");
+  });
+
+  test("restored source URLs still face the same video host allowlist", () => {
+    expect(isApprovedVideoSource(parseProxyPath(collapse(`/video/preset=fia,q=medium,f=mp4/${A13}`)).sourceUrl)).toBe(true);
+    for (const tail of [
+      "https:/evil.example/v.mp4",
+      "https:/s3.amazonaws.com/cbbt-er.public/../x",
+      "https:/s3.amazonaws.com/cbbt-er.public/%2e%2e/other/v.mp4",
+      "https:///x",
+      "https:///s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
+      "https:/%2Fs3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
+      "https:/s3.amazonaws.com%2Fcbbt-er.public/media/videos/a13/720p.mp4",
+      "https:/s3.amazonaws.com/cbbt-er.public%2F..%2Fother/v.mp4",
+      "https:/s3.amazonaws.com@evil.example/cbbt-er.public/v.mp4",
+      "https:/user@s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
+      "https:/s3.amazonaws.com.evil.example/cbbt-er.public/v.mp4",
+      "http:/s3.amazonaws.com/cbbt-er.public/media/videos/a13/720p.mp4",
+      "https:/pub-27b708e1b3d94fe2ac53247a87bb142a.r2.dev.evil.test/v.mp4",
+    ]) {
+      const { sourceUrl } = parseProxyPath(`/video/preset=fia,q=medium,f=mp4/${tail}`);
+      expect(isApprovedVideoSource(sourceUrl)).toBe(false);
+    }
   });
 });
