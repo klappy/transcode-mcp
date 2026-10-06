@@ -1,6 +1,6 @@
 import { DEMO_VIDEO_HTML } from "./demo-video";
 import { handleVideoReference } from "./lib/video-reference";
-import { legacyPinFor, serveLegacyVideoPin, servePinnedFallback } from "./lib/video-legacy-pins";
+import { legacyPinFor, serveLegacyVideoPin, servePinnedFallback, publishedPinFor, servePublishedVideoPin, markPublishedPinStale } from "./lib/video-published-pins";
 import { liveDocs, docsSchema } from "./lib/docs";
 import {handleVideoProxy, VideoOwner, videoSlot, videoOptions, selectVideoContract, VIDEO_SOURCE_REJECTION} from "./lib/video";
 // src/worker.ts
@@ -371,11 +371,20 @@ async function route(request: Request, env: Env, ctx: ExecutionContext): Promise
         if (parsed.mediaType !== 'video') return new Response('Invalid video route', {status:400});
         videoOptions(parsed.options);
         if (!selectVideoContract(parsed.sourceUrl,parsed.options.size)) return new Response(VIDEO_SOURCE_REJECTION, {status:403});
-        // Released alpha.13 omitted-size URLs serve their pinned bytes; otherwise unchanged.
+        // Released alpha.13 omitted-size URLs serve their pinned bytes (fail-closed).
         const pin = legacyPinFor(url.pathname, url.search);
         const pinned = await serveLegacyVideoPin(request, env.AUDIO_BUCKET, pin);
         if (pinned) return pinned;
-        if (!env.AUDIO_CONTAINER) return new Response('Video service unavailable', {status:503});
+        // Published identities (explicit-size and lazy URLs clients pin) serve their
+        // pinned bytes across container rebuilds. None verified in this tier's bucket:
+        // the normal path still serves (never block a video), marked stale.
+        const published = ['GET','HEAD'].includes(request.method) ? publishedPinFor(url.pathname, url.search) : undefined;
+        if (published) {
+          const served = await servePublishedVideoPin(request, env.AUDIO_BUCKET, published);
+          if (served) return served;
+        }
+        const stale = (response: Response) => published ? markPublishedPinStale(response, url.pathname, published) : response;
+        if (!env.AUDIO_CONTAINER) return stale(new Response('Video service unavailable', {status:503}));
         const slot = await videoSlot(parsed.sourceUrl, AUDIO_CONTAINER_INSTANCES,parsed.options.size);
         const stub = env.AUDIO_CONTAINER.get(env.AUDIO_CONTAINER.idFromName(slot));
         const target = new URL('https://audio-container/video-delivery');
@@ -384,7 +393,8 @@ async function route(request: Request, env: Env, ctx: ExecutionContext): Promise
         // Pinned identity with no retained bytes: encode may run, but only output
         // equal to the pinned bytes is served (full GET, verified before any byte).
         if (pin && ['GET','HEAD'].includes(request.method)) return servePinnedFallback(request, pin, () => stub.fetch(new Request(target, {method:'GET'})));
-        return stub.fetch(new Request(target, {method:request.method, headers:request.headers}));
+        const delivered = stub.fetch(new Request(target, {method:request.method, headers:request.headers}));
+        return published ? delivered.then(stale) : delivered;
       } catch { return new Response('Invalid video request', {status:400}); }
     }
     // Image proxy
