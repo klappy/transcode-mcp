@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import worker from "./worker";
 import { normalizeProxyPath, parseProxyPath } from "./lib/parse-proxy-path";
 import { handleVideoProxy, selectCatalogVideoContract, selectVideoContract, videoContracts, videoKey, videoSlot, VIDEO_SOURCE_REJECTION } from "./lib/video";
-import { LEGACY_PINS, legacyPinFor, clearLegacyPinVerification } from "./lib/video-legacy-pins";
+import { LEGACY_PINS, legacyPinFor, clearLegacyPinVerification } from "./lib/video-published-pins";
 import { computeAudioKey } from "./lib/audio-key";
 import { resolveAudioOptions } from "./lib/audio-options";
 
@@ -24,11 +24,14 @@ const ctx = (pending: Promise<unknown>[] = []) => ({ waitUntil: (p: Promise<unkn
 let realFetch: typeof globalThis.fetch;
 let realCaches: unknown;
 let realError: typeof console.error;
+let realWarn: typeof console.warn;
 beforeEach(() => {
   realFetch = globalThis.fetch;
   realCaches = (globalThis as any).caches;
   realError = console.error;
+  realWarn = console.warn;
   console.error = () => {};
+  console.warn = () => {};
   clearLegacyPinVerification();
   // No source is ever fetched by the Worker on these paths unless a test says so.
   (globalThis as any).fetch = async () => { throw Error("unexpected source fetch"); };
@@ -37,6 +40,7 @@ afterEach(() => {
   globalThis.fetch = realFetch;
   (globalThis as any).caches = realCaches;
   console.error = realError;
+  console.warn = realWarn;
 });
 
 // Recorded from origin/main c6f3b02 (before this change) with videoKey('a'*64)
