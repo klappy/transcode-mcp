@@ -12,7 +12,7 @@ import {createVideoCatalog} from '../../container/video-catalog.mjs';
 import {createLazyVideoSelect,isApprovedVideoSource,VIDEO_SOURCE_ALLOWED_PREFIXES,type LazyVideoContract} from '../../container/video-sources.mjs';
 export {isApprovedVideoSource,VIDEO_SOURCE_ALLOWED_PREFIXES};
 export { contract as videoContract };
-export type VideoSize='xsmall'|'small'|'medium'|'large'|'xlarge';
+export type VideoSize='xsmall'|'small'|'medium'|'large'|'xlarge'|'1080p'|'3k'|'4k';
 export const videoContracts=[contract,a184,a10];
 export const selectCatalogVideoContract=createVideoCatalog(videoContracts,{xsmall,small,medium},extension.recipeRevision,[{size:'small',contract:compositeSmall},{size:'xlarge',contract:compositeLarge}]).select;
 export const selectLazyVideoContract=createLazyVideoSelect({xsmall,small,medium,large:contract,xlarge:compositeLarge});
@@ -23,7 +23,7 @@ export function selectVideoContract(url:string,size:string='large'):SelectedVide
 export const VIDEO_SOURCE_REJECTION='Video source not approved: source URL must be a canonical https URL under '+VIDEO_SOURCE_ALLOWED_PREFIXES.join(' or ');
 export function videoOptions(raw: Record<string, string>) {
     for (const [key,value] of Object.entries(raw)) {
-        if(key==='size'){if(!['xsmall','small','medium','large','xlarge'].includes(value))throw Error('Unsupported video size');}
+        if(key==='size'){if(!['xsmall','small','medium','large','xlarge','1080p','3k','4k'].includes(value))throw Error('Unsupported video size');}
         else if(({preset:'fia',q:'medium',f:'mp4'} as Record<string,string>)[key]!==value)throw Error('Unsupported video option');
     }
     return {preset:'fia',q:'medium',f:'mp4',...(raw.size&&raw.size!=='large'?{size:raw.size as VideoSize}:{})} as const;

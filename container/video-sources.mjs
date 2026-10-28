@@ -1,3 +1,4 @@
+import {createUhdVideoProfiles, UHD_VIDEO_SIZES} from './video-uhd-profiles.mjs';
 // Lazy on-demand video sources (operator ruling 2026-10-05: "There is no such
 // thing as unavailable"). Pure data/logic shared by Worker and container; no I/O.
 // The closed catalog (video-catalog.mjs) is consulted first and stays untouched,
@@ -28,14 +29,16 @@ export function isApprovedVideoSource(url) {
 // profiles (the composite rows' sourceBytes), since unknown sources are unsized.
 export function createLazyVideoSelect(profiles) {
   for (const size of LAZY_VIDEO_SIZES) if (!profiles?.[size]?.encoding) throw Error('Missing lazy video profile ' + size);
+  const uhd = createUhdVideoProfiles(profiles.xlarge);
   const sourceBytes = Math.max(...LAZY_VIDEO_SIZES.map(size => profiles[size].limits.sourceBytes || profiles[size].limits.bytes));
   return (url, size = 'large') => {
-    if (!LAZY_VIDEO_SIZES.includes(size) || !isApprovedVideoSource(url)) return undefined;
-    const profile = profiles[size];
+    if (![...LAZY_VIDEO_SIZES, ...UHD_VIDEO_SIZES].includes(size) || !isApprovedVideoSource(url)) return undefined;
+    const high = UHD_VIDEO_SIZES.includes(size);
+    const profile = high ? uhd[size] : profiles[size];
     return {
       recipe: 'fia-video@5-' + size,
       source: { url, lazy: true, provenance: { transformation: profile.source.provenance.transformation } },
-      limits: { ...structuredClone(profile.limits), sourceBytes },
+      limits: { ...structuredClone(profile.limits), sourceBytes: high ? profile.limits.sourceBytes : sourceBytes },
       encoding: structuredClone(profile.encoding),
       recipeRevision: profile.recipeRevision,
       lazySourcePolicy: 'approved-host-v1',
