@@ -56,7 +56,9 @@ jobs:
           path: target-qualification/prior
           merge-multiple: true
       - name: Build one actual encoder image
-        run: docker build -t fia-video-proof container
+        env:
+          REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
+        run: docker build --label "org.opencontainers.image.revision=$REVIEWED_COMMIT" -t fia-video-proof container
       - name: Measure three targets exactly once
         if: ${{ inputs.mode != 'uhd' }}
         env:

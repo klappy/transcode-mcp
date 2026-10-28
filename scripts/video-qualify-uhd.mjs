@@ -1,12 +1,15 @@
-import {mkdir,writeFile,open,readdir,stat,readFile} from 'node:fs/promises';
-import {createHash} from 'node:crypto';
+import {mkdir,writeFile,readdir,stat,readFile} from 'node:fs/promises';
 import {spawn,execFileSync} from 'node:child_process';
-import {resolve,join} from 'node:path';
+import {resolve,join,isAbsolute} from 'node:path';
 import assert from 'node:assert/strict';
+import {acquireUhd} from './video-uhd-acquire.mjs';
 import {uhdInput,UHD_TARGETS,UHD_DISK_LIMIT} from './video-uhd-policy.mjs';
 const input=uhdInput(process.env),commit=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();assert.match(process.env.REVIEWED_COMMIT||'',/^[a-f0-9]{40}$/);assert.equal(commit,process.env.REVIEWED_COMMIT);
+assert.equal(execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim(),'','Qualification requires clean checkout');
+if(process.env.UHD_SOURCE_MODE==='retained')assert.ok(process.env.UHD_SOURCE_FILE&&isAbsolute(process.env.UHD_SOURCE_FILE),'Retained mode requires nonempty absolute UHD_SOURCE_FILE');
+const image=JSON.parse(execFileSync('docker',['image','inspect','fia-video-proof'],{encoding:'utf8',maxBuffer:1048576}))[0];assert.equal(image.Config?.Labels?.['org.opencontainers.image.revision'],commit,'Build image from reviewed commit with revision label');
 const out=resolve(process.argv[2]||'target-qualification'),sourceDir=join(out,'input');await mkdir(sourceDir,{recursive:true});
-const receipt={status:'running',reviewedCommit:commit,input,originRequests:0,targets:[],diskLimit:UHD_DISK_LIMIT,containerLimits:{cpus:4,memoryBytes:8*1024**3,tmpfsBytes:1408*1024**2},startedAt:new Date().toISOString(),scope:'UHD Linux qualification only; no deploy, public cache or browser proof'};
+const receipt={status:'running',reviewedCommit:commit,input,originRequests:0,targets:[],diskLimit:UHD_DISK_LIMIT,containerLimits:{cpus:4,memoryBytes:8*1024**3,tmpfsBytes:1408*1024**2},startedAt:new Date().toISOString(),imageId:image.Id,scope:'UHD Linux qualification only; no deploy, public cache or browser proof; disk accounts evidence plus container tmpfs, excludes preexisting source and Docker images'};
 await writeFile(join(out,'uhd-started.json'),JSON.stringify(receipt),{flag:'wx'});
 let active=false,child,expired=false,checking=false;const deadline=Date.now()+26*60000;
 const save=()=>writeFile(join(out,'uhd-qualification.json'),JSON.stringify(receipt,null,2)+'\n');
@@ -17,11 +20,10 @@ const monitor=setInterval(async()=>{if(checking)return;checking=true;try{
  if(active){const sample=execFileSync('docker',['stats','--no-stream','--format','{{json .}}','fia-video-proof'],{timeout:10000,encoding:'utf8'}).trim();if(sample)(receipt.resourceSamples??=[]).push(JSON.parse(sample));}
 }catch(error){receipt.monitorError=String(error);expired=true;try{stop();}catch{}}finally{checking=false;}},2000);
 try{
- await save();receipt.originRequests=1;await save();const began=Date.now();
- const response=await fetch(input.url,{redirect:'error',signal:AbortSignal.timeout(120000)});assert.equal(response.status,200);if(response.headers.has('content-length'))assert.equal(Number(response.headers.get('content-length')),input.bytes);
- const fd=await open(join(sourceDir,'source.mp4'),'wx'),digest=createHash('sha256');let bytes=0;
- try{for await(const b of response.body){if(expired)throw Error('Qualification resource deadline');bytes+=b.length;assert.ok(bytes<=input.bytes);digest.update(b);let at=0;while(at<b.length){const w=await fd.write(b,at,b.length-at);assert.ok(w.bytesWritten);at+=w.bytesWritten;}}}finally{await fd.close();}
- assert.equal(bytes,input.bytes);assert.equal(digest.digest('hex'),input.sha256);receipt.acquisitionMs=Date.now()-began;await writeFile(join(sourceDir,'input.json'),JSON.stringify(input));
+ await save();const began=Date.now();
+ receipt.acquisition=await acquireUhd(input,join(sourceDir,'source.mp4'),{sourceFile:process.env.UHD_SOURCE_FILE,signal:AbortSignal.timeout(120000)});
+ receipt.originRequests=receipt.acquisition.originRequests;receipt.acquisitionMs=Date.now()-began;await writeFile(join(sourceDir,'input.json'),JSON.stringify(input));
+
  for(const size of UHD_TARGETS){
   assert.ok(!expired&&deadline-Date.now()>650000);assert.ok(await usage(out)+receipt.containerLimits.tmpfsBytes+300*1024**2<=UHD_DISK_LIMIT);
   const dir=join(out,size);await mkdir(dir);active=true;

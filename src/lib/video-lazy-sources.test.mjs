@@ -34,13 +34,42 @@ test('(a) non-catalog approved-host URL selects a lazy contract at every FIA siz
 });
 
 test('(b) disallowed or non-canonical source is 403 with a clear message and never allocates the encoder',async()=>{
- expect(VIDEO_SOURCE_ALLOWED_PREFIXES).toEqual(['https://s3.amazonaws.com/cbbt-er.public/','https://pub-27b708e1b3d94fe2ac53247a87bb142a.r2.dev/']);
+ expect(VIDEO_SOURCE_ALLOWED_PREFIXES).toEqual(['https://cdn.fiaguide.app/','https://s3.amazonaws.com/cbbt-er.public/','https://pub-27b708e1b3d94fe2ac53247a87bb142a.r2.dev/']);
  for(const bad of ['https://evil.test/v.mp4','http://s3.amazonaws.com/cbbt-er.public/media/videos/a11/720p.mp4','https://s3.amazonaws.com/other-bucket/v.mp4','https://s3.amazonaws.com/cbbt-er.public.evil/v.mp4','https://s3.amazonaws.com/cbbt-er.public/../other/v.mp4','https://s3.amazonaws.com/cbbt-er.public/','https://user@s3.amazonaws.com/cbbt-er.public/v.mp4',a11+'?x=1',a11+'#t','https://pub-27b708e1b3d94fe2ac53247a87bb142a.r2.dev.evil.test/v.mp4']){
   expect(selectVideoContract(bad,'medium')).toBeUndefined();
   let calls=0;const r=await handleVideoProxy(new Request('https://proxy/video'),{},async()=>{calls++;throw Error('no');},bad,{size:'medium'});
   expect(r.status).toBe(403);expect(await r.text()).toContain('https://s3.amazonaws.com/cbbt-er.public/');expect(calls).toBe(0);
  }
  for(const size of ['tiny','constructor','__proto__'])expect(selectVideoContract(a11,size)).toBeUndefined();
+});
+
+test('FIA Guide CDN selects identical Worker/container lazy contracts at every size',()=>{
+ const url='https://cdn.fiaguide.app/media/videos/example.mp4';
+ for(const size of sizes){
+  const contract=selectVideoContract(url,size);
+  expect(contract).toBeDefined();expect(contract).toEqual(containerLazySelect(url,size));
+  expect(contract.source).toMatchObject({url,lazy:true});
+  expect(parseProxyPath(buildToolResponse({media_type:'video',source_url:url,size},'https://x').proxy_path).sourceUrl).toBe(url);
+ }
+});
+
+test('FIA Guide CDN does not admit siblings, subdomains, spoof hosts or noncanonical URLs',async()=>{
+ for(const url of [
+  'https://fiaguide.app/v.mp4','https://media.fiaguide.app/v.mp4',
+  'https://nested.cdn.fiaguide.app/v.mp4','https://cdn.fiaguide.app.evil.test/v.mp4',
+  'https://cdn-fiaguide.app/v.mp4','https://cdn.fiaguide.app@evil.test/v.mp4',
+  'https://user:password@cdn.fiaguide.app/v.mp4','https://cdn.fiaguide.app:443/v.mp4',
+  'https://cdn.fiaguide.app:8443/v.mp4','https://CDN.fiaguide.app/v.mp4',
+  'http://cdn.fiaguide.app/v.mp4','https://cdn.fiaguide.app/',
+  'https://cdn.fiaguide.app/a/../v.mp4','https://cdn.fiaguide.app/v.mp4?x=1',
+  'https://cdn.fiaguide.app/v.mp4#t=1',
+ ]){
+  expect(selectVideoContract(url,'medium')).toBeUndefined();
+  expect(containerLazySelect(url,'medium')).toBeUndefined();
+  let calls=0;
+  const response=await handleVideoProxy(new Request('https://proxy/video'),{},async()=>{calls++;throw Error('no');},url,{size:'medium'});
+  expect(response.status).toBe(403);expect(calls).toBe(0);
+ }
 });
 
 test('(c) existing catalog rows keep identical contracts and cache keys',async()=>{

@@ -35,3 +35,7 @@ Public source handoff now selects a distinct efficient4K delivery derivative2265
 
 
 Release narrowing: preserve all existing xlarge limits for new target data, including60MiB output,256MiB input,32MiB per statistics file and64MiB aggregate statistics. UHD qualification must fail if these budgets are insufficient; no new limit expansion is included. Local existing delivery source independently hashed successfully, but public-source acquisition1010 and realLinux execution remain separate unresolved boundaries.
+
+## Retained local bytes preserve public source identity
+
+UHD_SOURCE_FILE selects consumer-local already-owned bytes, streamed into the evidence directory with exact pinned length/hash verification and zero origin requests. Missing, changed or symlink inputs fail; no URL fallback. The real CDN URL remains the contract identity, and runtime host policy is still required. Reconcile PR108 through ancestry on the feature branch before testing CDN identity; no substitute host or duplicate policy implementation. Linux/Docker/Node22 and the existing container build remain the tools. Offline encoder receipts cannot establish public source access or deployed delivery.
