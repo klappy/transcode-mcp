@@ -1,15 +1,13 @@
-# Private720p frame-rate experiment
+# One private720p25fps rate correction
 
-Accepted recipe: bb2edd892d04a9c21d5f43c06c932bc50d188c5a. This implements only the first720p25fps/439024bit/s comparison. No lower-rate or480/540job is included. Production runtime, contract, Dockerfile and existing CI paths are untouched.
+Accepted correction recipe: c3f2053063b05efb45f3f84fdd3c6bc535df7586. Exactly one444000bit/s two-pass25fps encode, unchanged900k/1800kVBV,750-frameGOP,AAC96k and all other settings. Nominal pair gate remains439024bit/s,≤1%payload difference, identicalAAC. No lower-rate encode,50fps regeneration, audio experiment or production selection.
 
-The manual workflow downloads exact retained artifact11324160558 from run37258408345. Receipt SHA, source SHA/bytes and baseline SHA/bytes are verified before use. Encoder identity must match exactly to reuse50fps bytes; otherwise one matched50fps control is generated. New25fps adds only explicit fps dropping and changes GOP1500→750. AAC remains96k; actual payload SHA/sample count/duration must match for a controlled result.
+Manual workflow downloads original source/baseline artifact11324160558 (run37258408345) plus unmatched experiment11323239996 (run37260050319). Pins verify both receipts, source/output SHA/bytes and encoder identity. The correction ratio is rederived from the pinned first measurements and rounded to444000. Exact actual encoder identity must match the retained50fps baseline or execution stops; there is no fallback control. Original artifacts remain read-only.
 
-Root dispatch, only after exact independent review and remote publication:
+Root dispatch after independent exact review/publication:
 
-`gh workflow run video-fps-experiment.yml --repo klappy/transcode-mcp --ref feat/fia-video-fps-experiment`
+`gh workflow run video-fps-experiment.yml --repo klappy/transcode-mcp --ref feat/fia-fps-rate-correction`
 
-GitHub may require this workflow to exist on the default branch before dispatch; if so root merges the independently reviewed experiment-only files first and dispatches that exact ref. No encoding triggers on PR or push. Do not use the ordinary video workflow to run this experiment.
+The workflow must exist on the default branch for GitHub dispatch; root resolves publication in the sequential train. No encoding on PR/push. Networking disabled inside the experiment container. Image build is outside the30-minute experiment clock and retains actual ffmpeg/library identity checks. Workflow maximum35minutes; one complete encode+measurement job300seconds,330seconds remaining required before starting; source/output60MiB, passlogs32/64MiB,768MiBaggregate with reservation and monitoring. No automatic retry.
 
-The experiment container has networking disabled. The image build can retrieve normal Debian dependencies; actual ffmpeg executable/library identity is measured, never assumed identical. The experiment30-minute clock begins with the script; image preparation is outside that clock and the overall workflow is bounded35minutes. Each complete encode+measurement job is limited300seconds; no start without330seconds remaining. Source/output60MiB, passlogs32MiBperfile/64MiBtotal, aggregate768MiB with preflightreservation and active monitoring. Linux process file-size limits complement monitoring. Files preserve source/output identities and pass args/logs; receipt does not claim visual/motion/browser acceptance.
-
-Run `node --test experiments/video-fps/policy.test.mjs` for non-encoding tests. After actual CI, independently review output bytes, measured frame cadence, matched-pairrate≤1%nominal and identicalAAC. Browser decoded still/motion/seek review remains necessary. A rate-unmatched result stays diagnostic; no automatic correction or retry.
+Run `node --test experiments/video-fps/policy.test.mjs`. Actual CI measurement, independent decoded-frame/motion/seek review remain outstanding. A failed match stays diagnostic. Current50fps production default is unchanged.

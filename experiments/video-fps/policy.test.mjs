@@ -25,3 +25,7 @@ test('audio payload or samplecount changes reject controlledcadenceclaim',()=>{
 test('workflow is manualonly and lower-rateencode is notpartofscript',async()=>{
  const workflow=await readFile(new URL('../../.github/workflows/video-fps-experiment.yml',import.meta.url),'utf8');assert.match(workflow,/workflow_dispatch:/);assert.doesNotMatch(workflow,/pull_request:|push:/);assert.match(workflow,/--network none/);const script=await readFile(new URL('./run.mjs',import.meta.url),'utf8');assert.doesNotMatch(script,/fetch\(/);assert.match(script,/await encode\(25\)/);assert.doesNotMatch(script,/329268|351219/);
 });
+test('correction changes only requestedvideo target while retainingnominal pairgate and originalcontract',async()=>{
+ assert.equal(plan.correction.encoderRequestBps,444000);assert.equal(plan.correction.nominalBps,439024);const selected=structuredClone(contract);selected.encoding.videoBps=plan.correction.encoderRequestBps;const a=fpsArguments(deliveryPassArguments,selected,{source:'/source',output:'/output',prefix:'/pass',pass:2,fps:25});assert.equal(a[a.indexOf('-b:v')+1],'444000');assert.equal(a[a.indexOf('-maxrate')+1],'900000');assert.equal(contract.encoding.videoBps,439024);
+ const script=await readFile(new URL('./run.mjs',import.meta.url),'utf8');assert.doesNotMatch(script,/encode\(50\)/);assert.match(script,/Correction requires exact retained encoder identity/);assert.match(script,/candidate.measurement,plan.correction.nominalBps/);assert.match(script,/attemptReceiptSha256/);
+});

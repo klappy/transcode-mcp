@@ -1,4 +1,4 @@
-name: Video FPS experiment (manual only)
+name: Video FPS rate correction (manual only)
 on:
   workflow_dispatch:
 permissions:
@@ -20,18 +20,25 @@ jobs:
           github-token: ${{ github.token }}
           path: prior
           merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 11323239996
+          run-id: 37260050319
+          github-token: ${{ github.token }}
+          path: attempt
+          merge-multiple: true
       - name: Build unchanged encoder runtime
         run: docker build -t fia-fps-experiment container
       - name: Measure explicit reviewed 720p cadence pair
         run: |
           mkdir evidence
-          docker run --name fia-fps-experiment --network none --memory 2g --cpus 2 --ulimit fsize=62914560:62914560 -v "$PWD:/proof:ro" -v "$PWD/prior:/prior:ro" -v "$PWD/evidence:/evidence" fia-fps-experiment node /proof/experiments/video-fps/run.mjs /prior /evidence
+          docker run --name fia-fps-experiment --network none --memory 2g --cpus 2 --ulimit fsize=62914560:62914560 -v "$PWD:/proof:ro" -v "$PWD/prior:/prior:ro" -v "$PWD/evidence:/evidence" -v "$PWD/attempt:/attempt:ro" fia-fps-experiment node /proof/experiments/video-fps/run.mjs /prior /evidence /attempt
       - name: Stop any remaining experiment process
         if: always()
         run: docker rm -f fia-fps-experiment || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: video-fps-720-measurement
+          name: video-fps-720-rate-correction
           path: evidence
           retention-days: 7
