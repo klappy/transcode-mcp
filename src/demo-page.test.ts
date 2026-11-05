@@ -82,15 +82,17 @@ describe("shared cross-page nav", () => {
 });
 
 describe('embedded FIA video previews',()=>{
- test('uses visible native controls and normal metadata preload without a covering Play button',()=>{
+ test('keeps native controls and waits for explicit Play before assigning media sources',()=>{
   expect(DEMO_VIDEO_HTML).toContain('video{display:block;');
-  expect(DEMO_VIDEO_HTML).toContain('<video controls playsinline preload="metadata"');
+  expect(DEMO_VIDEO_HTML.includes('preload="metadata"')).toBe(false);
+  expect(DEMO_VIDEO_HTML.includes('preload="none"')).toBe(true);
   expect(DEMO_VIDEO_HTML).not.toContain('class="play"');
   expect(DEMO_VIDEO_HTML).not.toMatch(/<video[^>]*autoplay/);
   expect(DEMO_VIDEO_HTML).not.toContain('Nothing downloads until you press Play');
   expect(DEMO_VIDEO_HTML).not.toContain('video{display:none');
   expect(DEMO_VIDEO_HTML).toContain('video.poster=posters[item.id]');
-  expect(DEMO_VIDEO_HTML).toContain('if(publication.ready&&item.url)video.src=item.url');
+  expect(DEMO_VIDEO_HTML.includes("card.querySelector('.benchmark-play').addEventListener('click'")).toBe(true);
+  expect(DEMO_VIDEO_HTML.includes('Historical fixed benchmarks')).toBe(true);
   expect(DEMO_VIDEO_HTML).toContain("video.addEventListener('play'");
  });
  test('six distinct matched local posters fit the aggregate byte budget and provenance hashes',async()=>{
