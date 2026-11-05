@@ -6,6 +6,23 @@ on:
         description: Exact independently reviewed 40-character runtime commit
         required: true
         type: string
+      mode:
+        description: Existing retained targets or pinned genuine UHD master
+        type: choice
+        default: retained
+        options: [retained, uhd]
+      source_url:
+        description: UHD canonical runtime-approved URL (required for UHD)
+        type: string
+      source_sha256:
+        description: UHD exact lowercase SHA256
+        type: string
+      source_bytes:
+        description: UHD exact positive byte count, at most256MiB
+        type: string
+      source_duration:
+        description: UHD exact probed duration in seconds, at most600
+        type: string
 permissions:
   contents: read
   actions: read
@@ -30,6 +47,7 @@ jobs:
         with:
           node-version: 22
       - name: Acquire pinned retained artifact (no origin fallback)
+        if: ${{ inputs.mode != 'uhd' }}
         uses: actions/download-artifact@v4
         with:
           artifact-ids: 11321498762
@@ -38,11 +56,23 @@ jobs:
           path: target-qualification/prior
           merge-multiple: true
       - name: Build one actual encoder image
-        run: docker build -t fia-video-proof container
+        env:
+          REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
+        run: docker build --label "org.opencontainers.image.revision=$REVIEWED_COMMIT" -t fia-video-proof container
       - name: Measure three targets exactly once
+        if: ${{ inputs.mode != 'uhd' }}
         env:
           REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
         run: node scripts/video-qualify-targets.mjs target-qualification
+      - name: Measure pinned UHD master through real lazy handler
+        if: ${{ inputs.mode == 'uhd' }}
+        env:
+          REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
+          UHD_SOURCE_URL: ${{ inputs.source_url }}
+          UHD_SOURCE_SHA256: ${{ inputs.source_sha256 }}
+          UHD_SOURCE_BYTES: ${{ inputs.source_bytes }}
+          UHD_SOURCE_DURATION: ${{ inputs.source_duration }}
+        run: node scripts/video-qualify-uhd.mjs target-qualification
       - name: Stop owned container
         if: always()
         run: docker rm -f fia-video-proof || true

@@ -113,8 +113,9 @@ export function validateLazyOutput(source, result, contract) {
 export async function lazyEncoderIdentity(signal, selected) {
   const base = await encoderIdentity(signal, selected);
   const lazyAdapterSha256 = hash(await readFile(new URL('./video-lazy.mjs', import.meta.url)));
+  const uhdProfilesSha256 = hash(await readFile(new URL('./video-uhd-profiles.mjs', import.meta.url)));
   const sourcesSha256 = hash(await readFile(new URL('./video-sources.mjs', import.meta.url)));
-  return { ...base, revision: hash(JSON.stringify({ base: base.revision, lazyAdapterSha256, sourcesSha256 })), lazyAdapterSha256, sourcesSha256 };
+  return { ...base, revision: hash(JSON.stringify({ base: base.revision, lazyAdapterSha256, sourcesSha256, uhdProfilesSha256 })), lazyAdapterSha256, sourcesSha256 };
 }
 
 async function probe(path, signal) { return JSON.parse((await runBounded('/usr/bin/ffprobe', ['-v', 'error', '-show_streams', '-show_format', '-of', 'json', path], { signal })).toString()); }
