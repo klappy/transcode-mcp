@@ -6,10 +6,10 @@ import {openSync,closeSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {execFileSync,spawnSync} from 'node:child_process';
-export const PIN=Object.freeze({commit:'652d536c8b64903dc01ba09a4b9ab034cce6797c',harness:'3cea8143d87aa57dd73535ab10e1b8f6297e41e4',url:'https://cdn.3dreview.app/overview/5d92d72d3946/3D-Review-120s-Raphael-narrated-draft.mp4',bytes:3574594,sha256:'5d92d72d3946bad622cee72b5bdebc8029e43cced4e9b01e4e65b4d6ada4d059'});
+export const PIN=Object.freeze({commit:'b77155c689c08a1d4f9acc3f72c19a905c4add7e',harness:'ef54e17c16c5fb7ef1bfc46e7ad67b7bb4ec1002',url:'https://cdn.3dreview.app/overview/8bd9e6de2dcf/3d-review-overview-120s-8bd9e6de2dcf.mp4',bytes:20195565,sha256:'8bd9e6de2dcfb2178df234a7c0305c60ed41dc4759c9644d08e7540f5a3a0ed1'});
 const sha=b=>createHash('sha256').update(b).digest('hex');
 export function assertBlob(bytes){assert.equal(createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex'),PIN.harness,'Harness Git identity');}
-export function assertSource(bytes){assert.equal(bytes.length,PIN.bytes);assert.equal(sha(bytes),PIN.sha256,'Approved original identity');}
+export function assertSource(bytes){assert.equal(bytes.length,PIN.bytes);assert.equal(sha(bytes),PIN.sha256,'Approved v5 identity');}
 export function assertContainer(c,image){
  assert.equal(image.Config.Labels['org.opencontainers.image.revision'],PIN.commit);
  assert.equal(c.Image,image.Id);assert.equal(c.State.ExitCode,0);assert.equal(c.State.Running,false);assert.equal(c.State.OOMKilled,false);
@@ -40,7 +40,7 @@ async function main(){
   const response=await fetch(PIN.url,{redirect:'error',signal:AbortSignal.timeout(120000)});assert.equal(response.status,200);
   assert.equal(Number(response.headers.get('content-length')),PIN.bytes);
   const chunks=[];let total=0;for await(const chunk of response.body){total+=chunk.length;assert.ok(total<=PIN.bytes);chunks.push(chunk);}
-  const source=Buffer.concat(chunks);assertSource(source);const input=join(out,'input');await mkdir(input);await writeFile(join(input,'approved-original.mp4'),source,{flag:'wx'});
+  const source=Buffer.concat(chunks);assertSource(source);const input=join(out,'input');await mkdir(input);await writeFile(join(input,'approved-v5.mp4'),source,{flag:'wx'});
   const blobResponse=await fetch(`https://api.github.com/repos/klappy/transcode-mcp/git/blobs/${PIN.harness}`,{headers:{Authorization:`Bearer ${process.env.GITHUB_TOKEN}`,Accept:'application/vnd.github+json'},redirect:'error',signal:AbortSignal.timeout(30000)});
   assert.equal(blobResponse.status,200);const blob=await blobResponse.json();assert.equal(blob.encoding,'base64');const harness=Buffer.from(blob.content,'base64');assertBlob(harness);const measuredDir=join(out,'encode');await mkdir(measuredDir);const harnessPath=join(out,'proof.mjs');await writeFile(harnessPath,harness,{flag:'wx'});
   const buildLog=openSync(join(out,'build.log'),'wx');try{run('docker',['build','--label',`org.opencontainers.image.revision=${PIN.commit}`,'-t',name,join(runtime,'container')],{timeout:600000,stdio:['ignore',buildLog,buildLog]});}finally{closeSync(buildLog);}
