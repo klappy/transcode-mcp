@@ -6,7 +6,7 @@ import {openSync,closeSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {execFileSync,spawnSync} from 'node:child_process';
-export const PIN=Object.freeze({commit:'b77155c689c08a1d4f9acc3f72c19a905c4add7e',harness:'ef54e17c16c5fb7ef1bfc46e7ad67b7bb4ec1002',url:'https://cdn.3dreview.app/overview/8bd9e6de2dcf/3d-review-overview-120s-8bd9e6de2dcf.mp4',bytes:20195565,sha256:'8bd9e6de2dcfb2178df234a7c0305c60ed41dc4759c9644d08e7540f5a3a0ed1'});
+export const PIN=Object.freeze({commit:'9d1e0453eff2ac4d3d40687641134b461dc2324c',harness:'82e8db48209f4495004df64cc282cedba3caa9f5',url:'https://cdn.3dreview.app/overview/8bd9e6de2dcf/3d-review-overview-120s-8bd9e6de2dcf.mp4',bytes:20195565,sha256:'8bd9e6de2dcfb2178df234a7c0305c60ed41dc4759c9644d08e7540f5a3a0ed1'});
 const sha=b=>createHash('sha256').update(b).digest('hex');
 export function assertBlob(bytes){assert.equal(createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex'),PIN.harness,'Harness Git identity');}
 export function assertSource(bytes){assert.equal(bytes.length,PIN.bytes);assert.equal(sha(bytes),PIN.sha256,'Approved v5 identity');}
