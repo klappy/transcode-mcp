@@ -2,6 +2,11 @@ name: FIA three-target qualification
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: Existing catalog qualification or pinned 3D source-policy proof
+        type: choice
+        default: three-target
+        options: [three-target, source-policy-3d]
       reviewed_commit:
         description: Exact independently reviewed 40-character runtime commit
         required: true
@@ -14,6 +19,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   qualify:
+    if: ${{ inputs.mode != 'source-policy-3d' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -51,4 +57,33 @@ jobs:
         with:
           name: fia-three-target-measurements
           path: target-qualification
+          retention-days: 7
+  source-policy:
+    if: ${{ inputs.mode == 'source-policy-3d' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: orchestration
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.reviewed_commit }}
+          path: runtime
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Qualify unchanged pinned image and retained-original harness
+        env:
+          REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node orchestration/scripts/video-qualify-source-policy.mjs runtime source-policy-evidence
+      - name: Stop owned source-policy container
+        if: always()
+        run: docker rm -f transcode-3d-proof || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: source-policy-3d-measurements
+          path: source-policy-evidence
           retention-days: 7

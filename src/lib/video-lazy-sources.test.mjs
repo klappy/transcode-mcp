@@ -34,7 +34,7 @@ test('(a) non-catalog approved-host URL selects a lazy contract at every FIA siz
 });
 
 test('(b) disallowed or non-canonical source is 403 with a clear message and never allocates the encoder',async()=>{
- expect(VIDEO_SOURCE_ALLOWED_PREFIXES).toEqual(['https://cdn.fiaguide.app/','https://s3.amazonaws.com/cbbt-er.public/','https://pub-27b708e1b3d94fe2ac53247a87bb142a.r2.dev/']);
+ expect(VIDEO_SOURCE_ALLOWED_PREFIXES).toEqual(['https://cdn.3dreview.app/','https://cdn.fiaguide.app/','https://s3.amazonaws.com/cbbt-er.public/','https://pub-27b708e1b3d94fe2ac53247a87bb142a.r2.dev/']);
  for(const bad of ['https://evil.test/v.mp4','http://s3.amazonaws.com/cbbt-er.public/media/videos/a11/720p.mp4','https://s3.amazonaws.com/other-bucket/v.mp4','https://s3.amazonaws.com/cbbt-er.public.evil/v.mp4','https://s3.amazonaws.com/cbbt-er.public/../other/v.mp4','https://s3.amazonaws.com/cbbt-er.public/','https://user@s3.amazonaws.com/cbbt-er.public/v.mp4',a11+'?x=1',a11+'#t','https://pub-27b708e1b3d94fe2ac53247a87bb142a.r2.dev.evil.test/v.mp4']){
   expect(selectVideoContract(bad,'medium')).toBeUndefined();
   let calls=0;const r=await handleVideoProxy(new Request('https://proxy/video'),{},async()=>{calls++;throw Error('no');},bad,{size:'medium'});
@@ -68,6 +68,66 @@ test('FIA Guide CDN does not admit siblings, subdomains, spoof hosts or noncanon
   expect(containerLazySelect(url,'medium')).toBeUndefined();
   let calls=0;
   const response=await handleVideoProxy(new Request('https://proxy/video'),{},async()=>{calls++;throw Error('no');},url,{size:'medium'});
+  expect(response.status).toBe(403);expect(calls).toBe(0);
+ }
+});
+
+test('approved 3D Review path uses existing Worker/container presets and MCP grammar',()=>{
+ const url='https://cdn.3dreview.app/overview/5d92d72d3946/3D-Review-120s-Raphael-narrated-draft.mp4';
+ for(const size of sizes){
+  const contract=selectVideoContract(url,size);
+  expect(contract).toEqual(containerLazySelect(url,size));
+  expect(contract.source).toMatchObject({url,lazy:true});
+  expect(contract.encoding).toEqual(selectVideoContract(a11,size).encoding);
+  expect(contract.limits).toEqual(selectVideoContract(a11,size).limits);
+  expect(parseProxyPath(buildToolResponse({media_type:'video',source_url:url,size},'https://x').proxy_path).sourceUrl).toBe(url);
+ }
+ expect(()=>buildToolResponse({media_type:'video',source_url:url,w:1920},'https://x')).toThrow('Video source or dimensions not supported');
+ expect(()=>buildToolResponse({media_type:'video',source_url:url,size:'large',q:'high',f:'mp4'},'https://x')).toThrow('Unsupported video option');
+});
+
+test('exact 3D CDN host admits independent video directories at existing sizes',()=>{
+ for(const url of ['https://cdn.3dreview.app/v.mp4','https://cdn.3dreview.app/overview/other/v.mp4','https://cdn.3dreview.app/media/new-video.webm'])for(const size of sizes){
+  const c=selectVideoContract(url,size);expect(c).toEqual(containerLazySelect(url,size));expect(c?.source).toMatchObject({url,lazy:true});
+  expect(c.encoding).toEqual(selectVideoContract(a11,size).encoding);expect(c.limits).toEqual(selectVideoContract(a11,size).limits);
+ }
+});
+
+test('3D Review host admission rejects sibling/private hosts and noncanonical URLs before allocation',async()=>{
+ const prefix='https://cdn.3dreview.app/';
+ for(const url of [prefix,prefix+'v.mp4?x=1',prefix+'v.mp4#t',prefix+'../v.mp4',
+  'https://127.0.0.1/v.mp4','https://10.0.0.1/v.mp4','https://169.254.169.254/latest/meta-data/',
+  'https://[::1]/v.mp4','https://localhost/v.mp4','https://cdn.3dreview.app@127.0.0.1/v.mp4',
+  'https://cdn.3dreview.app.evil.test/overview/5d92d72d3946/v.mp4',
+  'https://nested.cdn.3dreview.app/overview/5d92d72d3946/v.mp4',
+  'https://3dreview.app/overview/5d92d72d3946/v.mp4',
+  'https://cdn.3dreview.app@evil.test/overview/5d92d72d3946/v.mp4',
+  'https://user:password@cdn.3dreview.app/overview/5d92d72d3946/v.mp4',
+  'http://cdn.3dreview.app/overview/5d92d72d3946/v.mp4',
+  'https://cdn.3dreview.app:443/overview/5d92d72d3946/v.mp4',
+  'https://cdn.3dreview.app:8443/overview/5d92d72d3946/v.mp4',
+  'https://CDN.3dreview.app/overview/5d92d72d3946/v.mp4']){
+  expect(selectVideoContract(url,'large')).toBeUndefined();
+  expect(containerLazySelect(url,'large')).toBeUndefined();
+  let calls=0;
+  const response=await handleVideoProxy(new Request('https://proxy/video'),{},async()=>{calls++;throw Error('no');},url,{size:'large'});
+  expect(response.status).toBe(403);expect(calls).toBe(0);
+ }
+});
+
+test('approved v5 uses the same five Worker/container presets while retaining the approved original',async()=>{
+ const url='https://cdn.3dreview.app/overview/8bd9e6de2dcf/3d-review-overview-120s-8bd9e6de2dcf.mp4';
+ for(const size of sizes){
+  const contract=selectVideoContract(url,size);
+  expect(contract).toEqual(containerLazySelect(url,size));
+  expect(contract.source).toMatchObject({url,lazy:true});
+  expect(contract.encoding).toEqual(selectVideoContract(a11,size).encoding);
+  expect(contract.limits).toEqual(selectVideoContract(a11,size).limits);
+  expect(parseProxyPath(buildToolResponse({media_type:'video',source_url:url,size,q:'medium',f:'mp4'},'https://transcode.klappy.dev').proxy_path).sourceUrl).toBe(url);
+ }
+ for(const bad of [url+'?x=1',url+'#t=1',url.replace('cdn.3dreview.app/','cdn.3dreview.app.evil.test/'),url.replace('cdn.3dreview.app/','nested.cdn.3dreview.app/'),url.replace('https://','https://user:password@'),url.replace('/3d-review-overview-120s-8bd9e6de2dcf.mp4','/../v.mp4')]){
+  expect(selectVideoContract(bad,'large')).toBeUndefined();expect(containerLazySelect(bad,'large')).toBeUndefined();
+  let calls=0;const response=await handleVideoProxy(new Request('https://proxy/video'),{},async()=>{calls++;throw Error('no');},bad,{size:'large'});
   expect(response.status).toBe(403);expect(calls).toBe(0);
  }
 });
