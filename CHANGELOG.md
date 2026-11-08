@@ -14,7 +14,7 @@ Earlier granularity lives in `canon/handoffs/` and the PR record.
 ## [0.5.2] — 2026-11-06
 
 ### Fixed
-- Admit canonical video sources only under the approved original `https://cdn.3dreview.app/overview/5d92d72d3946/` and approved v5 `https://cdn.3dreview.app/overview/8bd9e6de2dcf/` paths through the existing lazy proxy. Other paths and hosts remain disallowed; URL validation, redirect rejection, presets and resource limits are unchanged.
+- Admit canonical video sources under the exact approved host `https://cdn.3dreview.app/` through the existing lazy proxy, including the approved original and v5. Sibling/subdomain/private hosts remain disallowed; URL validation, redirect rejection, presets and resource limits are unchanged.
 
 ## [0.5.1] — 2026-10-27
 

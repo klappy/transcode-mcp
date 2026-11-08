@@ -6,8 +6,7 @@
 // Abuse guard (flagged default for operator review): the ONE list of source
 // prefixes the proxy will fetch lazily. Anything else is 403.
 export const VIDEO_SOURCE_ALLOWED_PREFIXES = Object.freeze([
-  'https://cdn.3dreview.app/overview/8bd9e6de2dcf/',
-  'https://cdn.3dreview.app/overview/5d92d72d3946/',
+  'https://cdn.3dreview.app/',
   'https://cdn.fiaguide.app/',
   'https://s3.amazonaws.com/cbbt-er.public/',
   'https://pub-27b708e1b3d94fe2ac53247a87bb142a.r2.dev/',
